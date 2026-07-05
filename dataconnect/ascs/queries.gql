@@ -1,0 +1,124 @@
+# Queries for ASCS Client App
+
+# 1. Fetch Profile
+query GetProfile($id: String!) {
+  profile(id: $id) {
+    id
+    email
+    username
+    fullName
+    role
+    accountStatus
+    mustChangePassword
+    contactNumber
+  }
+}
+
+# 2. Get Student details including profile
+query GetStudent($id: String!) {
+  student(id: $id) {
+    id
+    studentIdNumber
+    program
+    yearLevel
+    section
+    profile {
+      fullName
+      email
+    }
+  }
+}
+
+# 3. Get student's clearance application list
+query GetStudentApplications($studentId: String!) {
+  clearanceApplications(where: { studentId: { eq: $studentId } }) {
+    id
+    applicationNumber
+    academicYear
+    semester
+    purpose
+    overallStatus
+    submittedAt
+    updatedAt
+  }
+}
+
+# 4. Get clearance approvals detail for an application
+query GetClearanceTracking($applicationId: UUID!) {
+  clearanceApprovals(where: { applicationId: { eq: $applicationId } }) {
+    id
+    signatoryRole
+    status
+    actedAt
+    updatedAt
+    assignedSignatory {
+      fullName
+    }
+    requirement {
+      label
+      displayOrder
+    }
+  }
+}
+
+# 5. Get pending approvals for a specific signatory/role
+query GetPendingApprovals($signatoryRole: UserRole!, $signatoryId: String) {
+  clearanceApprovals(where: {
+    signatoryRole: { eq: $signatoryRole },
+    status: { eq: pending },
+    assignedSignatoryId: { eq: $signatoryId }
+  }) {
+    id
+    application {
+      id
+      applicationNumber
+      submittedAt
+      student {
+        id
+        studentIdNumber
+        profile {
+          fullName
+        }
+      }
+    }
+  }
+}
+
+# 6. Get financial record for an application
+query GetFinancialRecord($applicationId: UUID!) {
+  financialRecord(applicationId: $applicationId) {
+    id
+    status
+    notes
+    verifiedAt
+    recordedAt
+  }
+}
+
+# 7. Get unread notifications
+query GetNotifications($recipientId: String!) {
+  notifications(where: {
+    recipientId: { eq: $recipientId },
+    isRead: { eq: false }
+  }) {
+    id
+    type
+    message
+    relatedApplicationId
+    createdAt
+  }
+}
+
+# 8. List all students with active clearance statuses for Admin/Signatories
+query ListStudents {
+  students {
+    id
+    studentIdNumber
+    program
+    yearLevel
+    section
+    profile {
+      fullName
+    }
+  }
+}
