@@ -1,5 +1,6 @@
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 function initAdmin() {
   if (getApps().length > 0) {
@@ -32,6 +33,16 @@ export function getAdminAuth() {
     return getAuth();
   } catch (error) {
     console.error('Failed to get Firebase Admin Auth. Ensure Firebase Admin is initialized.', error);
+    throw error;
+  }
+}
+
+export function getAdminFirestore() {
+  initAdmin();
+  try {
+    return getFirestore();
+  } catch (error) {
+    console.error('Failed to get Firebase Admin Firestore. Ensure Firebase Admin is initialized.', error);
     throw error;
   }
 }
