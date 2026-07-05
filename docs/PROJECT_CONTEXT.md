@@ -6,8 +6,8 @@
 
 **Tech Stack:**
 - Next.js App Router (TypeScript)
-- Supabase (Auth, Database, RLS, Migrations)
-- Supabase MCP (AI-assisted schema planning)
+- Firebase (Authentication, Firebase SQL Connect / Cloud SQL PostgreSQL)
+- Firebase Admin SDK (Trusted server-side operations)
 - Tailwind CSS v4
 - daisyUI v5
 - TanStack Query v5
@@ -90,10 +90,10 @@ The **Automated Student Clearance System (ASCS)** is a web-based platform design
 ## 4. Core Modules
 
 ### 4.1 Authentication
-- Supabase Auth (email/password)
-- Role assignment on profile creation
-- Session management via Supabase SSR helpers
-- Protected routes enforced server-side via middleware
+- Firebase Authentication (email/password)
+- Role assignment on profile creation stored in PostgreSQL database profile table and/or Firebase custom claims
+- Session management via Firebase JWT session cookies or token validation in middleware/Next.js proxy
+- Protected routes enforced server-side via Next.js middleware and API authorization guards
 
 ### 4.2 Role-Based Dashboard
 - Each role sees a dashboard scoped to their responsibilities
@@ -135,14 +135,14 @@ The **Automated Student Clearance System (ASCS)** is a web-based platform design
 
 ### 4.9 Dean Visibility Control
 - Dean's dashboard and queries exclude clearance records where Adviser has not yet approved
-- Enforced at UI level (query filter) and database level (RLS policy)
+- Enforced at UI level (query filter) and API/Route Handler database query authorization level
 - Adviser approval unlocks Dean view automatically
 
 ### 4.10 Notifications
 - In-app notification list per role
 - Triggered on: application submission, signatory action, financial status update
 - Marked as read/unread
-- Future: email notifications via Supabase Edge Functions or third-party service
+- Future: email notifications via Firebase Cloud Functions or third-party service
 
 ### 4.11 Printable Clearance Document
 - Available only when overall status is `Approved`
@@ -220,7 +220,7 @@ The **Automated Student Clearance System (ASCS)** is a web-based platform design
 - The Dean **must not** see or process a clearance until the **Adviser** has approved it
 - This rule is enforced at two levels:
   1. **UI Level:** Dean's dashboard query filters out records where Adviser approval is not `Approved`
-  2. **Database/RLS Level:** Supabase RLS policy on `clearance_approvals` and `clearance_applications` restricts Dean's read access to records where the Adviser approval row exists and has `status = 'approved'`
+  2. **API/Authorization Level:** Next.js Route Handler / Server Action queries enforce authorization rules restricting Dean's read access to records where the Adviser approval row has `status = 'approved'`
 - Once Adviser approves, the clearance automatically becomes visible to the Dean without manual intervention
 - This ensures the Adviser acts as the academic gatekeeper before administrative final review
 
@@ -228,20 +228,26 @@ The **Automated Student Clearance System (ASCS)** is a web-based platform design
 
 ## 9. Suggested Database Entities
 
-> Note: These are planning-level proposals. Migrations will be created in Phase 3.
+> Note: These are planning-level proposals. PostgreSQL tables will be managed via Firebase SQL Connect.
 
 ### `profiles`
-Links to Supabase Auth `auth.users`. Stores user metadata.
-- `id` (uuid, FK -> auth.users)
+Links to Firebase Auth users. Stores user metadata.
+- `id` (text, PK, matches Firebase Auth uid)
 - `full_name` (text)
 - `role` (enum: student, librarian, accountant, osa_coordinator, guidance_counselor, area_chair, adviser, dean, admin)
 - `email` (text)
+- `username` (text, unique)
+- `account_status` (enum: active, inactive, deactivated)
+- `must_change_password` (boolean)
+- `contact_number` (text)
+- `last_password_changed_at` (timestamptz)
+- `deactivated_at` (timestamptz)
 - `created_at` (timestamptz)
 - `updated_at` (timestamptz)
 
 ### `students`
 Extended student-specific profile data.
-- `id` (uuid, FK -> profiles.id)
+- `id` (text, PK, FK -> profiles.id)
 - `student_id_number` (text, unique)
 - `program` (text)
 - `year_level` (integer)
@@ -251,7 +257,8 @@ Extended student-specific profile data.
 ### `clearance_applications`
 Each clearance request submitted by a student.
 - `id` (uuid, PK)
-- `student_id` (uuid, FK -> students.id)
+- `application_number` (text, unique)
+- `student_id` (text, FK -> students.id)
 - `academic_year` (text)
 - `semester` (text)
 - `purpose` (text)
@@ -264,41 +271,45 @@ Defines the set of required signatories/conditions for a clearance.
 - `id` (uuid, PK)
 - `role` (enum: matches signatory roles)
 - `label` (text, e.g., "Library Clearance")
-- `order` (integer, for display ordering)
+- `display_order` (integer, for display ordering)
 - `is_active` (boolean)
+- `assigned_signatory_id` (text, FK -> profiles.id)
 
 ### `clearance_approvals`
 One row per signatory per clearance application. Tracks individual approval status.
 - `id` (uuid, PK)
 - `application_id` (uuid, FK -> clearance_applications.id)
 - `requirement_id` (uuid, FK -> clearance_requirements.id)
-- `signatory_id` (uuid, FK -> profiles.id)
+- `signatory_role` (enum: matches signatory roles)
+- `assigned_signatory_id` (text, FK -> profiles.id)
 - `status` (enum: pending, approved, not_approved)
 - `acted_at` (timestamptz)
-- `created_at` (timestamptz)
+- `updated_at` (timestamptz)
 
 ### `remarks`
 Remarks attached to a specific clearance approval record.
 - `id` (uuid, PK)
 - `approval_id` (uuid, FK -> clearance_approvals.id)
-- `author_id` (uuid, FK -> profiles.id)
+- `author_id` (text, FK -> profiles.id ON DELETE SET NULL)
 - `content` (text)
 - `created_at` (timestamptz)
 
 ### `financial_records`
-Tracks financial status per clearance application. Includes history.
+Tracks financial status per clearance application.
 - `id` (uuid, PK)
 - `application_id` (uuid, FK -> clearance_applications.id)
-- `student_id` (uuid, FK -> students.id)
+- `student_id` (text, FK -> students.id)
 - `status` (enum: paid, unpaid)
-- `updated_by` (uuid, FK -> profiles.id)
 - `notes` (text)
+- `updated_by` (text, FK -> profiles.id ON DELETE SET NULL)
+- `verified_at` (timestamptz)
 - `recorded_at` (timestamptz)
+- `updated_at` (timestamptz)
 
 ### `notifications`
 In-app notifications for each user.
 - `id` (uuid, PK)
-- `recipient_id` (uuid, FK -> profiles.id)
+- `recipient_id` (text, FK -> profiles.id)
 - `type` (text, e.g., 'new_application', 'approval_action', 'financial_update')
 - `message` (text)
 - `related_application_id` (uuid, FK -> clearance_applications.id)
@@ -308,9 +319,9 @@ In-app notifications for each user.
 ### `activity_logs`
 Audit trail for system actions.
 - `id` (uuid, PK)
-- `actor_id` (uuid, FK -> profiles.id)
-- `action` (text, e.g., 'submitted_application', 'approved_clearance')
-- `entity_type` (text, e.g., 'clearance_application', 'clearance_approval')
+- `actor_id` (text, FK -> profiles.id)
+- `action` (text)
+- `entity_type` (text)
 - `entity_id` (uuid)
 - `metadata` (jsonb)
 - `created_at` (timestamptz)
@@ -411,7 +422,7 @@ Using **Tailwind CSS v4** and **daisyUI v5** component primitives.
 
 ## 12. TanStack Query Usage Plan
 
-TanStack Query v5 manages all server state (Supabase data fetching and caching).
+TanStack Query v5 manages all server state (data fetching and caching via Next.js Route Handlers and Firebase SQL Connect / PostgreSQL).
 
 | Query | Purpose |
 |-------|---------|
@@ -446,43 +457,44 @@ TanStack Form manages all user input forms with validation.
 
 | Form | Fields | Notes |
 |------|--------|-------|
-| **Login Form** | email, password | Supabase Auth sign-in |
+| **Login Form** | email, password | Firebase Auth sign-in |
 | **Clearance Application Form** | academic_year, semester, purpose, student confirmation | Validates completeness before submission |
 | **Remarks Form** | content (required when status != approved) | Inline modal triggered by approval action |
 | **Financial Status Update Form** | status (paid/unpaid), notes | Accountant use only |
 | **Account Management Form** | full_name, program, year_level, section, student_id_number | Admin / student profile update |
-| **Change Password Form** | current_password, new_password, confirm_password | Via Supabase Auth `updateUser` |
+| **Change Password Form** | current_password, new_password, confirm_password | Via Firebase Auth updatePassword |
 
 ---
 
-## 14. Supabase Usage Plan
+## 14. Firebase & SQL Connect Usage Plan
 
 ### Auth
-- Email/password authentication via `@supabase/ssr`
-- Session managed server-side using `createServerClient` in middleware and server components
-- Role stored in `profiles.role`; loaded after login and stored in session metadata or fetched fresh
+- Email/password authentication via Firebase Client SDK.
+- Session managed server-side using Firebase Session Cookies (JWT) set in route handlers or secure Next.js middleware token verification.
+- Roles stored in PostgreSQL `profiles` table and loaded on authentication. Custom claims can also be populated via Firebase Admin SDK.
+- Admin-created user accounts. Students cannot self-register.
 
-### Database
-- PostgreSQL via Supabase client
-- Server Components use `createServerClient` (no client-side leakage)
-- Client Components use `createBrowserClient` only for real-time or mutations post-hydration
-- All queries typed via generated Supabase TypeScript types (`supabase gen types typescript`)
+### Database (Firebase SQL Connect / PostgreSQL)
+- Relational database schema implemented on a Cloud SQL PostgreSQL instance accessed via Firebase SQL Connect.
+- Standard PostgreSQL connections or SDK queries managed in Next.js Server Components, Server Actions, or API Route Handlers.
+- All direct database client code and credentials (such as service account keys) kept server-side to prevent credential leakage.
+- Type definitions generated from the SQL Connect / PostgreSQL schema.
 
-### RLS Policies (planned, not yet implemented)
-- `profiles`: Users can read/update own row; Admin can read all
-- `clearance_applications`: Student can read own; Signatories can read all; Dean can read only where Adviser approved
-- `clearance_approvals`: Each signatory can update their own rows; Student can read rows for their applications
-- `financial_records`: Accountant can insert/update; Student and Dean can read
-- `notifications`: Each user can read/update own notifications
-- `activity_logs`: Admin read-only; system inserts via service role
+### Access Control & Authorization (Alternative to RLS)
+- Access control enforced entirely server-side in API route handlers and Server Actions by checking:
+  - User identity (validated via Firebase Admin SDK or middleware verifyIdToken).
+  - User role (queried from the `profiles` database table).
+- Dean authorization gate: Next.js API query handlers for Dean routes verify that the clearance application has Adviser approval before returning any student records.
+- Signatory authorization: Signatories can only modify clearance approvals assigned to their role or user ID.
 
-### Migrations
-- Managed via Supabase CLI (`supabase migration new`)
-- Created in Phase 3 after schema is finalized with Supabase MCP assistance
+### Database Migration & Management
+- Managed using standard PostgreSQL migration tools (e.g., Prisma Migrate, Drizzle Kit, or raw SQL migrations run via admin tools).
+- No direct database writes from the frontend client. All mutations execute via Next.js Route Handlers or Server Actions executing SQL transactions.
 
-### Supabase MCP
-- Used in Phase 3 for schema validation and RLS policy drafting
-- Assists in generating TypeScript types aligned with database schema
+### Firestore Decision
+- Firestore will **not** be used as the primary database for ASCS.
+- Reason: The system is relational and requires strict consistency between applications, approvals, financial records, roles, reports, and audit logs.
+- Firestore may only be considered later for optional lightweight real-time notification feeds, but SQL Connect remains the source of truth.
 
 ---
 
@@ -494,23 +506,23 @@ TanStack Form manages all user input forms with validation.
 - No code implementation
 
 ### Phase 2 — Package Verification and Project Structure
-- Verify installed packages match tech stack (Next.js, Supabase, Tailwind v4, daisyUI v5, TanStack Query v5, TanStack Form)
+- Verify installed packages match tech stack (Next.js, Firebase, Tailwind v4, daisyUI v5, TanStack Query v5, TanStack Form)
 - Install missing packages (with user approval)
 - Set up base folder structure: `components/`, `lib/`, `hooks/`, `types/`, `docs/`
 - Configure Tailwind CSS v4 and daisyUI v5
 - Set up TanStack Query provider
-- Configure Supabase client utilities (server and browser)
-- Create base middleware for auth and route protection
+- Configure Firebase Client and Admin SDK utilities
+- Create base middleware for auth session check and route protection
 
-### Phase 3 — Supabase Schema Planning
-- Finalize all table definitions using Supabase MCP
-- Write and apply migration files
-- Generate TypeScript types from schema
-- Draft and review RLS policies
+### Phase 3 — Firebase SQL Connect / PostgreSQL Schema Planning
+- Finalize all table definitions for PostgreSQL
+- Write and apply SQL migrations
+- Generate TypeScript types from PostgreSQL schema
+- Draft and review backend authorization query filters
 
 ### Phase 4 — Authentication and Role-Based Access
 - Login page with TanStack Form
-- Supabase Auth integration
+- Firebase Auth integration
 - Middleware route protection by role
 - Role-based redirect after login
 - Profile setup for new users
@@ -535,7 +547,7 @@ TanStack Form manages all user input forms with validation.
 
 ### Phase 8 — Dean Visibility and Printable Clearance
 - Dean dashboard with Adviser-gated clearance list
-- RLS enforcement for Dean visibility
+- Backend query-level enforcement for Dean visibility
 - Printable clearance document view
 - Print trigger (only when fully approved)
 
@@ -552,10 +564,10 @@ TanStack Form manages all user input forms with validation.
 
 ### Phase 11 — Testing and Polish
 - End-to-end workflow testing
-- RLS policy validation
+- Authorization validation
 - UI consistency review (Tailwind v4 + daisyUI v5)
 - Accessibility checks
-- Performance review (TanStack Query caching, Supabase query optimization)
+- Performance review (TanStack Query caching, database query optimization)
 - Final documentation updates
 
 ---
