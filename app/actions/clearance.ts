@@ -272,3 +272,205 @@ export async function fetchStudentDashboardAction() {
     return { success: false, error: error.message };
   }
 }
+
+// Fetch pending approval queue for a signatory
+export async function fetchPendingApprovalsAction() {
+  try {
+    const claims = await getAuthenticatedUser();
+    const userId = claims.uid;
+    const email = claims.email || '';
+
+    // Extract role from profiles
+    let role = 'student';
+    if (process.env.DATABASE_URL) {
+      const pRes = await query('SELECT role FROM public.profiles WHERE id = $1', [userId]);
+      role = pRes.rows[0]?.role || 'student';
+    } else {
+      // Fallback role deduction for local testing
+      const emailLower = email.toLowerCase();
+      if (emailLower.includes('admin')) role = 'admin';
+      else if (emailLower.includes('librarian')) role = 'librarian';
+      else if (emailLower.includes('accountant')) role = 'accountant';
+      else if (emailLower.includes('osa')) role = 'osa_coordinator';
+      else if (emailLower.includes('guidance')) role = 'guidance_counselor';
+      else if (emailLower.includes('chair')) role = 'area_chair';
+      else if (emailLower.includes('adviser')) role = 'adviser';
+      else if (emailLower.includes('dean')) role = 'dean';
+    }
+
+    if (role === 'student') {
+      throw new Error('Unauthorized: Students do not have approval queues.');
+    }
+
+    if (process.env.DATABASE_URL) {
+      const res = await query(
+        `SELECT a.id as approval_id, a.signatory_role, a.status, ap.id as application_id, 
+                ap.application_number, ap.academic_year, ap.semester, ap.purpose, ap.submitted_at, 
+                s.student_id_number, p.full_name as student_name
+         FROM public.clearance_approvals a
+         JOIN public.clearance_applications ap ON a.application_id = ap.id
+         JOIN public.students s ON ap.student_id = s.id
+         JOIN public.profiles p ON s.id = p.id
+         WHERE a.signatory_role = $1 AND a.status = 'pending' AND (a.assigned_signatory_id IS NULL OR a.assigned_signatory_id = $2)
+         ORDER BY ap.submitted_at ASC`,
+        [role, userId]
+      );
+      return { success: true, role, pendingQueue: res.rows };
+    }
+
+    // FALLBACK: Mock DB
+    const db = getMockDb();
+    
+    // Filter approvals matching the role in pending state
+    const pendingApprovals = db.clearance_approvals.filter(
+      (ap: any) => ap.signatory_role === role && ap.status === 'pending'
+    );
+
+    const pendingQueue = pendingApprovals.map((ap: any) => {
+      const app = db.clearance_applications.find((a: any) => a.id === ap.application_id);
+      
+      // Look up student name in profiles (we will fall back to mock details if profile doesn't exist)
+      let studentName = 'Test Student';
+      let studentIdNum = 'STUD-2026-0001';
+      
+      if (app) {
+        if (app.student_id === 'mock-student-uid') {
+          studentName = 'Juan Dela Cruz';
+          studentIdNum = 'STUD-2026-0001';
+        } else {
+          studentName = app.student_id.toUpperCase().split('-')[0] || 'Demo Student';
+          studentIdNum = 'STUD-MOCK-999';
+        }
+      }
+
+      return {
+        approval_id: ap.id,
+        signatory_role: ap.signatory_role,
+        status: ap.status,
+        application_id: ap.application_id,
+        application_number: app?.application_number || 'CLR-MOCK',
+        academic_year: app?.academic_year || '2026-2027',
+        semester: app?.semester || '1st',
+        purpose: app?.purpose || 'Graduation',
+        submitted_at: app?.submitted_at || new Date().toISOString(),
+        student_id_number: studentIdNum,
+        student_name: studentName
+      };
+    }).sort((a: any, b: any) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
+
+    return { success: true, role, pendingQueue };
+  } catch (error: any) {
+    console.error('Fetch pending approvals error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Sign / Action clearance approval
+export async function signClearanceAction(data: {
+  approvalId: string;
+  status: 'approved' | 'pending' | 'not_approved';
+  remarks: string;
+}) {
+  try {
+    const claims = await getAuthenticatedUser();
+    const signatoryId = claims.uid;
+    const email = claims.email || '';
+
+    // Enforce remarks validation
+    if (data.status !== 'approved' && (!data.remarks || data.remarks.trim() === '')) {
+      throw new Error('Remarks are required when marking an approval as pending or not approved.');
+    }
+
+    if (process.env.DATABASE_URL) {
+      await query(
+        'SELECT public.update_clearance_approval($1, $2, $3, $4)',
+        [data.approvalId, signatoryId, data.status, data.remarks]
+      );
+      return { success: true };
+    }
+
+    // FALLBACK: Mock DB
+    const db = getMockDb();
+
+    // Find the approval row
+    const approvalIndex = db.clearance_approvals.findIndex((ap: any) => ap.id === data.approvalId);
+    if (approvalIndex === -1) {
+      throw new Error('Clearance approval record not found.');
+    }
+
+    const approval = db.clearance_approvals[approvalIndex];
+    approval.status = data.status;
+    approval.acted_at = new Date().toISOString();
+    approval.updated_at = new Date().toISOString();
+    approval.assigned_signatory_id = signatoryId;
+
+    // Add remark if entered
+    if (data.remarks && data.remarks.trim() !== '') {
+      db.remarks.push({
+        id: `rem-${Math.random().toString(36).substr(2, 9)}`,
+        approval_id: data.approvalId,
+        author_id: signatoryId,
+        content: data.remarks,
+        created_at: new Date().toISOString()
+      });
+    }
+
+    // Log Activity
+    db.activity_logs.push({
+      id: `log-${Math.random().toString(36).substr(2, 9)}`,
+      actor_id: signatoryId,
+      action: 'approval_action',
+      entity_type: 'clearance_approval',
+      entity_id: data.approvalId,
+      created_at: new Date().toISOString()
+    });
+
+    // Notify Student
+    const app = db.clearance_applications.find((a: any) => a.id === approval.application_id);
+    if (app) {
+      db.notifications.push({
+        id: `notif-${Math.random().toString(36).substr(2, 9)}`,
+        recipient_id: app.student_id,
+        type: 'approval_updated',
+        message: `Your approval for ${approval.signatory_role} has been marked as ${data.status} in application ${app.application_number}`,
+        related_application_id: app.id,
+        is_read: false,
+        created_at: new Date().toISOString()
+      });
+
+      // Recalculate Application overall status (Simulates Postgres Trigger)
+      const appApprovals = db.clearance_approvals.filter((ap: any) => ap.application_id === app.id);
+      const finance = db.financial_records.find((f: any) => f.application_id === app.id);
+      
+      const totalCount = appApprovals.length;
+      const approvedCount = appApprovals.filter((ap: any) => ap.status === 'approved').length;
+      const notApprovedCount = appApprovals.filter((ap: any) => ap.status === 'not_approved').length;
+      const financeStatus = finance ? finance.status : 'unpaid';
+      const financeVerified = finance ? finance.verified_at : null;
+
+      let finalStatus = 'pending';
+      if (notApprovedCount > 0) {
+        finalStatus = 'not_approved';
+      } else if (approvedCount === totalCount && totalCount > 0) {
+        if (financeStatus === 'paid') {
+          finalStatus = 'approved';
+        } else if (financeStatus === 'unpaid' && financeVerified !== null) {
+          finalStatus = 'not_approved';
+        } else {
+          finalStatus = 'pending';
+        }
+      }
+
+      app.overall_status = finalStatus;
+      app.updated_at = new Date().toISOString();
+    }
+
+    saveMockDb(db);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Sign clearance action error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
