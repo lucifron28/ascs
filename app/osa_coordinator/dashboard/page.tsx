@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import SignatoryDashboard from '@/components/signatory/SignatoryDashboard';
 import { LogOut, Shield } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -22,29 +23,22 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
       {/* Navbar */}
-      <div className="navbar bg-slate-900 border-b border-slate-800 px-6">
+      <div className="navbar bg-slate-900 border-b border-slate-800 px-6 shrink-0 z-30 sticky top-0">
         <div className="flex-1">
-          <span className="font-bold text-lg tracking-wider text-indigo-400">ASCS PKM</span>
+          <span className="font-extrabold text-lg tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center gap-1.5">
+            <Shield className="w-5 h-5 text-indigo-400 shrink-0" /> ASCS PKM
+          </span>
         </div>
         <div className="flex-none">
-          <button onClick={handleLogout} className="btn btn-sm btn-ghost hover:bg-slate-800 text-slate-300 rounded-lg flex items-center gap-1">
+          <button onClick={handleLogout} className="btn btn-sm btn-ghost hover:bg-slate-800 text-slate-300 rounded-lg flex items-center gap-1.5">
             <LogOut className="w-4 h-4" /> Logout
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="card w-full max-w-md bg-slate-900 border border-slate-800 shadow-2xl p-8 rounded-2xl text-center animate-fade-in">
-          <div className="avatar placeholder mb-4 justify-center">
-            <div className="bg-indigo-950 text-indigo-400 rounded-full w-16 h-16 flex items-center justify-center">
-              <Shield className="w-8 h-8" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold capitalize mb-2">osa coordinator Dashboard</h1>
-          <p className="text-slate-400 text-sm mb-6">Welcome to the Automated Student Clearance System. This dashboard is currently a stub for Phase 4 validation.</p>
-          <div className="badge badge-indigo border-indigo-500/30 bg-indigo-950/50 text-indigo-300 p-3 rounded-md font-medium text-xs">Role: osa_coordinator</div>
-        </div>
+      <div className="flex-1 overflow-y-auto p-6 md:p-8 max-w-5xl w-full mx-auto space-y-8 animate-fade-in">
+        <SignatoryDashboard />
       </div>
     </div>
   );
