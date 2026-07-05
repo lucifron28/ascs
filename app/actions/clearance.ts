@@ -474,3 +474,181 @@ export async function signClearanceAction(data: {
   }
 }
 
+// Fetch all financial accounts (Accountant Queue)
+export async function fetchFinancialQueueAction() {
+  try {
+    const claims = await getAuthenticatedUser();
+    const userId = claims.uid;
+    const email = claims.email || '';
+
+    // Verify role is accountant or admin
+    let role = 'student';
+    if (process.env.DATABASE_URL) {
+      const pRes = await query('SELECT role FROM public.profiles WHERE id = $1', [userId]);
+      role = pRes.rows[0]?.role || 'student';
+    } else {
+      const emailLower = email.toLowerCase();
+      if (emailLower.includes('admin')) role = 'admin';
+      else if (emailLower.includes('accountant')) role = 'accountant';
+    }
+
+    if (role !== 'accountant' && role !== 'admin') {
+      throw new Error('Unauthorized: Only accountants can access financial queues.');
+    }
+
+    if (process.env.DATABASE_URL) {
+      const res = await query(
+        `SELECT f.*, ap.application_number, ap.academic_year, ap.semester, ap.purpose, 
+                ap.overall_status, p.full_name as student_name, s.student_id_number
+         FROM public.financial_records f
+         JOIN public.clearance_applications ap ON f.application_id = ap.id
+         JOIN public.students s ON f.student_id = s.id
+         JOIN public.profiles p ON s.id = p.id
+         ORDER BY f.recorded_at DESC`
+      );
+      return { success: true, financialQueue: res.rows };
+    }
+
+    // FALLBACK: Mock DB
+    const db = getMockDb();
+    
+    const financialQueue = db.financial_records.map((f: any) => {
+      const app = db.clearance_applications.find((a: any) => a.id === f.application_id);
+      
+      let studentName = 'Test Student';
+      let studentIdNum = 'STUD-2026-0001';
+      
+      if (app) {
+        if (app.student_id === 'mock-student-uid') {
+          studentName = 'Juan Dela Cruz';
+          studentIdNum = 'STUD-2026-0001';
+        } else {
+          studentName = app.student_id.toUpperCase().split('-')[0] || 'Demo Student';
+          studentIdNum = 'STUD-MOCK-999';
+        }
+      }
+
+      return {
+        id: f.id,
+        application_id: f.application_id,
+        student_id: f.student_id,
+        status: f.status,
+        notes: f.notes,
+        verified_at: f.verified_at,
+        recorded_at: f.recorded_at,
+        application_number: app?.application_number || 'CLR-MOCK',
+        academic_year: app?.academic_year || '2026-2027',
+        semester: app?.semester || '1st',
+        purpose: app?.purpose || 'Enrollment',
+        overall_status: app?.overall_status || 'pending',
+        student_name: studentName,
+        student_id_number: studentIdNum
+      };
+    }).sort((a: any, b: any) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime());
+
+    return { success: true, financialQueue };
+  } catch (error: any) {
+    console.error('Fetch financial queue error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Update student financial balance record
+export async function updateFinancialStatusAction(data: {
+  recordId: string;
+  status: 'paid' | 'unpaid';
+  notes: string;
+}) {
+  try {
+    const claims = await getAuthenticatedUser();
+    const accountantId = claims.uid;
+
+    if (process.env.DATABASE_URL) {
+      await query(
+        `UPDATE public.financial_records 
+         SET status = $1, notes = $2, verified_at = $3, updated_by = $4, updated_at = NOW() 
+         WHERE id = $5`,
+        [
+          data.status,
+          data.notes,
+          data.status === 'paid' ? new Date() : null,
+          accountantId,
+          data.recordId
+        ]
+      );
+      // Stored triggers in PostgreSQL will automatically recalculate application overall status.
+      return { success: true };
+    }
+
+    // FALLBACK: Mock DB
+    const db = getMockDb();
+
+    // Find financial record
+    const fIndex = db.financial_records.findIndex((f: any) => f.id === data.recordId);
+    if (fIndex === -1) {
+      throw new Error('Financial record not found.');
+    }
+
+    const fRecord = db.financial_records[fIndex];
+    fRecord.status = data.status;
+    fRecord.notes = data.notes;
+    fRecord.verified_at = data.status === 'paid' ? new Date().toISOString() : null;
+    fRecord.updated_by = accountantId;
+    fRecord.updated_at = new Date().toISOString();
+
+    // Log Activity
+    db.activity_logs.push({
+      id: `log-${Math.random().toString(36).substr(2, 9)}`,
+      actor_id: accountantId,
+      action: 'update_financial',
+      entity_type: 'financial_record',
+      entity_id: data.recordId,
+      created_at: new Date().toISOString()
+    });
+
+    // Notify Student
+    const app = db.clearance_applications.find((a: any) => a.id === fRecord.application_id);
+    if (app) {
+      db.notifications.push({
+        id: `notif-${Math.random().toString(36).substr(2, 9)}`,
+        recipient_id: fRecord.student_id,
+        type: 'financial_updated',
+        message: `Your financial accountability status has been updated to ${data.status.toUpperCase()} in application ${app.application_number}`,
+        related_application_id: app.id,
+        is_read: false,
+        created_at: new Date().toISOString()
+      });
+
+      // Recalculate Application overall status (Simulates PostgreSQL trigger)
+      const appApprovals = db.clearance_approvals.filter((ap: any) => ap.application_id === app.id);
+      const totalCount = appApprovals.length;
+      const approvedCount = appApprovals.filter((ap: any) => ap.status === 'approved').length;
+      const notApprovedCount = appApprovals.filter((ap: any) => ap.status === 'not_approved').length;
+
+      let finalStatus = 'pending';
+      if (notApprovedCount > 0) {
+        finalStatus = 'not_approved';
+      } else if (approvedCount === totalCount && totalCount > 0) {
+        if (data.status === 'paid') {
+          finalStatus = 'approved';
+        } else if (data.status === 'unpaid' && fRecord.verified_at !== null) {
+          finalStatus = 'not_approved';
+        } else {
+          finalStatus = 'pending';
+        }
+      }
+
+      app.overall_status = finalStatus;
+      app.updated_at = new Date().toISOString();
+    }
+
+    saveMockDb(db);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Update financial status error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+
