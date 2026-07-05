@@ -1,0 +1,138 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return getUserData().role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+
+    function isAccountant() {
+      return isAuthenticated() && getUserRole() == 'accountant';
+    }
+
+    function isDean() {
+      return isAuthenticated() && getUserRole() == 'dean';
+    }
+
+    // users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      // Client can only update display-safe fields, role changes are blocked
+      allow update: if isOwner(userId) 
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'accountStatus', 'uid', 'email']);
+      allow create, delete: if false; // Server-only creation/removal
+    }
+
+    // publicUsers collection
+    match /publicUsers/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server-only update from Server Actions
+    }
+
+    // students collection
+    match /students/{studentId} {
+      allow read: if isOwner(studentId) 
+        || isAdmin() 
+        || isAccountant() 
+        || isDean() 
+        || getUserRole() in ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'adviser'];
+      allow write: if false; // Server-only creation and update
+    }
+
+    // clearanceRequirements collection
+    match /clearanceRequirements/{requirementId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server-only management
+    }
+
+    // clearanceApplications collection
+    match /clearanceApplications/{applicationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentUid == request.auth.uid 
+        || isAdmin() 
+        || isAccountant()
+        || (isDean() && resource.data.adviserApproved == true)
+        || getUserRole() in ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'adviser']
+      );
+      allow write: if false; // Server-only writes via Server Actions
+      
+      // approvals subcollection
+      match /approvals/{approvalId} {
+        allow read: if isAuthenticated() && (
+          get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.studentUid == request.auth.uid
+          || isAdmin()
+          || isAccountant()
+          || getUserRole() in ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'adviser']
+        );
+        allow write: if false; // Server-only writes
+      }
+
+      // remarks subcollection
+      match /remarks/{remarkId} {
+        allow read: if isAuthenticated() && (
+          get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.studentUid == request.auth.uid
+          || isAdmin()
+          || getUserRole() in ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'adviser']
+        );
+        allow write: if false; // Server-only writes
+      }
+    }
+
+    // transactionCategories collection
+    match /transactionCategories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server-only writes
+    }
+
+    // financialTransactions collection
+    match /financialTransactions/{transactionId} {
+      allow read: if isAdmin() 
+        || isAccountant() 
+        || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
+      allow write: if false; // Server-only writes
+    }
+
+    // financialTemplates collection
+    match /financialTemplates/{templateId} {
+      allow read: if isAdmin() || isAccountant();
+      allow write: if false; // Server-only writes
+      
+      // rows subcollection
+      match /rows/{rowId} {
+        allow read, write: if false; // Server-only
+      }
+    }
+
+    // notifications collection
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid 
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow create, delete: if false; // Server-only creation/deletion
+    }
+
+    // activityLogs collection
+    match /activityLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Server-only
+    }
+  }
+}
