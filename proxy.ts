@@ -1,4 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { jwtVerify, createRemoteJWKSet } from 'jose';
+
+// Firebase session cookie public keys
+const JWKS = createRemoteJWKSet(
+  new URL('https://www.googleapis.com/identitytoolkit/v3/relyingparty/publicKeys')
+);
 
 function decodeJwt(token: string) {
   try {
@@ -27,9 +33,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Decode JWT payload to extract user metadata/role (bypassing signature check on Edge runtime)
+  // Decode JWT payload to extract user metadata/role
   const decoded = decodeJwt(session);
   const role = decoded?.role || 'student';
+
+  // Cryptographically verify session cookie signature in production
+  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR !== 'true') {
+    try {
+      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'ascs11';
+      await jwtVerify(session, JWKS, {
+        issuer: `https://session.firebase.google.com/${projectId}`,
+        audience: projectId,
+      });
+    } catch (verifyError: any) {
+      console.error('Middleware JWT signature verification failed:', verifyError.message);
+      if (!isPublicRoute) {
+        url.pathname = '/login';
+        const redirectRes = NextResponse.redirect(url);
+        redirectRes.cookies.delete('session');
+        return redirectRes;
+      }
+    }
+  }
 
   // Redirect logged-in users away from login page
   if (isAuthRoute) {

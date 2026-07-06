@@ -188,7 +188,12 @@ export async function fetchStudentDashboardAction() {
       const req = reqsMap.get(data.requirementId);
       return {
         id: doc.id,
-        ...data,
+        requirementId: data.requirementId,
+        signatory_role: data.signatoryRole,
+        status: data.status,
+        assignee_name: data.assignedSignatoryName || null,
+        acted_at: data.actedAt || null,
+        remarks_latest: data.remarksLatest || null,
         label: req?.label || data.signatoryRole,
         displayOrder: req?.displayOrder || 99
       };
@@ -678,20 +683,24 @@ export async function importFinancialLedgerAction(data: {
     const templateRef = firestore.collection('financialTemplates').doc();
     const templateId = templateRef.id;
 
-    await firestore.runTransaction(async (transaction) => {
-      // Create template parent doc
-      transaction.set(templateRef, {
-        templateName: data.templateName,
-        templateType: data.templateType,
-        academicYear: data.academicYear,
-        semester: data.semester,
-        createdBy: accountantId,
-        createdAt: new Date().toISOString(),
-        status: 'committed'
-      });
+    // Create template parent document
+    await templateRef.set({
+      templateName: data.templateName,
+      templateType: data.templateType,
+      academicYear: data.academicYear,
+      semester: data.semester,
+      createdBy: accountantId,
+      createdAt: new Date().toISOString(),
+      status: 'committed'
+    });
 
-      // Process rows
-      for (const row of data.rows) {
+    // Process rows in batches of 100 to fit under Firestore transaction limits
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < data.rows.length; i += CHUNK_SIZE) {
+      const chunk = data.rows.slice(i, i + CHUNK_SIZE);
+      const batch = firestore.batch();
+
+      for (const row of chunk) {
         const rowRef = templateRef.collection('rows').doc();
         
         // Find matching student
@@ -717,7 +726,7 @@ export async function importFinancialLedgerAction(data: {
         }
 
         // Save row staging record
-        transaction.set(rowRef, {
+        batch.set(rowRef, {
           rowNumber: row.rowNumber,
           rawData: row,
           matchedStudentId,
@@ -730,7 +739,7 @@ export async function importFinancialLedgerAction(data: {
         // If row is valid, write financialTransaction
         if (validationStatus === 'valid' && matchedStudentUid) {
           const txRef = firestore.collection('financialTransactions').doc();
-          transaction.set(txRef, {
+          batch.set(txRef, {
             transactionDate: new Date().toISOString(),
             direction: data.templateType === 'expense' ? 'expense' : 'income',
             categoryId: 'imported_ledger',
@@ -760,12 +769,11 @@ export async function importFinancialLedgerAction(data: {
           const cleanSemester = data.semester.replace(/\s+/g, '-');
           const appId = `${matchedStudentUid}_${cleanAcademicYear}_${cleanSemester}`;
           const appRef = firestore.collection('clearanceApplications').doc(appId);
-          const appSnap = (await transaction.get(appRef)) as any;
+          const appSnap = await appRef.get();
 
           if (appSnap.exists) {
-            // Update financialStatus on the application document
             const isCharge = row.amount > 0 && data.templateType === 'collection';
-            transaction.update(appRef, {
+            batch.update(appRef, {
               financialStatus: isCharge ? 'unpaid' : 'paid',
               financialNotes: isCharge ? `Outstanding: ${row.categoryName} - PHP ${row.amount}` : 'Cleared from ledger import',
               financialVerifiedAt: new Date().toISOString(),
@@ -774,7 +782,10 @@ export async function importFinancialLedgerAction(data: {
           }
         }
       }
-    });
+
+      // Commit this batch of 100 rows
+      await batch.commit();
+    }
 
     return { success: true, templateId };
   } catch (error: any) {
