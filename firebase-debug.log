@@ -1,0 +1,30 @@
+[debug] [2026-07-06T05:01:33.769Z] ----------------------------------------------------------------------
+[debug] [2026-07-06T05:01:33.771Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Ron\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start
+[debug] [2026-07-06T05:01:33.771Z] CLI Version:   15.15.0
+[debug] [2026-07-06T05:01:33.771Z] Platform:      win32
+[debug] [2026-07-06T05:01:33.771Z] Node Version:  v24.15.0
+[debug] [2026-07-06T05:01:33.771Z] Time:          Mon Jul 06 2026 13:01:33 GMT+0800 (Philippine Standard Time)
+[debug] [2026-07-06T05:01:33.771Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-06T05:01:33.773Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-07-06T05:01:35.050Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-06T05:01:35.050Z] > authorizing via signed-in user (cronvincent@gmail.com)
+[debug] [2026-07-06T05:01:35.244Z] openjdk version "21.0.11" 2026-04-21 LTS
+
+[debug] [2026-07-06T05:01:35.244Z] OpenJDK Runtime Environment Temurin-21.0.11+10 (build 21.0.11+10-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.11+10 (build 21.0.11+10-LTS, mixed mode, sharing)
+
+[debug] [2026-07-06T05:01:35.261Z] Parsed Java major version: 21
+[info] i  emulators: Starting emulators: auth, firestore {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth, firestore"}}
+[debug] [2026-07-06T05:01:35.272Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-06T05:01:35.272Z] [auth] Authentication Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-06T05:01:35.272Z] [firestore] Firestore Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-06T05:01:35.272Z] [firestore.websocket] websocket server for firestore only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-06T05:01:35.272Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-07-06T05:01:35.275Z] Write emulator hub locator at C:\Users\Ron\AppData\Local\Temp\hub-ascs11.json
+[info] i  firestore: downloading cloud-firestore-emulator-v1.20.4.jar... {"metadata":{"emulator":{"name":"firestore"},"message":"downloading cloud-firestore-emulator-v1.20.4.jar..."}}
+[debug] [2026-07-06T05:01:35.287Z] >>> [apiv2][query] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.20.4.jar 
+[debug] [2026-07-06T05:01:35.581Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-07-06T05:01:35.581Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-07-06T05:01:35.710Z] <<< [apiv2][status] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.20.4.jar 200
+[debug] [2026-07-06T05:01:35.711Z] <<< [apiv2][body] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.20.4.jar [stream]

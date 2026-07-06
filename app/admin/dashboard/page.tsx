@@ -20,7 +20,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
+    <div data-theme="abyss" className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
       {/* Navbar */}
       <div className="navbar bg-slate-900 border-b border-slate-800 px-6">
         <div className="flex-1">

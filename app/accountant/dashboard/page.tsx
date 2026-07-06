@@ -21,7 +21,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
+    <div data-theme="business" className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
       {/* Navbar */}
       <div className="navbar bg-slate-900 border-b border-slate-800 px-6 shrink-0 z-30 sticky top-0">
         <div className="flex-1">

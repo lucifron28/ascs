@@ -64,7 +64,7 @@ export default function StudentDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
+    <div data-theme="night" className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
       {/* Top Navigation Navbar */}
       <div className="navbar bg-slate-900/80 backdrop-blur border-b border-slate-800/60 px-6 shrink-0 z-30 sticky top-0">
         <div className="flex-1">
