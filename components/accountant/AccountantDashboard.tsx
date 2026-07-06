@@ -8,7 +8,7 @@ interface FinancialRecord {
   id: string;
   application_id: string;
   student_id: string;
-  status: 'paid' | 'unpaid';
+  status: 'pending' | 'paid' | 'unpaid';
   notes: string | null;
   verified_at: string | null;
   recorded_at: string;
@@ -60,7 +60,7 @@ export default function AccountantDashboard() {
 
   const handleOpenUpdate = (rec: FinancialRecord) => {
     setSelectedRecord(rec);
-    setStatusInput(rec.status);
+    setStatusInput(rec.status === 'pending' ? 'unpaid' : rec.status);
     setNotesInput(rec.notes || '');
     setModalError(null);
     setModalSuccess(false);
@@ -110,6 +110,7 @@ export default function AccountantDashboard() {
     return matchesSearch && matchesStatus;
   });
 
+  const pendingCount = records.filter((r) => r.status === 'pending').length;
   const unpaidCount = records.filter((r) => r.status === 'unpaid').length;
   const paidCount = records.filter((r) => r.status === 'paid').length;
 
@@ -125,7 +126,7 @@ export default function AccountantDashboard() {
   return (
     <div className="space-y-6">
       {/* 1. Header & Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
         <div className="card bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-row items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-indigo-950 border border-indigo-800/40 flex items-center justify-center text-indigo-400">
             <CreditCard className="w-6 h-6" />
@@ -133,6 +134,16 @@ export default function AccountantDashboard() {
           <div>
             <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider">Total Accounts</span>
             <h3 className="text-2xl font-black text-white">{records.length}</h3>
+          </div>
+        </div>
+
+        <div className="card bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-row items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-950 border border-amber-800/40 flex items-center justify-center text-amber-400">
+            <CircleEllipsis className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider">Pending Audit</span>
+            <h3 className="text-2xl font-black text-white">{pendingCount}</h3>
           </div>
         </div>
 
@@ -195,6 +206,16 @@ export default function AccountantDashboard() {
             All
           </button>
           <button
+            onClick={() => setStatusFilter('pending')}
+            className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
+              statusFilter === 'pending'
+                ? 'bg-indigo-600 text-white hover:bg-indigo-500'
+                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+            }`}
+          >
+            Pending
+          </button>
+          <button
             onClick={() => setStatusFilter('unpaid')}
             className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
               statusFilter === 'unpaid'
@@ -251,9 +272,13 @@ export default function AccountantDashboard() {
                         <span className="badge badge-sm border border-emerald-800/60 bg-emerald-950/40 text-emerald-400 rounded-md font-medium px-2 py-0.5">
                           Paid / Settled
                         </span>
-                      ) : (
+                      ) : rec.status === 'unpaid' ? (
                         <span className="badge badge-sm border border-rose-800/60 bg-rose-950/40 text-rose-400 rounded-md font-medium px-2 py-0.5">
                           Unpaid Dues
+                        </span>
+                      ) : (
+                        <span className="badge badge-sm border border-amber-800/60 bg-amber-950/40 text-amber-400 rounded-md font-medium px-2 py-0.5">
+                          Pending Audit
                         </span>
                       )}
                     </td>

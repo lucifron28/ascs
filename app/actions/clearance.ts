@@ -596,6 +596,193 @@ export async function updateFinancialStatusAction(data: {
   }
 }
 
+// 7. Fetch Dean Clearance Applications Queue (restricted to adviserApproved === true)
+export async function fetchDeanApplicationsAction() {
+  try {
+    const claims = await getAuthenticatedUser();
+    const deanId = claims.uid;
+
+    const firestore = getAdminFirestore();
+
+    // Verify role
+    const userDoc = await firestore.collection('users').doc(deanId).get();
+    if (!userDoc.exists) throw new Error('User profile not found.');
+    const user = userDoc.data()!;
+
+    if (user.role !== 'dean' && user.role !== 'admin') {
+      throw new Error('Unauthorized: Only the Dean can access the academic clearance queue.');
+    }
+
+    // Query applications where adviserApproved === true
+    const appsQuery = await firestore.collection('clearanceApplications')
+      .where('adviserApproved', '==', true)
+      .orderBy('submittedAt', 'desc')
+      .get();
+
+    const deanQueue = appsQuery.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        applicationNumber: data.applicationNumber,
+        studentNumber: data.studentNumber,
+        studentName: data.studentName,
+        program: data.program,
+        yearLevel: data.yearLevel,
+        section: data.section,
+        academicYear: data.academicYear,
+        semester: data.semester,
+        purpose: data.purpose,
+        overallStatus: data.overallStatus,
+        financialStatus: data.financialStatus,
+        submittedAt: data.submittedAt,
+        updatedAt: data.updatedAt
+      };
+    });
+
+    return { success: true, deanQueue };
+  } catch (error: any) {
+    console.error('Fetch Dean queue error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// 8. Import Financial Ledger (Accountant)
+export async function importFinancialLedgerAction(data: {
+  templateName: string;
+  templateType: 'collection' | 'expense' | 'mixed';
+  academicYear: string;
+  semester: string;
+  rows: Array<{
+    rowNumber: number;
+    studentNumber: string;
+    categoryName: string;
+    amount: number;
+    notes: string;
+  }>;
+}) {
+  try {
+    const claims = await getAuthenticatedUser();
+    const accountantId = claims.uid;
+
+    const firestore = getAdminFirestore();
+
+    // Verify accountant / admin
+    const userDoc = await firestore.collection('users').doc(accountantId).get();
+    if (!userDoc.exists) throw new Error('User profile not found.');
+    const user = userDoc.data()!;
+
+    if (user.role !== 'accountant' && user.role !== 'admin') {
+      throw new Error('Unauthorized: Only accountants can import financial ledgers.');
+    }
+
+    const templateRef = firestore.collection('financialTemplates').doc();
+    const templateId = templateRef.id;
+
+    await firestore.runTransaction(async (transaction) => {
+      // Create template parent doc
+      transaction.set(templateRef, {
+        templateName: data.templateName,
+        templateType: data.templateType,
+        academicYear: data.academicYear,
+        semester: data.semester,
+        createdBy: accountantId,
+        createdAt: new Date().toISOString(),
+        status: 'committed'
+      });
+
+      // Process rows
+      for (const row of data.rows) {
+        const rowRef = templateRef.collection('rows').doc();
+        
+        // Find matching student
+        const studentQuery = await firestore.collection('students')
+          .where('studentNumber', '==', row.studentNumber)
+          .limit(1)
+          .get();
+
+        let matchedStudentId = null;
+        let matchedStudentUid = null;
+        let matchedStudentName = null;
+        let validationStatus: 'valid' | 'invalid' = 'valid';
+        const validationErrors: string[] = [];
+
+        if (studentQuery.empty) {
+          validationStatus = 'invalid';
+          validationErrors.push(`Student with number ${row.studentNumber} not found.`);
+        } else {
+          const studentDoc = studentQuery.docs[0];
+          matchedStudentId = studentDoc.id;
+          matchedStudentUid = studentDoc.data().uid;
+          matchedStudentName = studentDoc.data().fullName;
+        }
+
+        // Save row staging record
+        transaction.set(rowRef, {
+          rowNumber: row.rowNumber,
+          rawData: row,
+          matchedStudentId,
+          matchedStudentUid,
+          validationStatus,
+          validationErrors,
+          createdAt: new Date().toISOString()
+        });
+
+        // If row is valid, write financialTransaction
+        if (validationStatus === 'valid' && matchedStudentUid) {
+          const txRef = firestore.collection('financialTransactions').doc();
+          transaction.set(txRef, {
+            transactionDate: new Date().toISOString(),
+            direction: data.templateType === 'expense' ? 'expense' : 'income',
+            categoryId: 'imported_ledger',
+            categoryName: row.categoryName,
+            isClearanceRelevant: true,
+            studentId: matchedStudentId,
+            studentUid: matchedStudentUid,
+            studentNumber: row.studentNumber,
+            studentName: matchedStudentName,
+            payerName: matchedStudentName,
+            payeeName: null,
+            amount: row.amount,
+            documentNumber: null,
+            referenceNumber: `LEDGER-${templateId}-${row.rowNumber}`,
+            particulars: row.notes || 'Imported from ledger spreadsheet',
+            academicYear: data.academicYear,
+            semester: data.semester,
+            encodedBy: accountantId,
+            encodedByName: user.fullName,
+            sourceTemplateId: templateId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+
+          // Check if student has active clearance application for this term to update status
+          const cleanAcademicYear = data.academicYear.replace(/\s+/g, '-');
+          const cleanSemester = data.semester.replace(/\s+/g, '-');
+          const appId = `${matchedStudentUid}_${cleanAcademicYear}_${cleanSemester}`;
+          const appRef = firestore.collection('clearanceApplications').doc(appId);
+          const appSnap = (await transaction.get(appRef)) as any;
+
+          if (appSnap.exists) {
+            // Update financialStatus on the application document
+            const isCharge = row.amount > 0 && data.templateType === 'collection';
+            transaction.update(appRef, {
+              financialStatus: isCharge ? 'unpaid' : 'paid',
+              financialNotes: isCharge ? `Outstanding: ${row.categoryName} - PHP ${row.amount}` : 'Cleared from ledger import',
+              financialVerifiedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
+      }
+    });
+
+    return { success: true, templateId };
+  } catch (error: any) {
+    console.error('Import ledger error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 function formatRoleName(role: string) {
   return role.replace('_', ' ').toUpperCase();
 }
