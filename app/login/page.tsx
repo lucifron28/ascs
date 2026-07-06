@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from '@tanstack/react-form';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { firebaseAuth as auth } from '@/lib/firebase/client';
 import { LogIn, Mail, Lock, ShieldAlert, Check } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
 
