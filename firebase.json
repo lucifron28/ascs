@@ -1,15 +1,17 @@
 {
-  "auth": {
-    "providers": {
-      "emailPassword": true
-    }
+  "firestore": {
+    "rules": "firestore.rules"
   },
   "emulators": {
-    "dataconnect": {
-      "dataDir": "dataconnect/.dataconnect/pgliteData"
-    }
-  },
-  "dataconnect": {
-    "source": "dataconnect"
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
   }
 }
