@@ -43,7 +43,7 @@ export async function submitApplicationAction(data: {
     const appId = `${studentUid}_${cleanAcademicYear}_${cleanSemester}`;
 
     // Execute submission in a Firestore Transaction
-    await firestore.runTransaction(async (transaction) => {
+    await firestore.runTransaction(async (transaction: any) => {
       const appRef = firestore.collection('clearanceApplications').doc(appId);
       const appSnap = (await transaction.get(appRef)) as any;
 
@@ -333,7 +333,7 @@ export async function signClearanceAction(data: {
     }
 
     // Run update in transaction
-    await firestore.runTransaction(async (transaction) => {
+    await firestore.runTransaction(async (transaction: any) => {
       const appRef = parentAppDoc.ref;
       const appSnap = (await transaction.get(appRef)) as any;
       const approvalSnap = (await transaction.get(approvalRef)) as any;
@@ -522,7 +522,7 @@ export async function updateFinancialStatusAction(data: {
 
     const appRef = firestore.collection('clearanceApplications').doc(data.recordId);
 
-    await firestore.runTransaction(async (transaction) => {
+    await firestore.runTransaction(async (transaction: any) => {
       const appSnap = (await transaction.get(appRef)) as any;
       if (!appSnap.exists) {
         throw new Error('Clearance application not found.');
