@@ -6,6 +6,7 @@ import { useForm } from '@tanstack/react-form';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { LogIn, Mail, Lock, ShieldAlert, Check } from 'lucide-react';
+import ThemeSelector from '@/components/ui/ThemeSelector';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -87,27 +88,32 @@ export default function LoginPage() {
   };
 
   return (
-    <div data-theme="sunset" className="relative min-h-screen flex items-center justify-center bg-slate-950 overflow-hidden font-sans">
+    <div className="relative min-h-screen flex items-center justify-center bg-base-300 text-base-content overflow-hidden font-sans transition-colors duration-200">
+      {/* Theme Selector Floating Menu */}
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeSelector />
+      </div>
+
       {/* Background Radial Glow */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Main Container */}
       <div className="relative w-full max-w-md p-4 z-10">
         {/* Title / Logo Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
             ASCS PKM
           </h1>
-          <p className="text-slate-400 text-sm mt-2">
+          <p className="text-base-content/70 text-sm mt-2 font-medium">
             Automated Student Clearance & Financial Monitoring
           </p>
         </div>
 
         {/* Login Glassmorphism Card */}
-        <div className="card w-full bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 shadow-2xl p-8 rounded-2xl">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <LogIn className="w-5 h-5 text-indigo-400" /> Sign In
+        <div className="card w-full bg-base-200/60 backdrop-blur-xl border border-base-content/10 shadow-2xl p-8 rounded-2xl">
+          <h2 className="text-xl font-bold text-base-content mb-6 flex items-center gap-2">
+            <LogIn className="w-5 h-5 text-primary" /> Sign In
           </h2>
 
           {/* Success Notification Alert */}

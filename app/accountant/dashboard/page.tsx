@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import AccountantDashboard from '@/components/accountant/AccountantDashboard';
 import { LogOut, Shield } from 'lucide-react';
+import ThemeSelector from '@/components/ui/ThemeSelector';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -21,16 +22,17 @@ export default function DashboardPage() {
   };
 
   return (
-    <div data-theme="business" className="min-h-screen bg-slate-950 text-white font-sans flex flex-col">
+    <div className="min-h-screen bg-base-300 text-base-content font-sans flex flex-col transition-colors duration-200">
       {/* Navbar */}
-      <div className="navbar bg-slate-900 border-b border-slate-800 px-6 shrink-0 z-30 sticky top-0">
+      <div className="navbar bg-base-100 border-b border-base-content/10 px-6 shrink-0 z-30 sticky top-0">
         <div className="flex-1">
-          <span className="font-extrabold text-lg tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center gap-1.5">
-            <Shield className="w-5 h-5 text-indigo-400 shrink-0" /> ASCS PKM
+          <span className="font-extrabold text-lg tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary flex items-center gap-1.5">
+            <Shield className="w-5 h-5 text-primary shrink-0" /> ASCS PKM
           </span>
         </div>
-        <div className="flex-none">
-          <button onClick={handleLogout} className="btn btn-sm btn-ghost hover:bg-slate-800 text-slate-300 rounded-lg flex items-center gap-1.5">
+        <div className="flex-none flex items-center gap-3">
+          <ThemeSelector />
+          <button onClick={handleLogout} className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg flex items-center gap-1.5">
             <LogOut className="w-4 h-4" /> Logout
           </button>
         </div>
@@ -39,10 +41,10 @@ export default function DashboardPage() {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-6 md:p-8 max-w-5xl w-full mx-auto space-y-8 animate-fade-in">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-base-content">
             Financial Accountability Management
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-base-content/70 text-sm mt-1">
             Monitor student balances, log outstanding dues, and verify clear records.
           </p>
         </div>

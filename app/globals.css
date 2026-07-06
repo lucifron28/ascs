@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: light --default, dark --prefersdark, night, sunset, business, dim, abyss, forest;
+  themes: light --default, dark --prefersdark, night, sunset, business, dim, abyss, forest, corporate;
 }
 
 :root {
