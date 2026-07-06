@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth } from '@/lib/firebase/admin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,39 +21,15 @@ export async function GET(request: NextRequest) {
     const uid = decodedClaims.uid;
     const email = decodedClaims.email || '';
 
-    // Attempt to query profile from Data Connect database
+    // Attempt to query profile from Firestore database
     try {
-      const dbUrl = process.env.FIREBASE_DATA_CONNECT_URL || 'http://127.0.0.1:4000/graphql';
-      const dbResponse = await fetch(dbUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: `
-            query GetProfile($id: String!) {
-              profile(id: $id) {
-                id
-                email
-                username
-                fullName
-                role
-                accountStatus
-              }
-            }
-          `,
-          variables: { id: uid },
-        }),
-      });
-
-      if (dbResponse.ok) {
-        const { data, errors } = await dbResponse.json();
-        if (data?.profile && !errors) {
-          return NextResponse.json({ profile: data.profile });
-        }
+      const firestore = getAdminFirestore();
+      const userDoc = await firestore.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        return NextResponse.json({ profile: userDoc.data() });
       }
     } catch (dbError) {
-      console.warn('Database connection failed, falling back to email-based role deduction:', dbError);
+      console.warn('Firestore database query failed, falling back to email-based role deduction:', dbError);
     }
 
     // Fallback: Deduce user role from email prefix for easy emulator/demo testing
@@ -79,7 +55,7 @@ export async function GET(request: NextRequest) {
     }
 
     const mockProfile = {
-      id: uid,
+      uid: uid,
       email: email,
       username: email.split('@')[0] || 'user',
       fullName: email.split('@')[0]?.toUpperCase() || 'Demo User',

@@ -91,6 +91,9 @@ export async function seedDatabaseAction() {
         }
       }
 
+      // Set custom user claims for role-based middleware routing
+      await auth.setCustomUserClaims(user.uid, { role: user.role });
+
       // Create users/{userId} document
       await usersCol.doc(user.uid).set({
         uid: user.uid,

@@ -4,7 +4,10 @@ import fs from 'fs';
 import path from 'path';
 import { cookies } from 'next/headers';
 import { getAdminAuth } from '@/lib/firebase/admin';
-import { query } from '@/lib/db';
+// Mock stub for query to allow compile during Firestore transition phases
+const query = async (...args: any[]): Promise<{ rows: any[] }> => {
+  return { rows: [] };
+};
 
 const MOCK_DB_FILE = path.join(process.cwd(), 'dev_mock_db.json');
 
