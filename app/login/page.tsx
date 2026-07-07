@@ -151,7 +151,8 @@ export default function LoginPage() {
                   return undefined;
                 },
               }}
-              children={(field) => (
+            >
+              {(field) => (
                 <div className="form-control w-full">
                   <label className="label py-1">
                     <span className="label-text text-slate-300 font-medium text-xs">Email Address</span>
@@ -179,7 +180,7 @@ export default function LoginPage() {
                   )}
                 </div>
               )}
-            />
+            </form.Field>
 
             {/* Password Field */}
             <form.Field
@@ -191,7 +192,8 @@ export default function LoginPage() {
                   return undefined;
                 },
               }}
-              children={(field) => (
+            >
+              {(field) => (
                 <div className="form-control w-full">
                   <label className="label py-1">
                     <span className="label-text text-slate-300 font-medium text-xs">Password</span>
@@ -219,7 +221,7 @@ export default function LoginPage() {
                   )}
                 </div>
               )}
-            />
+            </form.Field>
 
             {/* Submit Button */}
             <button

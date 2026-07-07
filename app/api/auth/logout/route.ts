@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   const response = NextResponse.json({ status: 'success' });
   
   // Clear the HTTP-only session cookie

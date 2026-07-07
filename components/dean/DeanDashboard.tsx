@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchDeanApplicationsAction } from '@/app/actions/clearance';
-import { ClipboardList, ShieldAlert, CheckCircle2, User, Calendar, Search, CircleEllipsis, X, Award } from 'lucide-react';
+import { ClipboardList, ShieldAlert, CheckCircle2, Search, CircleEllipsis, X } from 'lucide-react';
 
 interface DeanApplication {
   id: string;
@@ -31,26 +31,38 @@ export default function DeanDashboard() {
   // Modal State
   const [selectedRecord, setSelectedRecord] = useState<DeanApplication | null>(null);
 
+  const isMounted = React.useRef(true);
+
   const loadRecords = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetchDeanApplicationsAction();
-      if (res.success) {
-        setRecords(res.deanQueue || []);
-      } else {
-        setError(res.error || 'Failed to retrieve academic clearance queue.');
+      if (isMounted.current) {
+        if (res.success) {
+          setRecords(res.deanQueue || []);
+        } else {
+          setError(res.error || 'Failed to retrieve academic clearance queue.');
+        }
       }
     } catch (err: any) {
       console.error('Error loading Dean records:', err);
-      setError(err.message || 'Connection error.');
+      if (isMounted.current) {
+        setError(err.message || 'Connection error.');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    isMounted.current = true;
     loadRecords();
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   // Filtered List

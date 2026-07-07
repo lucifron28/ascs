@@ -117,7 +117,7 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
                             </h4>
                             {approvalRemarks.map((remark) => (
                               <div key={remark.id} className="border-l border-indigo-500/30 pl-3 py-1 space-y-1">
-                                <p className="text-slate-300 italic">"{remark.content}"</p>
+                                <p className="text-slate-300 italic">&ldquo;{remark.content}&rdquo;</p>
                                 <div className="text-[10px] text-slate-500 flex gap-2">
                                   <span>By: {remark.author_name}</span>
                                   <span>•</span>

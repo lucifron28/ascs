@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchPendingApprovalsAction, signClearanceAction } from '@/app/actions/clearance';
-import { ClipboardList, ShieldAlert, CheckCircle2, AlertTriangle, User, Calendar, MessageSquare, X } from 'lucide-react';
+import { ClipboardList, ShieldAlert, CheckCircle2, User, Calendar, MessageSquare, X } from 'lucide-react';
 
 interface PendingApproval {
   approval_id: string;
@@ -31,27 +31,39 @@ export default function SignatoryDashboard() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalSuccess, setModalSuccess] = useState(false);
 
+  const isMounted = React.useRef(true);
+
   const loadQueue = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetchPendingApprovalsAction();
-      if (res.success) {
-        setQueue(res.pendingQueue || []);
-        setRole(res.role || '');
-      } else {
-        setError(res.error || 'Failed to load pending approvals.');
+      if (isMounted.current) {
+        if (res.success) {
+          setQueue(res.pendingQueue || []);
+          setRole(res.role || '');
+        } else {
+          setError(res.error || 'Failed to load pending approvals.');
+        }
       }
     } catch (err: any) {
       console.error('Error loading queue:', err);
-      setError(err.message || 'Connection error.');
+      if (isMounted.current) {
+        setError(err.message || 'Connection error.');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    isMounted.current = true;
     loadQueue();
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const handleOpenReview = (app: PendingApproval) => {

@@ -45,7 +45,7 @@ export default function DashboardPage() {
               <Shield className="w-8 h-8" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold capitalize mb-2">admin Dashboard</h1>
+          <h1 className="text-2xl font-bold mb-2">Admin Dashboard</h1>
           <p className="text-base-content/70 text-sm mb-6">Welcome to the Automated Student Clearance System. This dashboard is currently a stub for Phase 4 validation.</p>
           <div className="badge badge-primary border-primary/20 bg-primary/10 text-primary p-3 rounded-md font-medium text-xs">Role: admin</div>
         </div>

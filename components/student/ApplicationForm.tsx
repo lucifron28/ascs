@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { submitApplicationAction } from '@/app/actions/clearance';
-import { FileText, Send, AlertTriangle, CheckCircle } from 'lucide-react';
+import { FileText, Send, AlertTriangle } from 'lucide-react';
 
 interface ApplicationFormProps {
   onSuccess: () => void;
@@ -67,9 +67,8 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
         className="space-y-5"
       >
         {/* Academic Year */}
-        <form.Field
-          name="academicYear"
-          children={(field) => (
+        <form.Field name="academicYear">
+          {(field) => (
             <div className="form-control w-full">
               <label className="label py-1">
                 <span className="label-text text-slate-300 font-medium text-xs">Academic Year</span>
@@ -87,12 +86,11 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
               </select>
             </div>
           )}
-        />
+        </form.Field>
 
         {/* Semester */}
-        <form.Field
-          name="semester"
-          children={(field) => (
+        <form.Field name="semester">
+          {(field) => (
             <div className="form-control w-full">
               <label className="label py-1">
                 <span className="label-text text-slate-300 font-medium text-xs">Semester</span>
@@ -110,12 +108,11 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
               </select>
             </div>
           )}
-        />
+        </form.Field>
 
         {/* Purpose */}
-        <form.Field
-          name="purpose"
-          children={(field) => (
+        <form.Field name="purpose">
+          {(field) => (
             <div className="form-control w-full">
               <label className="label py-1">
                 <span className="label-text text-slate-300 font-medium text-xs">Purpose</span>
@@ -134,12 +131,11 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
               </select>
             </div>
           )}
-        />
+        </form.Field>
 
         {/* Confirmation Checkbox */}
-        <form.Field
-          name="confirmCorrectness"
-          children={(field) => (
+        <form.Field name="confirmCorrectness">
+          {(field) => (
             <div className="form-control w-full mt-4">
               <label className="label cursor-pointer justify-start gap-3 py-1">
                 <input
@@ -156,7 +152,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
               </label>
             </div>
           )}
-        />
+        </form.Field>
 
         {/* Submit Button */}
         <button
