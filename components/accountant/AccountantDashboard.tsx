@@ -36,26 +36,38 @@ export default function AccountantDashboard() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalSuccess, setModalSuccess] = useState(false);
 
+  const isMounted = React.useRef(true);
+
   const loadRecords = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetchFinancialQueueAction();
-      if (res.success) {
-        setRecords(res.financialQueue || []);
-      } else {
-        setError(res.error || 'Failed to retrieve financial accounts.');
+      if (isMounted.current) {
+        if (res.success) {
+          setRecords(res.financialQueue || []);
+        } else {
+          setError(res.error || 'Failed to retrieve financial accounts.');
+        }
       }
     } catch (err: any) {
       console.error('Error loading records:', err);
-      setError(err.message || 'Connection error.');
+      if (isMounted.current) {
+        setError(err.message || 'Connection error.');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    isMounted.current = true;
     loadRecords();
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const handleOpenUpdate = (rec: FinancialRecord) => {
@@ -78,7 +90,7 @@ export default function AccountantDashboard() {
       const res = await updateFinancialStatusAction({
         recordId: selectedRecord.id,
         status: statusInput,
-        notes: notesInput,
+        financialRemarks: notesInput,
       });
 
       if (res.success) {

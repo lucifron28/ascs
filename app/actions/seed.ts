@@ -12,18 +12,6 @@ const DEFAULT_REQUIREMENTS = [
   { id: 'adviser', role: 'adviser', label: 'Adviser Clearance', displayOrder: 6, isActive: true }
 ];
 
-// Default Transaction Categories
-const DEFAULT_CATEGORIES = [
-  // Income categories
-  { id: 'membership_dues', name: 'Membership Dues', direction: 'income', isClearanceRelevant: true, defaultAmount: 150, isActive: true },
-  { id: 'monthly_contribution', name: 'Monthly Contribution', direction: 'income', isClearanceRelevant: false, defaultAmount: 50, isActive: true },
-  { id: 'donation', name: 'Donation', direction: 'income', isClearanceRelevant: false, defaultAmount: 0, isActive: true },
-  { id: 'merchandise', name: 'T-shirt / Merchandise', direction: 'income', isClearanceRelevant: true, defaultAmount: 300, isActive: true },
-  // Expense categories
-  { id: 'supplies', name: 'Supplies', direction: 'expense', isClearanceRelevant: false, defaultAmount: 0, isActive: true },
-  { id: 'transportation', name: 'Transportation', direction: 'expense', isClearanceRelevant: false, defaultAmount: 0, isActive: true },
-  { id: 'meals', name: 'Meals', direction: 'expense', isClearanceRelevant: false, defaultAmount: 0, isActive: true }
-];
 
 // Demo Users Configuration
 const DEMO_USERS = [
@@ -60,15 +48,6 @@ export async function seedDatabaseAction() {
       });
     }
 
-    // 2. Seed Transaction Categories
-    const catCol = firestore.collection('transactionCategories');
-    for (const cat of DEFAULT_CATEGORIES) {
-      await catCol.doc(cat.id).set({
-        ...cat,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-    }
 
     // 3. Seed Demo Users & Authentication accounts
     const usersCol = firestore.collection('users');
@@ -133,7 +112,7 @@ export async function seedDatabaseAction() {
       }
     }
 
-    return { success: true, message: 'Database seeded successfully with requirements, transaction categories, and demo accounts.' };
+    return { success: true, message: 'Database seeded successfully with requirements and demo accounts.' };
   } catch (error: any) {
     console.error('Database seeding error:', error);
     return { success: false, error: error.message };

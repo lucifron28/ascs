@@ -96,30 +96,6 @@ service cloud.firestore {
       }
     }
 
-    // transactionCategories collection
-    match /transactionCategories/{categoryId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Server-only writes
-    }
-
-    // financialTransactions collection
-    match /financialTransactions/{transactionId} {
-      allow read: if isAdmin() 
-        || isAccountant() 
-        || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
-      allow write: if false; // Server-only writes
-    }
-
-    // financialTemplates collection
-    match /financialTemplates/{templateId} {
-      allow read: if isAdmin() || isAccountant();
-      allow write: if false; // Server-only writes
-      
-      // rows subcollection
-      match /rows/{rowId} {
-        allow read, write: if false; // Server-only
-      }
-    }
 
     // notifications collection
     match /notifications/{notificationId} {

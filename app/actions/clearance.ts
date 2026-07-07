@@ -14,7 +14,7 @@ async function getAuthenticatedUser() {
 
   try {
     return await getAdminAuth().verifySessionCookie(session, true);
-  } catch (error) {
+  } catch {
     throw new Error('Unauthorized: Invalid session.');
   }
 }
@@ -92,7 +92,9 @@ export async function submitApplicationAction(data: {
         overallStatus: 'pending',
         financialStatus: 'pending', // Starts as pending verified
         financialVerifiedAt: null,
-        financialNotes: null,
+        financialRemarks: null,
+        financialUpdatedBy: null,
+        financialUpdatedByName: null,
         adviserApproved: false,
         printableAvailable: false,
         pendingCount: activeReqs.length,
@@ -212,7 +214,7 @@ export async function fetchStudentDashboardAction() {
     // Format financial segment to match student dashboard props
     const financial = {
       status: application.financialStatus,
-      notes: application.financialNotes || null,
+      notes: application.financialRemarks || null,
       verified_at: application.financialVerifiedAt
     };
 
@@ -479,7 +481,7 @@ export async function fetchFinancialQueueAction() {
         application_id: doc.id,
         student_id: data.studentId,
         status: data.financialStatus,
-        notes: data.financialNotes || null,
+        notes: data.financialRemarks || null,
         verified_at: data.financialVerifiedAt,
         recorded_at: data.submittedAt,
         application_number: data.applicationNumber,
@@ -503,7 +505,7 @@ export async function fetchFinancialQueueAction() {
 export async function updateFinancialStatusAction(data: {
   recordId: string; // matches application ID
   status: 'paid' | 'unpaid';
-  notes: string;
+  financialRemarks: string;
 }) {
   try {
     const claims = await getAuthenticatedUser();
@@ -518,6 +520,11 @@ export async function updateFinancialStatusAction(data: {
 
     if (user.role !== 'accountant' && user.role !== 'admin') {
       throw new Error('Unauthorized: Only accountants can modify financial status.');
+    }
+
+    // Input validation
+    if (data.status === 'unpaid' && (!data.financialRemarks || !data.financialRemarks.trim())) {
+      throw new Error("Remarks are required when marking a student as 'unpaid'.");
     }
 
     const appRef = firestore.collection('clearanceApplications').doc(data.recordId);
@@ -535,14 +542,17 @@ export async function updateFinancialStatusAction(data: {
       const approvalsQuery = await approvalsColRef.get();
       
       let pendingCount = 0;
-      let approvedCount = 0;
       let notApprovedCount = 0;
 
       approvalsQuery.forEach(doc => {
         const status = doc.data().status;
-        if (status === 'approved') approvedCount++;
-        else if (status === 'not_approved') notApprovedCount++;
-        else pendingCount++;
+        if (status === 'approved') {
+          // Increment approved count (implied by overall count logic)
+        } else if (status === 'not_approved') {
+          notApprovedCount++;
+        } else {
+          pendingCount++;
+        }
       });
 
       // Overall status evaluation logic
@@ -563,7 +573,9 @@ export async function updateFinancialStatusAction(data: {
       transaction.update(appRef, {
         financialStatus: data.status,
         financialVerifiedAt: new Date().toISOString(),
-        financialNotes: data.notes || null,
+        financialRemarks: data.financialRemarks || null,
+        financialUpdatedBy: accountantId,
+        financialUpdatedByName: user.fullName || null,
         overallStatus: finalStatus,
         printableAvailable: finalStatus === 'approved',
         updatedAt: new Date().toISOString()
@@ -578,7 +590,7 @@ export async function updateFinancialStatusAction(data: {
         action: 'update_financial',
         entityType: 'financial_record',
         entityId: data.recordId,
-        metadata: { status: data.status, notes: data.notes },
+        metadata: { status: data.status, financialRemarks: data.financialRemarks },
         createdAt: new Date().toISOString()
       });
 
@@ -651,149 +663,7 @@ export async function fetchDeanApplicationsAction() {
   }
 }
 
-// 8. Import Financial Ledger (Accountant)
-export async function importFinancialLedgerAction(data: {
-  templateName: string;
-  templateType: 'collection' | 'expense' | 'mixed';
-  academicYear: string;
-  semester: string;
-  rows: Array<{
-    rowNumber: number;
-    studentNumber: string;
-    categoryName: string;
-    amount: number;
-    notes: string;
-  }>;
-}) {
-  try {
-    const claims = await getAuthenticatedUser();
-    const accountantId = claims.uid;
-
-    const firestore = getAdminFirestore();
-
-    // Verify accountant / admin
-    const userDoc = await firestore.collection('users').doc(accountantId).get();
-    if (!userDoc.exists) throw new Error('User profile not found.');
-    const user = userDoc.data()!;
-
-    if (user.role !== 'accountant' && user.role !== 'admin') {
-      throw new Error('Unauthorized: Only accountants can import financial ledgers.');
-    }
-
-    const templateRef = firestore.collection('financialTemplates').doc();
-    const templateId = templateRef.id;
-
-    // Create template parent document
-    await templateRef.set({
-      templateName: data.templateName,
-      templateType: data.templateType,
-      academicYear: data.academicYear,
-      semester: data.semester,
-      createdBy: accountantId,
-      createdAt: new Date().toISOString(),
-      status: 'committed'
-    });
-
-    // Process rows in batches of 100 to fit under Firestore transaction limits
-    const CHUNK_SIZE = 100;
-    for (let i = 0; i < data.rows.length; i += CHUNK_SIZE) {
-      const chunk = data.rows.slice(i, i + CHUNK_SIZE);
-      const batch = firestore.batch();
-
-      for (const row of chunk) {
-        const rowRef = templateRef.collection('rows').doc();
-        
-        // Find matching student
-        const studentQuery = await firestore.collection('students')
-          .where('studentNumber', '==', row.studentNumber)
-          .limit(1)
-          .get();
-
-        let matchedStudentId = null;
-        let matchedStudentUid = null;
-        let matchedStudentName = null;
-        let validationStatus: 'valid' | 'invalid' = 'valid';
-        const validationErrors: string[] = [];
-
-        if (studentQuery.empty) {
-          validationStatus = 'invalid';
-          validationErrors.push(`Student with number ${row.studentNumber} not found.`);
-        } else {
-          const studentDoc = studentQuery.docs[0];
-          matchedStudentId = studentDoc.id;
-          matchedStudentUid = studentDoc.data().uid;
-          matchedStudentName = studentDoc.data().fullName;
-        }
-
-        // Save row staging record
-        batch.set(rowRef, {
-          rowNumber: row.rowNumber,
-          rawData: row,
-          matchedStudentId,
-          matchedStudentUid,
-          validationStatus,
-          validationErrors,
-          createdAt: new Date().toISOString()
-        });
-
-        // If row is valid, write financialTransaction
-        if (validationStatus === 'valid' && matchedStudentUid) {
-          const txRef = firestore.collection('financialTransactions').doc();
-          batch.set(txRef, {
-            transactionDate: new Date().toISOString(),
-            direction: data.templateType === 'expense' ? 'expense' : 'income',
-            categoryId: 'imported_ledger',
-            categoryName: row.categoryName,
-            isClearanceRelevant: true,
-            studentId: matchedStudentId,
-            studentUid: matchedStudentUid,
-            studentNumber: row.studentNumber,
-            studentName: matchedStudentName,
-            payerName: matchedStudentName,
-            payeeName: null,
-            amount: row.amount,
-            documentNumber: null,
-            referenceNumber: `LEDGER-${templateId}-${row.rowNumber}`,
-            particulars: row.notes || 'Imported from ledger spreadsheet',
-            academicYear: data.academicYear,
-            semester: data.semester,
-            encodedBy: accountantId,
-            encodedByName: user.fullName,
-            sourceTemplateId: templateId,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-
-          // Check if student has active clearance application for this term to update status
-          const cleanAcademicYear = data.academicYear.replace(/\s+/g, '-');
-          const cleanSemester = data.semester.replace(/\s+/g, '-');
-          const appId = `${matchedStudentUid}_${cleanAcademicYear}_${cleanSemester}`;
-          const appRef = firestore.collection('clearanceApplications').doc(appId);
-          const appSnap = await appRef.get();
-
-          if (appSnap.exists) {
-            const isCharge = row.amount > 0 && data.templateType === 'collection';
-            batch.update(appRef, {
-              financialStatus: isCharge ? 'unpaid' : 'paid',
-              financialNotes: isCharge ? `Outstanding: ${row.categoryName} - PHP ${row.amount}` : 'Cleared from ledger import',
-              financialVerifiedAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            });
-          }
-        }
-      }
-
-      // Commit this batch of 100 rows
-      await batch.commit();
-    }
-
-    return { success: true, templateId };
-  } catch (error: any) {
-    console.error('Import ledger error:', error);
-    return { success: false, error: error.message };
-  }
-}
-
 function formatRoleName(role: string) {
   return role.replace('_', ' ').toUpperCase();
 }
+
