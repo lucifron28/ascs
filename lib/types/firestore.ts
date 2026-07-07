@@ -1,6 +1,11 @@
 import { UserRole } from './roles';
 import { ClearanceStatus, FinancialStatus, AccountStatus } from './status';
 
+export type FirestoreTimestamp = {
+  seconds: number;
+  nanoseconds: number;
+} | string | Date;
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -10,9 +15,9 @@ export interface UserProfile {
   accountStatus: AccountStatus;
   mustChangePassword: boolean;
   contactNumber: string;
-  createdAt: any; // Timestamp or string (ISO)
-  updatedAt: any; // Timestamp or string (ISO)
-  deactivatedAt: any | null; // Timestamp or string (ISO)
+  createdAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
+  deactivatedAt: FirestoreTimestamp | null;
 }
 
 export interface PublicUserProfile {
@@ -30,8 +35,8 @@ export interface StudentProfile {
   email: string;
   contactNumber: string;
   accountStatus: AccountStatus;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
 }
 
 export interface ClearanceRequirement {
@@ -41,8 +46,8 @@ export interface ClearanceRequirement {
   isActive: boolean;
   assignedSignatoryId: string | null;
   assignedSignatoryName: string | null;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
 }
 
 export interface ClearanceApplication {
@@ -61,7 +66,7 @@ export interface ClearanceApplication {
   
   // Financial Accountability (Clearance-Level Only)
   financialStatus: FinancialStatus;
-  financialVerifiedAt: any | null;
+  financialVerifiedAt: FirestoreTimestamp | null;
   financialRemarks: string | null;
   financialUpdatedBy: string | null;
   financialUpdatedByName: string | null;
@@ -72,8 +77,8 @@ export interface ClearanceApplication {
   pendingCount: number;
   approvedCount: number;
   notApprovedCount: number;
-  submittedAt: any;
-  updatedAt: any;
+  submittedAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
 }
 
 export interface ClearanceApproval {
@@ -83,8 +88,8 @@ export interface ClearanceApproval {
   assignedSignatoryName: string | null;
   status: ClearanceStatus;
   remarksLatest: string | null;
-  actedAt: any | null;
-  updatedAt: any;
+  actedAt: FirestoreTimestamp | null;
+  updatedAt: FirestoreTimestamp;
 }
 
 export interface ClearanceRemark {
@@ -93,7 +98,7 @@ export interface ClearanceRemark {
   authorName: string;
   authorRole: string;
   content: string;
-  createdAt: any;
+  createdAt: FirestoreTimestamp;
 }
 
 export interface Notification {
@@ -102,7 +107,7 @@ export interface Notification {
   message: string;
   relatedApplicationId: string;
   isRead: boolean;
-  createdAt: any;
+  createdAt: FirestoreTimestamp;
 }
 
 export interface ActivityLog {
@@ -113,5 +118,6 @@ export interface ActivityLog {
   entityType: string;
   entityId: string;
   metadata: Record<string, any>;
-  createdAt: any;
+  createdAt: FirestoreTimestamp;
 }
+
