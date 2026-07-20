@@ -52,7 +52,11 @@ export default function StudentDashboardPage() {
   };
 
   const handlePrint = () => {
-    setShowPrintModal(true);
+    if (dashboardData?.application?.id) {
+      router.push(`/student/clearance/${dashboardData.application.id}/print`);
+    } else {
+      setShowPrintModal(true);
+    }
   };
 
   if (loading) {

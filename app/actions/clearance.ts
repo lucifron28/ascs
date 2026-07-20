@@ -663,7 +663,80 @@ export async function fetchDeanApplicationsAction() {
   }
 }
 
+// 8. Fetch Clearance Certificate Details for Printing
+export async function fetchClearanceCertificateAction(applicationId: string) {
+  try {
+    const claims = await getAuthenticatedUser();
+    const userId = claims.uid;
+
+    const firestore = getAdminFirestore();
+
+    // Fetch User Doc
+    const userDoc = await firestore.collection('users').doc(userId).get();
+    if (!userDoc.exists) throw new Error('User profile not found.');
+    const user = userDoc.data()!;
+
+    // Fetch Clearance Application
+    const appRef = firestore.collection('clearanceApplications').doc(applicationId);
+    const appSnap = await appRef.get();
+
+    if (!appSnap.exists) {
+      throw new Error('Clearance application not found.');
+    }
+
+    const application = { id: appSnap.id, ...appSnap.data() } as any;
+
+    // Check Access Permission (Student owner, Dean, Accountant, or Admin)
+    const isOwner = application.studentUid === userId;
+    const isStaff = ['admin', 'dean', 'accountant'].includes(user.role);
+
+    if (!isOwner && !isStaff) {
+      throw new Error('Unauthorized: You do not have permission to view or print this certificate.');
+    }
+
+    // Verify printable availability
+    if (application.overallStatus !== 'approved' && !application.printableAvailable) {
+      throw new Error('Certificate Unavailable: Clearance application has not been fully approved yet.');
+    }
+
+    // Fetch Approvals
+    const approvalsQuery = await appRef.collection('approvals').get();
+    const reqsQuery = await firestore.collection('clearanceRequirements').get();
+    const reqsMap = new Map();
+    reqsQuery.forEach((doc) => reqsMap.set(doc.id, doc.data()));
+
+    const approvals = approvalsQuery.docs
+      .map((doc) => {
+        const data = doc.data();
+        const req = reqsMap.get(data.requirementId);
+        return {
+          id: doc.id,
+          signatoryRole: data.signatoryRole,
+          label: req?.label || data.signatoryRole,
+          status: data.status,
+          assignedSignatoryName: data.assignedSignatoryName || 'Department Desk',
+          actedAt: data.actedAt || null,
+          displayOrder: req?.displayOrder || 99,
+        };
+      })
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+
+    return {
+      success: true,
+      certificateData: {
+        application,
+        approvals,
+        issuedAt: application.updatedAt || new Date().toISOString(),
+      },
+    };
+  } catch (error: any) {
+    console.error('Fetch certificate error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 function formatRoleName(role: string) {
   return role.replace('_', ' ').toUpperCase();
 }
+
 
