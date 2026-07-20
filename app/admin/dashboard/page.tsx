@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, Shield } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
+import AdminDashboard from '@/components/admin/AdminDashboard';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -38,18 +39,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="card w-full max-w-md bg-base-100 border border-base-content/10 shadow-2xl p-8 rounded-2xl text-center animate-fade-in">
-          <div className="avatar placeholder mb-4 justify-center">
-            <div className="bg-primary/10 text-primary rounded-full w-16 h-16 flex items-center justify-center">
-              <Shield className="w-8 h-8" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-base-content/70 text-sm mb-6">Welcome to the Automated Student Clearance System. This dashboard is currently a stub for Phase 4 validation.</p>
-          <div className="badge badge-primary border-primary/20 bg-primary/10 text-primary p-3 rounded-md font-medium text-xs">Role: admin</div>
-        </div>
-      </div>
+      <AdminDashboard />
     </div>
   );
 }
