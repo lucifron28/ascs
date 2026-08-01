@@ -5,8 +5,33 @@ import { useRouter } from 'next/navigation';
 import { useForm } from '@tanstack/react-form';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseAuth as auth } from '@/lib/firebase/client';
+import { seedDatabaseAction } from '@/app/actions/seed';
 import { LogIn, Mail, Lock, ShieldAlert, Check } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
+
+let demoSeedPromise: Promise<void> | null = null;
+
+async function ensureDemoAccounts() {
+  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR !== 'true') {
+    return;
+  }
+
+  if (!demoSeedPromise) {
+    demoSeedPromise = seedDatabaseAction()
+      .then((result) => {
+        if (!result.success) {
+          throw new Error(result.error || 'Unable to prepare demo accounts.');
+        }
+      })
+      .catch((error) => {
+        // Allow a retry after the emulator is started or recovers.
+        demoSeedPromise = null;
+        throw error;
+      });
+  }
+
+  await demoSeedPromise;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,6 +51,10 @@ export default function LoginPage() {
       setSuccess(false);
 
       try {
+        // A fresh Auth emulator has no users until the seed action runs. Bootstrap
+        // the idempotent demo data before attempting the first sign-in.
+        await ensureDemoAccounts();
+
         // 1. Authenticate with Firebase Auth Client SDK
         const userCredential = await signInWithEmailAndPassword(
           auth,
@@ -247,6 +276,7 @@ export default function LoginPage() {
           </h3>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
+              type="button"
               onClick={() => quickFill('student@pkm.edu.ph')}
               disabled={loading || success}
               className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
@@ -254,6 +284,7 @@ export default function LoginPage() {
               student@pkm.edu.ph
             </button>
             <button
+              type="button"
               onClick={() => quickFill('admin@pkm.edu.ph')}
               disabled={loading || success}
               className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
@@ -261,6 +292,7 @@ export default function LoginPage() {
               admin@pkm.edu.ph
             </button>
             <button
+              type="button"
               onClick={() => quickFill('librarian@pkm.edu.ph')}
               disabled={loading || success}
               className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
@@ -268,6 +300,7 @@ export default function LoginPage() {
               librarian@pkm.edu.ph
             </button>
             <button
+              type="button"
               onClick={() => quickFill('dean@pkm.edu.ph')}
               disabled={loading || success}
               className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
