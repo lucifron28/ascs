@@ -22,7 +22,8 @@ export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
 
   const isAuthRoute = url.pathname.startsWith('/login');
-  const isPublicRoute = url.pathname === '/' || isAuthRoute;
+  const isApiRoute = url.pathname.startsWith('/api/');
+  const isPublicRoute = url.pathname === '/' || isAuthRoute || isApiRoute;
 
   // No session cookie, redirect protected routes to login
   if (!session) {
