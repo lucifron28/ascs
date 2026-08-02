@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
+import { getSessionCookieName } from './lib/auth/session-name';
 
 // Firebase session cookie public keys
 const JWKS = createRemoteJWKSet(
@@ -18,7 +19,8 @@ function decodeJwt(token: string) {
 }
 
 export async function proxy(request: NextRequest) {
-  const session = request.cookies.get('session')?.value;
+  const sessionCookieName = getSessionCookieName();
+  const session = request.cookies.get(sessionCookieName)?.value;
   const url = request.nextUrl.clone();
 
   const isAuthRoute = url.pathname.startsWith('/login');
@@ -51,7 +53,7 @@ export async function proxy(request: NextRequest) {
       if (!isPublicRoute) {
         url.pathname = '/login';
         const redirectRes = NextResponse.redirect(url);
-        redirectRes.cookies.delete('session');
+        redirectRes.cookies.delete(sessionCookieName);
         return redirectRes;
       }
     }

@@ -33,8 +33,20 @@ async function ensureDemoAccounts() {
   await demoSeedPromise;
 }
 
+async function readJsonResponse(response: Response) {
+  const body = await response.text();
+  if (!body) return {};
+
+  try {
+    return JSON.parse(body) as Record<string, unknown>;
+  } catch {
+    throw new Error(`Authentication service returned an invalid response (HTTP ${response.status}).`);
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -75,16 +87,21 @@ export default function LoginPage() {
         });
 
         if (!sessionRes.ok) {
-          throw new Error('Failed to establish session.');
+          const sessionBody = await readJsonResponse(sessionRes);
+          throw new Error(typeof sessionBody.error === 'string' ? sessionBody.error : 'Failed to establish session.');
         }
 
         // 4. Fetch the profile details to determine the user role
         const profileRes = await fetch('/api/auth/profile');
+        const profileBody = await readJsonResponse(profileRes);
         if (!profileRes.ok) {
-          throw new Error('Failed to retrieve profile details.');
+          throw new Error(typeof profileBody.error === 'string' ? profileBody.error : 'Failed to retrieve profile details.');
         }
 
-        const { profile } = await profileRes.json();
+        const { profile } = profileBody as { profile?: { role?: string } };
+        if (!profile) {
+          throw new Error('Profile not found. Contact the system administrator.');
+        }
         const role = profile.role || 'student';
 
         setSuccess(true);
@@ -100,7 +117,9 @@ export default function LoginPage() {
         if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
           friendlyMessage = 'Invalid email or password.';
         } else if (err.code === 'auth/network-request-failed') {
-          friendlyMessage = 'Network error. Please check your connection.';
+          friendlyMessage = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true'
+            ? 'Firebase Auth emulator is unavailable. Start `firebase emulators:start` and try again.'
+            : 'Network error. Please check your connection.';
         } else if (err.message) {
           friendlyMessage = err.message;
         }
@@ -269,8 +288,8 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Demo Credentials Quick Fill Panel */}
-        <div className="card w-full mt-6 bg-slate-900/30 border border-slate-800/40 p-5 rounded-2xl">
+        {/* Demo Credentials Quick Fill Panel (explicitly opt-in) */}
+        {demoMode && <div className="card w-full mt-6 bg-slate-900/30 border border-slate-800/40 p-5 rounded-2xl">
           <h3 className="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">
             Demo Credentials (Quick-Fill)
           </h3>
@@ -308,7 +327,7 @@ export default function LoginPage() {
               dean@pkm.edu.ph
             </button>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );

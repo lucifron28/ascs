@@ -138,17 +138,17 @@ export default function StudentDashboardPage() {
             />
 
             {/* Print Action Bar */}
-            {dashboardData.application.overall_status === 'approved' && (
+            {dashboardData.application.overallStatus === 'approved' && (
               <div className="card bg-emerald-950/20 border border-emerald-800/40 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5 text-emerald-300 text-sm">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <span>Congratulations! Your clearance is fully approved. Print your document now.</span>
+                  <span>Your clearance is approved. Print the ASCS prototype record for review.</span>
                 </div>
                 <button
                   onClick={handlePrint}
                   className="btn btn-sm btn-success bg-emerald-600 hover:bg-emerald-500 text-white border-none rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-950/30"
                 >
-                  <Printer className="w-4 h-4" /> Print Clearance
+                  <Printer className="w-4 h-4" /> Print Clearance Record
                 </button>
               </div>
             )}
@@ -168,13 +168,13 @@ export default function StudentDashboardPage() {
           <div className="bg-white text-slate-950 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 rounded-t-2xl">
-              <span className="font-bold text-slate-800">Clearance Document Preview</span>
+              <span className="font-bold text-slate-800">ASCS Clearance Record Preview (Prototype)</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
                   className="btn btn-sm btn-primary bg-indigo-600 hover:bg-indigo-500 border-none text-white rounded-lg flex items-center gap-1"
                 >
-                  <Printer className="w-4 h-4" /> Print
+                  <Printer className="w-4 h-4" /> Print Record
                 </button>
                 <button
                   onClick={() => setShowPrintModal(false)}
@@ -190,33 +190,34 @@ export default function StudentDashboardPage() {
               <div className="text-center space-y-1 mb-8">
                 <h2 className="text-xl font-bold uppercase tracking-wide">Pambayang Kolehiyo ng Mauban</h2>
                 <p className="text-xs italic text-slate-600">Mauban, Quezon</p>
-                <p className="text-sm font-semibold mt-4 uppercase">Certificate of Student Clearance</p>
+                <p className="text-xs font-semibold mt-4 uppercase">Automated Student Clearance System (ASCS)</p>
+                <p className="text-sm font-semibold uppercase">Student Clearance Certificate — Prototype / MVP</p>
                 <div className="w-32 h-0.5 bg-slate-800 mx-auto mt-1" />
               </div>
 
               <div className="grid grid-cols-2 gap-y-2 gap-x-6 mb-8 text-xs">
                 <div>
-                  <span className="font-bold">Student Name:</span> Juan Dela Cruz
+                  <span className="font-bold">Student Name:</span> {dashboardData?.application?.studentName}
                 </div>
                 <div>
-                  <span className="font-bold">Student ID No:</span> STUD-2026-0001
+                  <span className="font-bold">Student ID No:</span> {dashboardData?.application?.studentNumber}
                 </div>
                 <div>
-                  <span className="font-bold">Program / Year:</span> BSIT - 4th Year
+                  <span className="font-bold">Program / Year:</span> {dashboardData?.application?.program} - {dashboardData?.application?.yearLevel}
                 </div>
                 <div>
-                  <span className="font-bold">Academic Term:</span> {dashboardData?.application?.academic_year} • {dashboardData?.application?.semester} Semester
+                  <span className="font-bold">Academic Term:</span> {dashboardData?.application?.academicYear} • {dashboardData?.application?.semester} Semester
                 </div>
                 <div>
                   <span className="font-bold">Purpose:</span> {dashboardData?.application?.purpose}
                 </div>
                 <div>
-                  <span className="font-bold">Clearance Number:</span> {dashboardData?.application?.application_number}
+                  <span className="font-bold">Clearance Number:</span> {dashboardData?.application?.applicationNumber}
                 </div>
               </div>
 
               <p className="mb-6 text-xs text-justify">
-                This is to certify that the above-named student is completely cleared of all academic, property, and financial accountabilities to Pambayang Kolehiyo ng Mauban for the specified academic term.
+                This prototype record summarizes the approval and financial status recorded in ASCS for the specified academic term. It is not an official school certificate.
               </p>
 
               {/* Signatory grid */}
@@ -231,7 +232,7 @@ export default function StudentDashboardPage() {
               </div>
 
               <div className="mt-16 text-center text-[10px] text-slate-400 italic">
-                Generated automatically by PKM Automated Clearance System on {new Date().toLocaleDateString()}.
+                ASCS prototype output generated for internal testing on {new Date().toLocaleDateString()} — not an official school certificate.
               </div>
             </div>
           </div>

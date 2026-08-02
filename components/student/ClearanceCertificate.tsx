@@ -55,7 +55,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
         <span className="loading loading-spinner loading-lg text-primary mb-4" />
-        <p className="text-sm font-medium text-base-content/70">Generating Official Clearance Certificate...</p>
+        <p className="text-sm font-medium text-base-content/70">Preparing the ASCS clearance record...</p>
       </div>
     );
   }
@@ -89,19 +89,19 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
         </button>
       </div>
 
-      {/* Official Certificate Paper Container */}
+      {/* Printable MVP certificate record */}
       <div className="bg-white text-slate-900 border-8 border-double border-indigo-900 p-8 sm:p-12 rounded-none shadow-2xl space-y-8 font-serif print:border-4 print:p-8 print:shadow-none print:m-0 print:w-full">
         {/* Header / Seal */}
         <div className="text-center space-y-2 border-b-2 border-slate-300 pb-6">
           <div className="flex items-center justify-center gap-2 text-indigo-900 font-sans">
             <Shield className="w-8 h-8 text-indigo-900 shrink-0" />
-            <span className="font-black text-xl tracking-widest uppercase">Pamantasan ng Lungsod ng Maynila</span>
+            <span className="font-black text-xl tracking-widest uppercase">Pambayang Kolehiyo ng Mauban</span>
           </div>
           <p className="text-xs tracking-wider uppercase font-sans text-slate-600 font-semibold">
-            Office of the University Registrar & Student Affairs
+            Automated Student Clearance System (ASCS)
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 pt-2 font-serif uppercase">
-            Official Student Clearance Certificate
+            Student Clearance Certificate — Prototype / MVP
           </h1>
           <p className="text-xs font-mono text-slate-500 font-semibold">
             Reference No: <span className="text-indigo-950 font-bold">{application.applicationNumber}</span>
@@ -110,7 +110,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
 
         {/* Certificate Preamble */}
         <div className="text-center text-sm sm:text-base leading-relaxed space-y-3 font-serif">
-          <p>This is to certify that the student specified below has complied with and completed all academic, departmental, library, financial, and administrative clearance requirements for the designated term.</p>
+          <p>This prototype record summarizes the approval and financial status recorded in the Automated Student Clearance System for the designated term.</p>
         </div>
 
         {/* Student Profile Grid */}
@@ -143,7 +143,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
             <thead>
               <tr className="bg-slate-100 border-b border-slate-200 text-slate-700">
                 <th className="p-2 border-r border-slate-200">Department / Office</th>
-                <th className="p-2 border-r border-slate-200">Assigned Evaluator</th>
+              <th className="p-2 border-r border-slate-200">Assigned Signatory</th>
                 <th className="p-2 border-r border-slate-200">Date Verified</th>
                 <th className="p-2 text-center">Status</th>
               </tr>
@@ -165,9 +165,9 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
               ))}
               {/* Financial Accountability Row */}
               <tr>
-                <td className="p-2 font-semibold border-r border-slate-200">Accountant Financial Audit</td>
+                <td className="p-2 font-semibold border-r border-slate-200">Accountant Financial Review</td>
                 <td className="p-2 border-r border-slate-200 text-slate-700">
-                  {application.financialUpdatedByName || 'University Accountant'}
+                  {application.financialUpdatedByName || 'Accountant'}
                 </td>
                 <td className="p-2 border-r border-slate-200 font-mono text-[11px] text-slate-600">
                   {application.financialVerifiedAt
@@ -184,11 +184,11 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
           </table>
         </div>
 
-        {/* Official Dean Sign-off & Seal */}
+        {/* Dean review and placeholder seal */}
         <div className="pt-8 grid grid-cols-2 gap-8 items-end font-sans">
           <div className="space-y-2">
             <div className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-full flex items-center justify-center text-[10px] text-slate-400 font-bold uppercase text-center p-2">
-              Official University Seal
+              Institution Seal Placeholder
             </div>
             <p className="text-[10px] text-slate-500">
               Date Issued: <span className="font-mono font-semibold text-slate-700">{new Date(issuedAt).toLocaleDateString()}</span>
@@ -197,14 +197,17 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
 
           <div className="text-center space-y-1">
             <div className="border-b border-slate-900 pb-1 font-bold text-sm uppercase text-slate-900">
-              Office of the Academic Dean
+              Academic Dean Review
             </div>
-            <p className="text-xs text-slate-600 font-serif">College Academic Dean & Registrar</p>
+            <p className="text-xs text-slate-600 font-serif">Pambayang Kolehiyo ng Mauban</p>
             <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider flex items-center justify-center gap-1">
-              <Award className="w-3 h-3" /> Final Academic Approval Validated
+              <Award className="w-3 h-3" /> All configured approvals recorded
             </p>
           </div>
         </div>
+        <p className="text-center text-[10px] font-sans font-semibold uppercase tracking-wider text-slate-500 border-t border-slate-200 pt-4">
+          Prototype / MVP output for internal testing only — not an official school certificate.
+        </p>
       </div>
     </div>
   );

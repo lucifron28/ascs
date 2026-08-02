@@ -1,22 +1,13 @@
 'use server';
 
-import { cookies } from 'next/headers';
-import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
+import { getAdminFirestore } from '@/lib/firebase/admin';
+import { verifySessionCookie } from '@/lib/auth/session';
+import { getClearanceStatusSummary } from '@/lib/clearance/status';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 // Helper: Verify session and return claims
 async function getAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('session')?.value;
-
-  if (!session) {
-    throw new Error('Unauthorized: No session cookie found.');
-  }
-
-  try {
-    return await getAdminAuth().verifySessionCookie(session, true);
-  } catch {
-    throw new Error('Unauthorized: Invalid session.');
-  }
+  return verifySessionCookie();
 }
 
 // 1. Submit Clearance Application (Student)
@@ -63,13 +54,13 @@ export async function submitApplicationAction(data: {
 
       // Fetch active requirements to initialize approvals
       const reqColRef = firestore.collection('clearanceRequirements');
-      const requirementsQuery = await reqColRef.where('isActive', '==', true).get();
+      const requirementsQuery = await transaction.get(reqColRef.where('isActive', '==', true));
       
       if (requirementsQuery.empty) {
         throw new Error('No active clearance requirements found to initiate checklist.');
       }
 
-      const activeReqs = requirementsQuery.docs.map(doc => ({
+      const activeReqs = requirementsQuery.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data()
       })) as any[];
@@ -173,10 +164,22 @@ export async function fetchStudentDashboardAction() {
     }
 
     const appDoc = appQuery.docs[0];
-    const application = { id: appDoc.id, ...appDoc.data() } as any;
+    const rawApplication = { id: appDoc.id, ...appDoc.data() } as any;
 
     // Fetch approvals subcollection
     const approvalsQuery = await appDoc.ref.collection('approvals').get();
+    const statusSummary = getClearanceStatusSummary(
+      approvalsQuery.docs.map((doc) => ({ status: doc.data().status, signatoryRole: doc.data().signatoryRole })),
+      rawApplication.financialStatus,
+    );
+    const application = {
+      ...rawApplication,
+      overallStatus: statusSummary.overallStatus,
+      printableAvailable: statusSummary.printableAvailable,
+      pendingCount: statusSummary.pendingCount,
+      approvedCount: statusSummary.approvedCount,
+      notApprovedCount: statusSummary.notApprovedCount,
+    };
     
     // Fetch requirements to resolve display order
     const reqsQuery = await firestore.collection('clearanceRequirements').get();
@@ -250,36 +253,36 @@ export async function fetchPendingApprovalsAction() {
       throw new Error('Unauthorized: Student role cannot access evaluator queues.');
     }
 
-    // Fetch all active clearance applications
-    const appsQuery = await firestore.collection('clearanceApplications').get();
+    // Query only pending approvals for this role. The parent application is
+    // read per result instead of scanning every application document.
+    const approvalsQuery = await firestore.collectionGroup('approvals')
+      .where('status', '==', 'pending')
+      .get();
     const pendingQueue: any[] = [];
 
-    // Iterate through applications and query approvals subcollections
-    for (const appDoc of appsQuery.docs) {
-      const appData = appDoc.data();
-      const approvalsQuery = await appDoc.ref.collection('approvals')
-        .where('signatoryRole', '==', role)
-        .where('status', '==', 'pending')
-        .get();
+    for (const approvalDoc of approvalsQuery.docs) {
+      const approvalData = approvalDoc.data();
+      if (approvalData.signatoryRole !== role) continue;
+      if (approvalData.assignedSignatoryId && approvalData.assignedSignatoryId !== userId) continue;
 
-      approvalsQuery.forEach(apprDoc => {
-        const apprData = apprDoc.data();
-        // Signatory can see it if it is unassigned or assigned specifically to them
-        if (!apprData.assignedSignatoryId || apprData.assignedSignatoryId === userId) {
-          pendingQueue.push({
-            approval_id: apprDoc.id,
-            signatory_role: apprData.signatoryRole,
-            status: apprData.status,
-            application_id: appDoc.id,
-            application_number: appData.applicationNumber,
-            academic_year: appData.academicYear,
-            semester: appData.semester,
-            purpose: appData.purpose,
-            submitted_at: appData.submittedAt,
-            student_id_number: appData.studentNumber,
-            student_name: appData.studentName
-          });
-        }
+      const appRef = approvalDoc.ref.parent.parent;
+      if (!appRef) continue;
+      const appSnap = await appRef.get();
+      if (!appSnap.exists) continue;
+      const appData = appSnap.data()!;
+
+      pendingQueue.push({
+        approval_id: approvalDoc.id,
+        signatory_role: approvalData.signatoryRole,
+        status: approvalData.status,
+        application_id: appSnap.id,
+        application_number: appData.applicationNumber,
+        academic_year: appData.academicYear,
+        semester: appData.semester,
+        purpose: appData.purpose,
+        submitted_at: appData.submittedAt,
+        student_id_number: appData.studentNumber,
+        student_name: appData.studentName
       });
     }
 
@@ -295,6 +298,7 @@ export async function fetchPendingApprovalsAction() {
 
 // 4. Sign/Action Clearance Approval (Signatory)
 export async function signClearanceAction(data: {
+  applicationId: string;
   approvalId: string;
   status: 'approved' | 'pending' | 'not_approved';
   remarks: string;
@@ -303,62 +307,62 @@ export async function signClearanceAction(data: {
     const claims = await getAuthenticatedUser();
     const signatoryId = claims.uid;
 
-    const firestore = getAdminFirestore();
-
-    // Get Signatory Profile
-    const userDoc = await firestore.collection('users').doc(signatoryId).get();
-    if (!userDoc.exists) throw new Error('Signatory profile not found.');
-    const user = userDoc.data()!;
-
-    // Enforce remarks validation
+    if (!data.applicationId || !data.approvalId) {
+      throw new Error('Application and approval identifiers are required.');
+    }
     if (data.status !== 'approved' && (!data.remarks || data.remarks.trim() === '')) {
       throw new Error('Remarks are required when marking an approval as pending or not approved.');
     }
 
-    // Locate the clearance application holding this approval
-    // Iterate to find the application containing the approvals subcollection document
-    const appsQuery = await firestore.collection('clearanceApplications').get();
-    let parentAppDoc: any = null;
-    let approvalRef: any = null;
+    const firestore = getAdminFirestore();
+    const userDoc = await firestore.collection('users').doc(signatoryId).get();
+    if (!userDoc.exists) throw new Error('Signatory profile not found.');
+    const user = userDoc.data()!;
+    const appRef = firestore.collection('clearanceApplications').doc(data.applicationId);
+    const approvalRef = appRef.collection('approvals').doc(data.approvalId);
 
-    for (const doc of appsQuery.docs) {
-      const apprDoc = await doc.ref.collection('approvals').doc(data.approvalId).get();
-      if (apprDoc.exists) {
-        parentAppDoc = doc;
-        approvalRef = apprDoc.ref;
-        break;
-      }
-    }
-
-    if (!parentAppDoc || !approvalRef) {
-      throw new Error('Clearance approval record not found.');
-    }
-
-    // Run update in transaction
     await firestore.runTransaction(async (transaction: any) => {
-      const appRef = parentAppDoc.ref;
+      // Every read is completed before any write so the status decision is
+      // based on one consistent application snapshot.
       const appSnap = (await transaction.get(appRef)) as any;
       const approvalSnap = (await transaction.get(approvalRef)) as any;
+      const approvalsSnap = await transaction.get(appRef.collection('approvals'));
+
+      if (!appSnap.exists || !approvalSnap.exists) {
+        throw new Error('Clearance approval record not found.');
+      }
 
       const appData = appSnap.data()!;
       const approvalData = approvalSnap.data()!;
-
-      // Verify assignee role match
       if (approvalData.signatoryRole !== user.role) {
         throw new Error('Unauthorized: Evaluator department mismatch.');
       }
+      if (approvalData.assignedSignatoryId && approvalData.assignedSignatoryId !== signatoryId) {
+        throw new Error('Unauthorized: This approval is assigned to another signatory.');
+      }
 
-      // Update approval document
+      const approvalStatuses: Array<{ status: string; signatoryRole?: string }> = approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({
+        status: doc.id === data.approvalId ? data.status : doc.data().status,
+        signatoryRole: doc.id === data.approvalId ? approvalData.signatoryRole : doc.data().signatoryRole,
+      }));
+      const summary = getClearanceStatusSummary(approvalStatuses, appData.financialStatus);
+      const adviserApproved = approvalStatuses.some(
+        (approval) => approval.signatoryRole === 'adviser' && approval.status === 'approved',
+      );
+      const now = new Date().toISOString();
+
       transaction.update(approvalRef, {
         status: data.status,
         remarksLatest: data.remarks || null,
-        assignedSignatoryId: signatoryId,
-        assignedSignatoryName: user.fullName,
-        actedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // Unassigned approvals remain role-wide queue items. The actor is
+        // recorded separately rather than silently converting a queue item
+        // into an assignment.
+        actedById: signatoryId,
+        actedByName: user.fullName,
+        actedAt: now,
+        updatedAt: now,
       });
 
-      // Write remark log
       if (data.remarks && data.remarks.trim() !== '') {
         const remarkRef = appRef.collection('remarks').doc();
         transaction.set(remarkRef, {
@@ -366,61 +370,21 @@ export async function signClearanceAction(data: {
           authorId: signatoryId,
           authorName: user.fullName,
           authorRole: user.role,
-          content: data.remarks,
-          createdAt: new Date().toISOString()
+          content: data.remarks.trim(),
+          createdAt: now,
         });
       }
 
-      // Fetch all approvals to calculate overall status
-      const approvalsColRef = appRef.collection('approvals');
-      const approvalsQuery = await approvalsColRef.get(); // Note: inside transactions, read-only queries should technically be before writes. But in Node SDK, gets are permitted if transaction get is used. We can fetch approvals inside the transaction:
-      
-      let pendingCount = 0;
-      let approvedCount = 0;
-      let notApprovedCount = 0;
-
-      // Re-read approvals inside the transaction loop
-      for (const doc of approvalsQuery.docs) {
-        let status = doc.data().status;
-        // Adjust status if it is the current updated one
-        if (doc.id === data.approvalId) {
-          status = data.status;
-        }
-
-        if (status === 'approved') approvedCount++;
-        else if (status === 'not_approved') notApprovedCount++;
-        else pendingCount++;
-      }
-
-      // Overall status evaluation logic
-      let finalStatus = 'pending';
-      const financialStatus = appData.financialStatus;
-
-      if (notApprovedCount > 0) {
-        finalStatus = 'not_approved';
-      } else if (pendingCount === 0) {
-        if (financialStatus === 'paid') {
-          finalStatus = 'approved';
-        } else if (financialStatus === 'unpaid') {
-          finalStatus = 'not_approved'; // Unpaid holds overall approval
-        } else {
-          finalStatus = 'pending'; // Pending financial verification blocks
-        }
-      }
-
-      const isAdviserApproval = approvalData.signatoryRole === 'adviser' && data.status === 'approved';
-      
       transaction.update(appRef, {
-        overallStatus: finalStatus,
-        pendingCount,
-        approvedCount,
-        notApprovedCount,
-        adviserApproved: appData.adviserApproved || isAdviserApproval,
-        printableAvailable: finalStatus === 'approved',
-        updatedAt: new Date().toISOString()
+        overallStatus: summary.overallStatus,
+        pendingCount: summary.pendingCount,
+        approvedCount: summary.approvedCount,
+        notApprovedCount: summary.notApprovedCount,
+        adviserApproved,
+        printableAvailable: summary.printableAvailable,
+        updatedAt: now,
       });
 
-      // Write Activity Log
       const logRef = firestore.collection('activityLogs').doc();
       transaction.set(logRef, {
         actorId: signatoryId,
@@ -429,19 +393,18 @@ export async function signClearanceAction(data: {
         action: 'approval_action',
         entityType: 'clearance_approval',
         entityId: data.approvalId,
-        metadata: { status: data.status, remarks: data.remarks },
-        createdAt: new Date().toISOString()
+        metadata: { applicationId: data.applicationId, status: data.status, remarks: data.remarks || null },
+        createdAt: now,
       });
 
-      // Write Student Notification
       const notifRef = firestore.collection('notifications').doc();
       transaction.set(notifRef, {
         recipientId: appData.studentUid,
         type: 'approval_updated',
-        message: `Your approval for ${formatRoleName(approvalData.signatoryRole)} has been marked as ${data.status.replace('_', ' ')}.`,
-        relatedApplicationId: parentAppDoc.id,
+        message: `Your ${formatRoleName(approvalData.signatoryRole)} approval is now ${data.status.replace('_', ' ')}.`,
+        relatedApplicationId: data.applicationId,
         isRead: false,
-        createdAt: new Date().toISOString()
+        createdAt: now,
       });
     });
 
@@ -530,55 +493,34 @@ export async function updateFinancialStatusAction(data: {
     const appRef = firestore.collection('clearanceApplications').doc(data.recordId);
 
     await firestore.runTransaction(async (transaction: any) => {
+      // Read the application and every approval before writing any status so
+      // concurrent signatory actions cannot compute from a stale snapshot.
       const appSnap = (await transaction.get(appRef)) as any;
+      const approvalsSnap = await transaction.get(appRef.collection('approvals'));
       if (!appSnap.exists) {
         throw new Error('Clearance application not found.');
       }
 
       const appData = appSnap.data()!;
-
-      // Fetch approvals subcollection to calculate overall status
-      const approvalsColRef = appRef.collection('approvals');
-      const approvalsQuery = await approvalsColRef.get();
-      
-      let pendingCount = 0;
-      let notApprovedCount = 0;
-
-      approvalsQuery.forEach(doc => {
-        const status = doc.data().status;
-        if (status === 'approved') {
-          // Increment approved count (implied by overall count logic)
-        } else if (status === 'not_approved') {
-          notApprovedCount++;
-        } else {
-          pendingCount++;
-        }
-      });
-
-      // Overall status evaluation logic
-      let finalStatus = 'pending';
-      if (notApprovedCount > 0) {
-        finalStatus = 'not_approved';
-      } else if (pendingCount === 0) {
-        if (data.status === 'paid') {
-          finalStatus = 'approved';
-        } else if (data.status === 'unpaid') {
-          finalStatus = 'not_approved';
-        } else {
-          finalStatus = 'pending';
-        }
-      }
+      const summary = getClearanceStatusSummary(
+        approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({ status: doc.data().status })),
+        data.status,
+      );
+      const now = new Date().toISOString();
 
       // Update parent application
       transaction.update(appRef, {
         financialStatus: data.status,
-        financialVerifiedAt: new Date().toISOString(),
-        financialRemarks: data.financialRemarks || null,
+        financialVerifiedAt: now,
+        financialRemarks: data.financialRemarks?.trim() || null,
         financialUpdatedBy: accountantId,
         financialUpdatedByName: user.fullName || null,
-        overallStatus: finalStatus,
-        printableAvailable: finalStatus === 'approved',
-        updatedAt: new Date().toISOString()
+        overallStatus: summary.overallStatus,
+        pendingCount: summary.pendingCount,
+        approvedCount: summary.approvedCount,
+        notApprovedCount: summary.notApprovedCount,
+        printableAvailable: summary.printableAvailable,
+        updatedAt: now
       });
 
       // Write Log
@@ -588,10 +530,10 @@ export async function updateFinancialStatusAction(data: {
         actorName: user.fullName,
         actorRole: user.role,
         action: 'update_financial',
-        entityType: 'financial_record',
+        entityType: 'clearance_application',
         entityId: data.recordId,
-        metadata: { status: data.status, financialRemarks: data.financialRemarks },
-        createdAt: new Date().toISOString()
+        metadata: { status: data.status, financialRemarks: data.financialRemarks?.trim() || null },
+        createdAt: now
       });
 
       // Write Notification
@@ -602,7 +544,7 @@ export async function updateFinancialStatusAction(data: {
         message: `Your financial accountability has been updated to ${data.status.toUpperCase()} in application ${appData.applicationNumber}.`,
         relatedApplicationId: data.recordId,
         isRead: false,
-        createdAt: new Date().toISOString()
+        createdAt: now
       });
     });
 
@@ -694,13 +636,22 @@ export async function fetchClearanceCertificateAction(applicationId: string) {
       throw new Error('Unauthorized: You do not have permission to view or print this certificate.');
     }
 
-    // Verify printable availability
-    if (application.overallStatus !== 'approved' && !application.printableAvailable) {
+    const approvalsQuery = await appRef.collection('approvals').get();
+    const statusSummary = getClearanceStatusSummary(
+      approvalsQuery.docs.map((doc) => ({
+        status: doc.data().status,
+        signatoryRole: doc.data().signatoryRole,
+      })),
+      application.financialStatus,
+    );
+
+    // Derive availability from current approval rows instead of trusting a
+    // stale client-visible flag.
+    if (!statusSummary.printableAvailable) {
       throw new Error('Certificate Unavailable: Clearance application has not been fully approved yet.');
     }
 
     // Fetch Approvals
-    const approvalsQuery = await appRef.collection('approvals').get();
     const reqsQuery = await firestore.collection('clearanceRequirements').get();
     const reqsMap = new Map();
     reqsQuery.forEach((doc) => reqsMap.set(doc.id, doc.data()));
@@ -724,7 +675,14 @@ export async function fetchClearanceCertificateAction(applicationId: string) {
     return {
       success: true,
       certificateData: {
-        application,
+        application: {
+          ...application,
+          overallStatus: statusSummary.overallStatus,
+          printableAvailable: statusSummary.printableAvailable,
+          pendingCount: statusSummary.pendingCount,
+          approvedCount: statusSummary.approvedCount,
+          notApprovedCount: statusSummary.notApprovedCount,
+        },
         approvals,
         issuedAt: application.updatedAt || new Date().toISOString(),
       },

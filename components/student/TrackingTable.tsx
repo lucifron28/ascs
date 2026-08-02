@@ -77,7 +77,7 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
             <thead>
               <tr className="text-slate-400 text-xs uppercase tracking-wider border-none">
                 <th className="bg-transparent pb-4">Signatory Department</th>
-                <th className="bg-transparent pb-4">Assigned Evaluator</th>
+                <th className="bg-transparent pb-4">Assigned Signatory</th>
                 <th className="bg-transparent pb-4">Clearance Status</th>
                 <th className="bg-transparent pb-4">Last Actioned</th>
               </tr>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth } from '@/lib/firebase/admin';
+import { getSessionCookieName } from '@/lib/auth/session';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({ status: 'success' });
 
     // Set secure HTTP-only cookie
-    response.cookies.set('session', sessionCookie, {
+    response.cookies.set(getSessionCookieName(), sessionCookie, {
       maxAge: expiresIn / 1000,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
