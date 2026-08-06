@@ -50,10 +50,11 @@ export default function AccountantDashboard() {
           setError(res.error || 'Failed to retrieve financial accounts.');
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading records:', err);
       if (isMounted.current) {
-        setError(err.message || 'Connection error.');
+        const message = err instanceof Error ? err.message : 'Connection error.';
+        setError(message);
       }
     } finally {
       if (isMounted.current) {
@@ -107,9 +108,10 @@ export default function AccountantDashboard() {
       } else {
         setModalError(res.error || 'Failed to update record.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating status:', err);
-      setModalError(err.message || 'Connection error.');
+      const message = err instanceof Error ? err.message : 'Connection error.';
+      setModalError(message);
     } finally {
       setModalLoading(false);
     }
@@ -331,6 +333,7 @@ export default function AccountantDashboard() {
               <button
                 onClick={() => setSelectedRecord(null)}
                 disabled={modalLoading}
+                aria-label="Close modal"
                 className="btn btn-sm btn-ghost hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg p-1.5"
               >
                 <X className="w-4 h-4" />

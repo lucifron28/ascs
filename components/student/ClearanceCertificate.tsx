@@ -13,7 +13,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any | null>(null);
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
 
   const isMounted = useRef(true);
 
@@ -31,9 +31,10 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
             setError(res.error || 'Failed to load clearance certificate.');
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (isMounted.current) {
-          setError(err.message || 'Connection error.');
+          const message = err instanceof Error ? err.message : 'Connection error.';
+          setError(message);
         }
       } finally {
         if (isMounted.current) {
@@ -75,7 +76,30 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
     );
   }
 
-  const { application, approvals, issuedAt } = data;
+  const { application, approvals, issuedAt } = data as unknown as {
+    application: {
+      applicationNumber: string;
+      studentName: string;
+      studentNumber: string;
+      program: string;
+      yearLevel: string;
+      section: string;
+      academicYear: string;
+      semester: string;
+      purpose: string;
+      financialUpdatedByName?: string;
+      financialVerifiedAt?: string;
+      financialStatus: string;
+    };
+    approvals: Array<{
+      id: string;
+      label: string;
+      status: string;
+      assignedSignatoryName?: string;
+      actedAt?: string | null;
+    }>;
+    issuedAt: string;
+  };
 
   return (
     <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
@@ -149,17 +173,27 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {approvals.map((app: any) => (
+              {approvals.map((app: { id: string; label: string; status: string; assignedSignatoryName?: string; actedAt?: string | null }) => (
                 <tr key={app.id}>
                   <td className="p-2 font-semibold border-r border-slate-200">{app.label}</td>
-                  <td className="p-2 border-r border-slate-200 text-slate-700">{app.assignedSignatoryName}</td>
+                  <td className="p-2 border-r border-slate-200 text-slate-700">{app.assignedSignatoryName || 'Role Queue'}</td>
                   <td className="p-2 border-r border-slate-200 font-mono text-[11px] text-slate-600">
                     {app.actedAt ? new Date(app.actedAt).toLocaleDateString() : 'N/A'}
                   </td>
-                  <td className="p-2 text-center font-bold text-emerald-700 uppercase text-[10px]">
-                    <span className="inline-flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Cleared
-                    </span>
+                  <td className="p-2 text-center font-bold uppercase text-[10px]">
+                    {app.status === 'approved' ? (
+                      <span className="inline-flex items-center gap-1 text-emerald-700">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Cleared
+                      </span>
+                    ) : app.status === 'not_approved' ? (
+                      <span className="inline-flex items-center gap-1 text-red-700">
+                        <AlertCircle className="w-3 h-3 text-red-600" /> Not Approved
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-amber-700">
+                        Pending
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -174,17 +208,26 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
                     ? new Date(application.financialVerifiedAt).toLocaleDateString()
                     : 'N/A'}
                 </td>
-                <td className="p-2 text-center font-bold text-emerald-700 uppercase text-[10px]">
-                  <span className="inline-flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> {application.financialStatus.toUpperCase()}
-                  </span>
+                <td className="p-2 text-center font-bold uppercase text-[10px]">
+                  {application.financialStatus === 'paid' ? (
+                    <span className="inline-flex items-center gap-1 text-emerald-700">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Paid
+                    </span>
+                  ) : application.financialStatus === 'unpaid' ? (
+                    <span className="inline-flex items-center gap-1 text-red-700">
+                      <AlertCircle className="w-3 h-3 text-red-600" /> Unpaid
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-amber-700">
+                      Pending
+                    </span>
+                  )}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* Dean review and placeholder seal */}
         <div className="pt-8 grid grid-cols-2 gap-8 items-end font-sans">
           <div className="space-y-2">
             <div className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-full flex items-center justify-center text-[10px] text-slate-400 font-bold uppercase text-center p-2">

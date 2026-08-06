@@ -111,17 +111,18 @@ export default function LoginPage() {
           router.push(`/${role}/dashboard`);
           router.refresh();
         }, 1000);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Login error:', err);
+        const errObj = err as { code?: string; message?: string };
         let friendlyMessage = 'Authentication failed. Please check your credentials.';
-        if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        if (errObj.code === 'auth/invalid-credential' || errObj.code === 'auth/user-not-found' || errObj.code === 'auth/wrong-password') {
           friendlyMessage = 'Invalid email or password.';
-        } else if (err.code === 'auth/network-request-failed') {
+        } else if (errObj.code === 'auth/network-request-failed') {
           friendlyMessage = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true'
             ? 'Firebase Auth emulator is unavailable. Start `firebase emulators:start` and try again.'
             : 'Network error. Please check your connection.';
-        } else if (err.message) {
-          friendlyMessage = err.message;
+        } else if (errObj.message) {
+          friendlyMessage = errObj.message;
         }
         setError(friendlyMessage);
         setLoading(false);

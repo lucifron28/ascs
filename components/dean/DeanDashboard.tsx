@@ -45,10 +45,11 @@ export default function DeanDashboard() {
           setError(res.error || 'Failed to retrieve academic clearance queue.');
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading Dean records:', err);
       if (isMounted.current) {
-        setError(err.message || 'Connection error.');
+        const message = err instanceof Error ? err.message : 'Connection error.';
+        setError(message);
       }
     } finally {
       if (isMounted.current) {

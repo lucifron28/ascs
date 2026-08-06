@@ -14,7 +14,12 @@ export default function StudentDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<{
+    application: unknown;
+    financial: unknown;
+    approvals: Array<Record<string, unknown>>;
+    remarks: Array<Record<string, unknown>>;
+  } | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Fetch student dashboard details
@@ -24,13 +29,19 @@ export default function StudentDashboardPage() {
     try {
       const res = await fetchStudentDashboardAction();
       if (res.success) {
-        setDashboardData(res);
+        setDashboardData(res as unknown as {
+          application: unknown;
+          financial: unknown;
+          approvals: Array<Record<string, unknown>>;
+          remarks: Array<Record<string, unknown>>;
+        });
       } else {
         setError(res.error || 'Failed to load dashboard data.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Connection error.';
       console.error('Fetch error:', err);
-      setError(err.message || 'Connection error.');
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -53,8 +64,9 @@ export default function StudentDashboardPage() {
   };
 
   const handlePrint = () => {
-    if (dashboardData?.application?.id) {
-      router.push(`/student/clearance/${dashboardData.application.id}/print`);
+    const appObj = dashboardData?.application as { id?: string } | undefined;
+    if (appObj?.id) {
+      router.push(`/student/clearance/${appObj.id}/print`);
     } else {
       setShowPrintModal(true);
     }
@@ -135,12 +147,12 @@ export default function StudentDashboardPage() {
           <div className="space-y-8 animate-fade-in">
             {/* Overall Status Cards */}
             <StatusSummary
-              application={dashboardData.application}
-              financial={dashboardData.financial}
+              application={dashboardData?.application as Parameters<typeof StatusSummary>[0]['application']}
+              financial={dashboardData?.financial as Parameters<typeof StatusSummary>[0]['financial']}
             />
 
             {/* Print Action Bar */}
-            {dashboardData.application.overallStatus === 'approved' && (
+            {(dashboardData?.application as { overallStatus?: string } | undefined)?.overallStatus === 'approved' && (
               <div className="card bg-emerald-950/20 border border-emerald-800/40 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5 text-emerald-300 text-sm">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -157,18 +169,16 @@ export default function StudentDashboardPage() {
 
             {/* Approvals Table */}
             <TrackingTable
-              approvals={dashboardData.approvals}
-              remarks={dashboardData.remarks}
+              approvals={(dashboardData?.approvals as unknown) as Parameters<typeof TrackingTable>[0]['approvals']}
+              remarks={(dashboardData?.remarks as unknown) as Parameters<typeof TrackingTable>[0]['remarks']}
             />
           </div>
         )}
-      </div>
 
-      {/* Printable Clearance Certificate Modal */}
-      {showPrintModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white text-slate-950 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
+        {/* Print Modal Dialog */}
+        {showPrintModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white text-slate-950 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 rounded-t-2xl">
               <span className="font-bold text-slate-800">ASCS Clearance Record Preview (Prototype)</span>
               <div className="flex items-center gap-2">
@@ -199,22 +209,22 @@ export default function StudentDashboardPage() {
 
               <div className="grid grid-cols-2 gap-y-2 gap-x-6 mb-8 text-xs">
                 <div>
-                  <span className="font-bold">Student Name:</span> {dashboardData?.application?.studentName}
+                  <span className="font-bold">Student Name:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.studentName || '')}
                 </div>
                 <div>
-                  <span className="font-bold">Student ID No:</span> {dashboardData?.application?.studentNumber}
+                  <span className="font-bold">Student ID No:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.studentNumber || '')}
                 </div>
                 <div>
-                  <span className="font-bold">Program / Year:</span> {dashboardData?.application?.program} - {dashboardData?.application?.yearLevel}
+                  <span className="font-bold">Program / Year:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.program || '')} - {String((dashboardData?.application as Record<string, unknown> | undefined)?.yearLevel || '')}
                 </div>
                 <div>
-                  <span className="font-bold">Academic Term:</span> {dashboardData?.application?.academicYear} • {dashboardData?.application?.semester} Semester
+                  <span className="font-bold">Academic Term:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.academicYear || '')} • {String((dashboardData?.application as Record<string, unknown> | undefined)?.semester || '')} Semester
                 </div>
                 <div>
-                  <span className="font-bold">Purpose:</span> {dashboardData?.application?.purpose}
+                  <span className="font-bold">Purpose:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.purpose || '')}
                 </div>
                 <div>
-                  <span className="font-bold">Clearance Number:</span> {dashboardData?.application?.applicationNumber}
+                  <span className="font-bold">Clearance Number:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.applicationNumber || '')}
                 </div>
               </div>
 
@@ -224,7 +234,7 @@ export default function StudentDashboardPage() {
 
               {/* Signatory grid */}
               <div className="grid grid-cols-2 gap-6 mt-10">
-                {dashboardData?.approvals.map((appr: any) => (
+                {((dashboardData?.approvals as Array<{ id: string; assignee_name?: string; label?: string; acted_at?: string }>) || []).map((appr) => (
                   <div key={appr.id} className="border-b border-slate-200 pb-3 flex flex-col justify-end min-h-[60px]">
                     <div className="font-bold text-slate-800 text-xs">{appr.assignee_name || 'APPROVED'}</div>
                     <div className="text-[10px] text-slate-500 italic uppercase">{appr.label}</div>
@@ -240,6 +250,7 @@ export default function StudentDashboardPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

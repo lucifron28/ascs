@@ -40,16 +40,17 @@ export default function SignatoryDashboard() {
       const res = await fetchPendingApprovalsAction();
       if (isMounted.current) {
         if (res.success) {
-          setQueue(res.pendingQueue || []);
+          setQueue((res.pendingQueue as unknown as PendingApproval[]) || []);
           setRole(res.role || '');
         } else {
           setError(res.error || 'Failed to load pending approvals.');
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading queue:', err);
       if (isMounted.current) {
-        setError(err.message || 'Connection error.');
+        const message = err instanceof Error ? err.message : 'Connection error.';
+        setError(message);
       }
     } finally {
       if (isMounted.current) {
@@ -110,9 +111,10 @@ export default function SignatoryDashboard() {
       } else {
         setModalError(res.error || 'Action failed.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Approval action error:', err);
-      setModalError(err.message || 'Connection error.');
+      const message = err instanceof Error ? err.message : 'Connection error.';
+      setModalError(message);
     } finally {
       setModalLoading(false);
     }
@@ -232,6 +234,7 @@ export default function SignatoryDashboard() {
               <button
                 onClick={() => setSelectedApp(null)}
                 disabled={modalLoading}
+                aria-label="Close modal"
                 className="btn btn-sm btn-ghost hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg p-1.5"
               >
                 <X className="w-4 h-4" />
@@ -313,7 +316,7 @@ export default function SignatoryDashboard() {
                 disabled={modalLoading || modalSuccess}
                 className="btn btn-sm btn-success bg-emerald-600 hover:bg-emerald-500 border-none text-white rounded-xl text-[10px] font-semibold tracking-wide transition-all uppercase h-9"
               >
-                Approve
+                Approve Clearance
               </button>
             </div>
           </div>

@@ -55,7 +55,7 @@ interface LogRecord {
   action: string;
   entityType: string;
   entityId: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: string;
 }
 
@@ -126,10 +126,11 @@ export default function AdminDashboard() {
 
         if (!uRes.success) setError(uRes.error || 'Failed to load user accounts.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isMounted.current) {
+        const message = err instanceof Error ? err.message : 'Connection error.';
         console.error('Error loading admin data:', err);
-        setError(err.message || 'Connection error.');
+        setError(message);
       }
     } finally {
       if (isMounted.current) {
@@ -169,17 +170,18 @@ export default function AdminDashboard() {
         newRole: selectedRole,
       });
 
-      if (res.success) {
+      if (res?.success) {
         setModalSuccess(true);
         setTimeout(() => {
           setSelectedUser(null);
           loadData();
         }, 800);
       } else {
-        setModalError(res.error || 'Failed to update user role.');
+        setModalError(res?.error || 'Failed to update user role.');
       }
-    } catch (err: any) {
-      setModalError(err.message || 'Connection error.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Connection error.';
+      setModalError(message);
     } finally {
       setModalLoading(false);
     }
@@ -212,17 +214,18 @@ export default function AdminDashboard() {
         assignedSignatoryName,
       });
 
-      if (res.success) {
+      if (res?.success) {
         setReqModalSuccess(true);
         setTimeout(() => {
           setSelectedReq(null);
           loadData();
         }, 800);
       } else {
-        setReqModalError(res.error || 'Failed to update requirement assignment.');
+        setReqModalError(res?.error || 'Failed to update requirement assignment.');
       }
-    } catch (err: any) {
-      setReqModalError(err.message || 'Connection error.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Connection error.';
+      setReqModalError(message);
     } finally {
       setReqModalLoading(false);
     }
@@ -234,14 +237,15 @@ export default function AdminDashboard() {
     setSeedResult(null);
     try {
       const res = await seedDatabaseAction();
-      if (res.success) {
+      if (res?.success) {
         setSeedResult({ success: true, message: res.message || 'Database seeded successfully!' });
         loadData();
       } else {
-        setSeedResult({ success: false, message: res.error || 'Seeding failed.' });
+        setSeedResult({ success: false, message: res?.error || 'Seeding failed.' });
       }
-    } catch (err: any) {
-      setSeedResult({ success: false, message: err.message || 'Failed to execute seeding action.' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to execute seeding action.';
+      setSeedResult({ success: false, message });
     } finally {
       setSeedLoading(false);
     }
@@ -605,6 +609,7 @@ export default function AdminDashboard() {
               </h3>
               <button
                 onClick={() => setSelectedUser(null)}
+                aria-label="Close modal"
                 className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
               >
                 <X className="w-4 h-4" />
@@ -668,7 +673,7 @@ export default function AdminDashboard() {
                   className="btn btn-sm btn-primary rounded-xl font-semibold gap-1.5"
                 >
                   {modalLoading && <span className="loading loading-spinner loading-xs" />}
-                  Save User Role
+                  Change User Role
                 </button>
               </div>
             </form>
@@ -686,6 +691,7 @@ export default function AdminDashboard() {
               </h3>
               <button
                 onClick={() => setSelectedReq(null)}
+                aria-label="Close modal"
                 className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
               >
                 <X className="w-4 h-4" />
