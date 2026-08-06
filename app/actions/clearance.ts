@@ -47,23 +47,52 @@ export async function submitApplicationAction(data: {
 
       const student = studentSnap.data()!;
 
-      // Fetch active requirements to initialize approvals
+      // Fetch active requirements to initialize approvals (excluding accountant)
       const reqColRef = firestore.collection('clearanceRequirements');
       const requirementsQuery = await transaction.get(reqColRef.where('isActive', '==', true));
-      
-      if (requirementsQuery.empty) {
-        throw new Error('No active clearance requirements found to initiate checklist.');
+
+      const activeReqs = requirementsQuery.docs
+        .map((doc: QueryDocumentSnapshot<DocumentData>) => {
+          const reqData = doc.data();
+          return {
+            id: doc.id,
+            role: reqData.role as string,
+            label: (reqData.label as string) || (reqData.role as string),
+            assignedSignatoryId: (reqData.assignedSignatoryId as string | null) || null,
+            assignedSignatoryName: (reqData.assignedSignatoryName as string | null) || null,
+          };
+        })
+        .filter((req) => req.role !== 'accountant');
+
+      if (activeReqs.length === 0) {
+        throw new Error('No active clearance signatory requirements are configured.');
       }
 
-      const activeReqs = requirementsQuery.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          role: data.role as string,
-          assignedSignatoryId: (data.assignedSignatoryId as string | null) || null,
-          assignedSignatoryName: (data.assignedSignatoryName as string | null) || null,
-        };
-      });
+      // Gather signatory notification targets within transaction read phase
+      const signatoryNotifications: Array<{ recipientId: string; reqLabel: string }> = [];
+      const notifiedRecipients = new Set<string>();
+
+      for (const req of activeReqs) {
+        if (req.assignedSignatoryId) {
+          if (!notifiedRecipients.has(req.assignedSignatoryId) && req.assignedSignatoryId !== studentUid) {
+            notifiedRecipients.add(req.assignedSignatoryId);
+            signatoryNotifications.push({ recipientId: req.assignedSignatoryId, reqLabel: req.label });
+          }
+        } else {
+          const matchingUsersSnap = await transaction.get(
+            firestore.collection('users')
+              .where('role', '==', req.role)
+              .where('accountStatus', '==', 'active')
+          );
+          for (const userDoc of matchingUsersSnap.docs) {
+            const recipientId = userDoc.id;
+            if (!notifiedRecipients.has(recipientId) && recipientId !== studentUid) {
+              notifiedRecipients.add(recipientId);
+              signatoryNotifications.push({ recipientId, reqLabel: req.label });
+            }
+          }
+        }
+      }
 
       const appNumber = `CLR-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -125,7 +154,8 @@ export async function submitApplicationAction(data: {
         createdAt: new Date().toISOString()
       });
 
-      // Add Notification
+      // Add Student Notification
+      const now = new Date().toISOString();
       const notifRef = firestore.collection('notifications').doc();
       transaction.set(notifRef, {
         recipientId: studentUid,
@@ -133,8 +163,21 @@ export async function submitApplicationAction(data: {
         message: `Your clearance application ${appNumber} has been successfully submitted.`,
         relatedApplicationId: appId,
         isRead: false,
-        createdAt: new Date().toISOString()
+        createdAt: now
       });
+
+      // Add Signatory Notifications
+      for (const sigNotif of signatoryNotifications) {
+        const sigNotifRef = firestore.collection('notifications').doc();
+        transaction.set(sigNotifRef, {
+          recipientId: sigNotif.recipientId,
+          type: 'signatory_action_required',
+          message: `A new clearance application ${appNumber} from ${student.fullName} requires ${sigNotif.reqLabel} review.`,
+          relatedApplicationId: appId,
+          isRead: false,
+          createdAt: now
+        });
+      }
     });
 
     return { success: true, applicationId: appId };
@@ -302,7 +345,14 @@ export async function signClearanceAction(data: {
     if (!data.applicationId || !data.approvalId) {
       throw new Error('Application and approval identifiers are required.');
     }
-    if (data.status !== 'approved' && (!data.remarks || data.remarks.trim() === '')) {
+
+    const validApprovalStatuses = ['approved', 'pending', 'not_approved'] as const;
+    if (!validApprovalStatuses.includes(data.status as unknown as (typeof validApprovalStatuses)[number])) {
+      throw new Error('Invalid clearance approval status.');
+    }
+
+    const trimmedRemarks = data.remarks?.trim() || '';
+    if (data.status !== 'approved' && !trimmedRemarks) {
       throw new Error('Remarks are required when marking an approval as pending or not approved.');
     }
 
@@ -457,13 +507,16 @@ export async function updateFinancialStatusAction(data: {
     if (user.role !== 'accountant' && user.role !== 'admin') {
       throw new Error('Unauthorized: Only accountants can modify financial status.');
     }
-
-    const firestore = getAdminFirestore();
-    // Input validation
-    if (data.status === 'unpaid' && (!data.financialRemarks || !data.financialRemarks.trim())) {
-      throw new Error("Remarks are required when marking a student as 'unpaid'.");
+    const validFinancialStatuses = ['paid', 'unpaid'] as const;
+    if (!validFinancialStatuses.includes(data.status as unknown as (typeof validFinancialStatuses)[number])) {
+      throw new Error('Invalid financial status.');
     }
 
+    const trimmedRemarks = data.financialRemarks?.trim() || '';
+    if (data.status === 'unpaid' && !trimmedRemarks) {
+      throw new Error("Remarks are required when marking a student as 'unpaid'.");
+    }
+    const firestore = getAdminFirestore();
     const appRef = firestore.collection('clearanceApplications').doc(data.recordId);
 
     await firestore.runTransaction(async (transaction: Transaction) => {
@@ -477,7 +530,10 @@ export async function updateFinancialStatusAction(data: {
 
       const appData = appSnap.data()!;
       const summary = getClearanceStatusSummary(
-        approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({ status: doc.data().status })),
+        approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({
+          status: doc.data().status,
+          signatoryRole: doc.data().signatoryRole,
+        })),
         data.status,
       );
       const now = new Date().toISOString();
