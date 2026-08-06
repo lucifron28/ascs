@@ -107,10 +107,15 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
         rollbackBatch.update(userRef, { role: previousRole, updatedAt: new Date().toISOString() });
         rollbackBatch.set(publicRef, { role: previousRole }, { merge: true });
         await rollbackBatch.commit();
-        throw new Error('Role update failed while synchronizing Firebase Auth claims. Firestore rollback completed.');
       } catch {
-        throw new Error('Role update partially failed and automatic rollback also failed. Manual administrator intervention is required.');
+        throw new Error(
+          'Role update partially failed and automatic rollback also failed. Manual administrator intervention is required.'
+        );
       }
+
+      throw new Error(
+        'Role update failed while synchronizing Firebase Auth claims. Firestore rollback completed.'
+      );
     }
 
     // 3. Write Activity Log after role synchronization succeeds
