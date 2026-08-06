@@ -45,7 +45,7 @@
 ## Workflow and status rules
 
 1. A student submits one application for an academic year/semester.
-2. The server creates the application, approval rows (5 default required signatories: Librarian, OSA Coordinator, Guidance Counselor, Area Chair, Adviser), submission notification, and activity log in a Firestore transaction.
+2. The server creates the application, approval rows (5 default required signatories: Librarian, OSA Coordinator, Guidance Counselor, Area Chair, Adviser), student submission confirmation notification, signatory action notifications for assigned or role-wide signatories, and activity log in a Firestore transaction.
 3. The Accountant acts as a financial gate only via `financialStatus: 'pending' | 'paid' | 'unpaid'`. The Accountant does not have a duplicate signatory approval row.
 4. Signatories act on their own role queue. An assigned approval can only be acted on by its assigned user; an unassigned row is a role-wide queue item.
 5. Remarks are required for `pending` and `not_approved` decisions and are visible to the student.

@@ -12,8 +12,8 @@
 | --- | --- | --- | --- | --- | --- |
 | **Outputs** | 6 | 0 | 0 | 1 | 7 |
 | **Roles** | 9 | 0 | 0 | 0 | 9 |
-| **Functional Requirements** | 13 | 2 | 0 | 3 | 18 |
-| **Overall Totals** | **28** | **2** | **0** | **4** | **34** |
+| **Functional Requirements** | 13 | 2 | 1 | 2 | 18 |
+| **Overall Totals** | **28** | **2** | **1** | **3** | **34** |
 
 ---
 
@@ -25,7 +25,7 @@
 | **Remarks Section** | `Implemented` | Displays mandatory remark history from `clearanceApplications/{id}/remarks` on student tracking and signatory modals. |
 | **Clearance Tracking Interface** | `Implemented` | Student dashboard table (`TrackingTable.tsx`) details requirement sign-off matrix, acted date, assigned signatory, and latest remark. |
 | **Financial Status Indicator** | `Implemented` | Dedicated `financialStatus` badge (`pending`, `paid`, `unpaid`) with accountant verification timestamp and financial remarks (ASCS tracks financial status and remarks, not an itemized dues ledger). |
-| **Automated Notifications** | `Implemented` | In-app `NotificationDropdown.tsx` displays real-time notification items triggered by submissions, approvals, and financial status updates. |
+| **Automated Notifications** | `Implemented` | In-app `NotificationDropdown.tsx` displays real-time notification items for student submissions (confirming to student and alerting assigned or role-wide signatories), signatory evaluations, and financial updates. |
 | **Printable Clearance Document** | `Implemented` | `ClearanceCertificate.tsx` renders print-ready MVP document accessible exclusively when `overallStatus === 'approved'`. |
 | **Reports** | `Deferred` | Advanced statistical reporting, batch PDF export, and aggregate clearance analytics. |
 
@@ -57,7 +57,7 @@
 
 | Requirement | Status | Description & Evidence |
 | --- | --- | --- |
-| **Admin-created accounts** | `Deferred` | Batch user import / admin self-service account provisioning form. |
+| **Admin-created accounts** | `Missing` | Administrator user profile creation form is unbuilt; accounts are provisioned via `seedDatabaseAction()` or Firebase Auth CLI. |
 | **No student self-registration** | `Implemented` | Public registration is disabled; users authenticate against pre-created Firestore profiles. |
 | **Student application submission** | `Implemented` | `submitApplicationAction` creates application and approval subdocuments in a Firestore transaction. |
 | **Duplicate-term prevention** | `Implemented` | Enforces deterministic doc ID `{studentUid}_{academicYear}_{semester}`; duplicate submissions throw transactional error. |
@@ -91,12 +91,11 @@
    - *Missing Behavior:* Admin dashboard user table lacks an explicit toggle button to flip `accountStatus` between `active` and `inactive`.
    - *Recommended Next Step:* Add an `Deactivate Account` / `Reactivate Account` action button in `AdminDashboard.tsx`.
 
-### Deferred Items:
+### Missing Items:
 1. **Admin-Created Accounts:**
    - *Evidence:* Demo accounts are seeded via `seedDatabaseAction()`.
-   - *Missing Behavior:* Bulk CSV user account creation wizard.
-   - *Recommended Next Step:* Implement CSV user import in post-MVP phase.
-
+   - *Missing Behavior:* Admin UI user account creation form / modal.
+   - *Recommended Next Step:* Implement `/admin/users/create` modal for provisioning staff and student accounts.
 2. **Password Reset:**
    - *Evidence:* Password authentication uses standard Firebase Auth.
    - *Missing Behavior:* Admin button to issue a temporary password or send a password reset link.
