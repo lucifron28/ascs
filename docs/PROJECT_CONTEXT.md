@@ -8,20 +8,26 @@
 
 - Next.js App Router with TypeScript, Tailwind CSS, daisyUI, TanStack Form, and Firebase SDKs.
 - Firebase Authentication provides email/password identity.
-- **Cloud Firestore is the primary database.** The active collections are:
-  `users`, `publicUsers`, `students`, `clearanceRequirements`,
-  `clearanceApplications`, `notifications`, and `activityLogs`.
-- `clearanceApplications/{applicationId}` contains `approvals` and `remarks`
-  subcollections.
-- Clearance-level financial fields live on each application:
-  `financialStatus`, `financialVerifiedAt`, `financialRemarks`,
-  `financialUpdatedBy`, and `financialUpdatedByName`.
-- The Firebase Admin SDK is the trusted server-side write layer. Firestore
-  Security Rules protect direct client reads and writes. Server Actions and
-  Route Handlers must verify the Firebase session cookie and the Firestore
-  profile before accessing data.
-- Client route/proxy checks are UX redirects only; they are not an
-  authorization boundary. Authorization is enforced again in server code.
+- **Cloud Firestore is the primary database.** Active collections:
+  * `users/{userId}`
+  * `publicUsers/{userId}`
+  * `students/{studentId}`
+  * `clearanceRequirements/{requirementId}`
+  * `clearanceApplications/{applicationId}`
+  * `clearanceApplications/{applicationId}/approvals/{approvalId}`
+  * `clearanceApplications/{applicationId}/remarks/{remarkId}`
+  * `notifications/{notificationId}`
+  * `activityLogs/{logId}`
+- Clearance-level financial fields live directly on `clearanceApplications`:
+  * `financialStatus: 'pending' | 'paid' | 'unpaid'`
+  * `financialVerifiedAt`
+  * `financialRemarks`
+  * `financialUpdatedBy`
+  * `financialUpdatedByName`
+- **Trusted Architecture**:
+  * Firebase Admin SDK server actions are the trusted write layer.
+  * Firestore Security Rules protect direct client access (denying direct client writes).
+  * Proxy or client route checks are for navigation/UX only and are not the primary authorization mechanism. Server actions and API routes re-verify the session cookie and user profile.
 
 ## Roles and responsibilities
 
@@ -46,15 +52,18 @@
    acted on by its assigned user; an unassigned row is a role-wide queue item.
 4. Remarks are required for `pending` and `not_approved` decisions and are
    visible to the student.
-5. The Accountant marks the application `paid` or `unpaid`; unpaid requires a
-   remark and blocks approval.
-6. Status is derived by `lib/clearance/status.ts`: `not_approved` wins; when
-   every approval is approved, `paid` produces `approved`, `unpaid` produces
-   `not_approved`; all other states are `pending`.
-7. Printable output is available only when the derived status is `approved`.
-   The print view is a prototype/MVP record and makes no official approval
-   claim.
-8. The Dean sees applications only after the Adviser approval is approved.
+5. A new application starts with `financialStatus = 'pending'`.
+   - `paid` means the Accountant verified that the student is financially cleared.
+   - `unpaid` means the Accountant verified unresolved financial accountability.
+   - `unpaid` blocks overall approval (derives `not_approved`).
+6. Status is derived by `lib/clearance/status.ts`:
+   - If any required approval is `not_approved`, overall status is `not_approved`.
+   - If all required approvals are `approved` and `financialStatus` is `paid`, overall status is `approved`.
+   - If all required approvals are `approved` and `financialStatus` is `unpaid`, overall status is `not_approved`.
+   - Otherwise, overall status is `pending`.
+7. Printable clearance (`printableAvailable`) is true and available only when overall status is `approved`.
+   The print view is a prototype/MVP record and makes no official institutional approval claim.
+8. The Dean sees applications only after the Adviser approval is `approved`.
 
 ## Data model
 

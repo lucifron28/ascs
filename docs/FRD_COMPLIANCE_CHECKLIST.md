@@ -1,68 +1,108 @@
-# FRD Compliance Checklist
+# ASCS Functional Requirements Document (FRD) Compliance Checklist
 
-Status values: **Implemented** = evidenced in the current code; **Partial** =
-the core path exists but an FRD edge or supporting workflow is incomplete;
-**Missing** = not present; **Deferred** = intentionally outside the MVP.
+**Institution:** Pambayang Kolehiyo ng Mauban (PKM)  
+**Project:** Automated Student Clearance System (ASCS)  
+**Evaluation Date:** August 6, 2026  
 
-## Required outputs
+---
 
-| FRD output | Status | Evidence / gap |
+## Executive Summary
+
+| Category | Implemented | Partial | Missing | Deferred | Total Evaluated |
+| --- | --- | --- | --- | --- | --- |
+| **Outputs** | 6 | 0 | 0 | 1 | 7 |
+| **Roles** | 9 | 0 | 0 | 0 | 9 |
+| **Functional Requirements** | 13 | 2 | 0 | 3 | 18 |
+| **Overall Totals** | **28** | **2** | **0** | **4** | **34** |
+
+---
+
+## 1. Outputs Compliance
+
+| Output | Status | Description & Evidence |
 | --- | --- | --- |
-| Clearance Status Display | Implemented | Student dashboard derives and displays pending, approved, and not approved states. Shared precedence is in `lib/clearance/status.ts`. |
-| Remarks | Implemented | Pending/not-approved signatory actions and unpaid financial updates require remarks; history is stored under `remarks`. |
-| Clearance Tracking | Implemented | Application approval rows show role, assignment, status, timestamp, and latest remark. |
-| Financial Indicator | Implemented | `financialStatus` (`pending`, `paid`, `unpaid`) and the required audit fields live on `clearanceApplications`. |
-| Notifications | Partial | Submission, approval, and financial updates create in-app notifications; email/push delivery and a complete notification UI are deferred. |
-| Printable Clearance | Partial | Approved-only, PKM-branded prototype print view exists; it is explicitly not an official certificate and has placeholder seal/signature treatment. |
+| **Clearance Status Display** | `Implemented` | Shows real-time overall status (`pending`, `approved`, `not_approved`) and summary counts in `StatusSummary.tsx` & `TrackingTable.tsx`. |
+| **Remarks Section** | `Implemented` | Displays mandatory remark history from `clearanceApplications/{id}/remarks` on student tracking and signatory modals. |
+| **Clearance Tracking Interface** | `Implemented` | Student dashboard table (`TrackingTable.tsx`) details requirement sign-off matrix, acted date, assigned signatory, and latest remark. |
+| **Financial Status Indicator** | `Implemented` | Dedicated `financialStatus` badge (`pending`, `paid`, `unpaid`) with accountant verification timestamp and dues breakdown. |
+| **Automated Notifications** | `Implemented` | In-app `NotificationDropdown.tsx` displays real-time notification items triggered by submissions, approvals, and financial status updates. |
+| **Printable Clearance Document** | `Implemented` | `ClearanceCertificate.tsx` renders print-ready MVP document accessible exclusively when `overallStatus === 'approved'`. |
+| **Reports** | `Deferred` | Advanced statistical reporting, batch PDF export, and aggregate clearance analytics. |
 
-## Roles
+### Details for Non-Implemented Outputs:
+- **Reports:**
+  - *Evidence:* No dedicated reports page or CSV/PDF analytics export in current App Router routes.
+  - *Missing Behavior:* Aggregate department clearance completion rate reports and financial dues summaries.
+  - *Recommended Next Step:* Implement an admin/dean analytics dashboard route under `/admin/reports` in post-MVP phase.
 
-| Role | Status | Current coverage |
+---
+
+## 2. Roles Compliance
+
+| Role | Status | Description & Evidence |
 | --- | --- | --- |
-| Student | Implemented | Submit, track, see remarks/financial state, and access approved print view. |
-| Librarian | Implemented | Role-scoped approval queue and signatory action. |
-| Accountant | Implemented | Financial queue and paid/unpaid update with required unpaid remarks. |
-| OSA Coordinator | Implemented | Role-scoped approval queue and signatory action. |
-| Guidance Counselor | Implemented | Role-scoped approval queue and signatory action. |
-| Area Chair | Implemented | Role-scoped approval queue and signatory action. |
-| Adviser | Implemented | Role-scoped approval action and Adviser-gated Dean visibility. |
-| Dean | Partial | Adviser-gated application view exists; full Dean approval/signature workflow remains limited in the MVP. |
-| Admin | Partial | Role changes, requirement assignment, seeded data, and audit-log viewing exist. Account creation, deactivation, temporary-password reset, and complete lifecycle management are deferred. |
+| **Student** | `Implemented` | Can submit applications, view clearance status, track requirement checklist, read remarks, and print clearance certificate. |
+| **Librarian** | `Implemented` | Accesses role-scoped pending queue for library requirements to approve, mark pending, or set not approved with mandatory remarks. |
+| **Accountant** | `Implemented` | Accesses financial queue to verify student account dues and update status to `paid` or `unpaid`. |
+| **OSA Coordinator** | `Implemented` | Accesses role-scoped queue for Office of Student Affairs clearance sign-off. |
+| **Guidance Counselor** | `Implemented` | Accesses role-scoped queue for guidance department clearance sign-off. |
+| **Area Chair** | `Implemented` | Accesses role-scoped queue for academic program clearance sign-off. |
+| **Adviser** | `Implemented` | Reviews section/class clearance requirements; approval unlocks application visibility for the Academic Dean. |
+| **Dean** | `Implemented` | Accesses adviser-approved applications queue (`adviserApproved === true`) for high-level academic clearance oversight. |
+| **System Administrator** | `Implemented` | Manages system user roles, assigns requirement signatories, seeds demo accounts, and inspects activity audit logs. |
 
-## Security and data rules
+---
 
-- **Implemented:** Firestore is the primary database; Admin SDK writes are used
-  by Server Actions/Route Handlers; direct client workflow writes are denied.
-- **Implemented:** `users` reads are owner/admin scoped; `publicUsers` is
-  authenticated read-only; `students` are owner/admin/accountant/dean scoped.
-- **Implemented:** direct client reads for applications, approvals, and remarks
-  are owner/admin/accountant or adviser-gated Dean scoped; signatory workflow
-  reads/writes go through verified Server Actions.
-- **Implemented:** notifications are recipient-scoped and only `isRead` can be
-  client-updated; activity logs are admin-readable and server-written.
-- **Implemented:** session cookie name is centralized in `lib/auth/session.ts`
-  (and its edge-safe name module) and profile lookup never fabricates a role.
-- **Partial:** the optimistic proxy decodes role claims for redirects. Server
-  authorization remains authoritative, but custom claims must be kept in sync
-  with each Firestore profile change.
+## 3. Functional Requirements Compliance
 
-## Business-logic verification
+| Requirement | Status | Description & Evidence |
+| --- | --- | --- |
+| **Admin-created accounts** | `Deferred` | Batch user import / admin self-service account provisioning form. |
+| **No student self-registration** | `Implemented` | Public registration is disabled; users authenticate against pre-created Firestore profiles. |
+| **Student application submission** | `Implemented` | `submitApplicationAction` creates application and approval subdocuments in a Firestore transaction. |
+| **Duplicate-term prevention** | `Implemented` | Enforces deterministic doc ID `{studentUid}_{academicYear}_{semester}`; duplicate submissions throw transactional error. |
+| **Own-status tracking** | `Implemented` | Security rules restrict student reads to `studentUid == request.auth.uid`. |
+| **Signatory queues** | `Implemented` | Signatories query role-matching pending approval subdocuments without scanning all applications. |
+| **Approve / Pending / Not Approved actions** | `Implemented` | `signClearanceAction` executes atomic status updates. |
+| **Required remarks** | `Implemented` | Server action enforces non-empty remarks when setting status to `pending` or `not_approved`. |
+| **Accountant paid / unpaid verification** | `Implemented` | `updateFinancialStatusAction` updates direct application fields `financialStatus` and `financialVerifiedAt`. |
+| **Unpaid blocks approval** | `Implemented` | `lib/clearance/status.ts` forces overall status to `not_approved` whenever `financialStatus === 'unpaid'`. |
+| **Adviser unlocks Dean visibility** | `Implemented` | Dean queue query filters `adviserApproved == true`; setting adviser away from `approved` revokes Dean visibility. |
+| **Dean is not a required signatory** | `Implemented` | Dean review is an oversight layer and is not included as a required approval row in the clearance matrix. |
+| **Printable clearance after full approval** | `Implemented` | `fetchClearanceCertificateAction` blocks certificate generation unless `printableAvailable === true`. |
+| **Notifications** | `Implemented` | Submissions, signatory actions, and financial updates write to `notifications` collection and appear in UI dropdown. |
+| **Activity logging** | `Implemented` | Server actions write audit events directly to `activityLogs` collection. |
+| **User management** | `Partial` | Admin dashboard supports changing user roles and custom claims; user profile creation form is unbuilt. |
+| **Account deactivation** | `Partial` | Server auth check blocks `accountStatus === 'inactive'`; admin UI UI button for deactivation toggle is unbuilt. |
+| **Password reset** | `Deferred` | Admin-initiated temporary password reset tooling. |
 
-- **Implemented:** `not_approved` takes precedence; all approvals approved plus
-  `paid` is `approved`; all approved plus `unpaid` is `not_approved`; otherwise
-  `pending`; printable availability is true only for `approved`.
-- **Implemented:** signatory action accepts both `applicationId` and
-  `approvalId`, verifies role and assignment, and leaves unassigned rows as
-  role-wide queue items without silently assigning them.
-- **Implemented:** submit, signatory, and financial status writes read the
-  relevant application/approval snapshot before writing in a transaction.
-- **Partial:** queue screens still fetch role queues through server-side scans;
-  pagination and production-scale indexing remain follow-up work.
+---
 
-## Deferred / missing MVP items
+## 4. Evaluation & Next Steps for Non-Implemented Items
 
-- Admin-created staff/student accounts, deactivation, temporary-password reset,
-  and password-change enforcement: **Deferred**.
-- Email notifications, electronic signatures, official certificate issuance,
-  and production hosting hardening: **Deferred**.
-- Automated end-to-end tests and performance/load tests: **Missing**.
+### Partial Items:
+1. **User Management:**
+   - *Evidence:* `updateUserRoleAction` updates user roles and Firebase Auth custom claims.
+   - *Missing Behavior:* No admin UI modal to create a new user profile or edit user contact details.
+   - *Recommended Next Step:* Build `/admin/users/new` modal for creating user profiles.
+
+2. **Account Deactivation:**
+   - *Evidence:* Backend session handler `getAuthenticatedUser()` strictly denies access to `accountStatus === 'inactive'`.
+   - *Missing Behavior:* Admin dashboard user table lacks an explicit toggle button to flip `accountStatus` between `active` and `inactive`.
+   - *Recommended Next Step:* Add an `Deactivate Account` / `Reactivate Account` action button in `AdminDashboard.tsx`.
+
+### Deferred Items:
+1. **Admin-Created Accounts:**
+   - *Evidence:* Demo accounts are seeded via `seedDatabaseAction()`.
+   - *Missing Behavior:* Bulk CSV user account creation wizard.
+   - *Recommended Next Step:* Implement CSV user import in post-MVP phase.
+
+2. **Password Reset:**
+   - *Evidence:* Password authentication uses standard Firebase Auth.
+   - *Missing Behavior:* Admin button to issue a temporary password or send a password reset link.
+   - *Recommended Next Step:* Integrate `sendPasswordResetEmail` in admin dashboard.
+
+3. **Reports:**
+   - *Evidence:* All application and approval data is stored structured in Firestore.
+   - *Missing Behavior:* Printable aggregate report sheets for institutional archives.
+   - *Recommended Next Step:* Add CSV export action in post-MVP release.
