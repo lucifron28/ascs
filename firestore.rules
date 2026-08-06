@@ -12,12 +12,16 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function hasUserDoc() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function getUserRole() {
-      return getUserData().role;
+      return hasUserDoc() ? getUserData().role : null;
     }
 
     function isAdmin() {
@@ -31,7 +35,6 @@ service cloud.firestore {
     function isDean() {
       return isAuthenticated() && getUserRole() == 'dean';
     }
-
     // users collection
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
