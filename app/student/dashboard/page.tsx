@@ -8,6 +8,7 @@ import TrackingTable from '@/components/student/TrackingTable';
 import StatusSummary from '@/components/student/StatusSummary';
 import { LogOut, Shield, Printer, RefreshCw, CheckCircle2, X } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
+import NotificationDropdown from '@/components/ui/NotificationDropdown';
 
 export default function StudentDashboardPage() {
   const router = useRouter();
@@ -78,6 +79,7 @@ export default function StudentDashboardPage() {
           </span>
         </div>
         <div className="flex-none flex items-center gap-3">
+          <NotificationDropdown />
           <ThemeSelector />
           <button
             onClick={loadDashboard}
