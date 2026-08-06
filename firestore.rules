@@ -38,10 +38,7 @@ service cloud.firestore {
     // users collection
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      // Client can only update display-safe fields, role changes are blocked
-      allow update: if isOwner(userId) 
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'accountStatus', 'uid', 'email']);
-      allow create, delete: if false; // Server-only creation/removal
+      allow write: if false; // All updates, profile creation, role changes are server-only
     }
 
     // publicUsers collection
@@ -52,10 +49,7 @@ service cloud.firestore {
 
     // students collection
     match /students/{studentId} {
-      allow read: if isOwner(studentId) 
-        || isAdmin() 
-        || isAccountant() 
-        || isDean();
+      allow read: if isOwner(studentId) || isAdmin();
       allow write: if false; // Server-only creation and update
     }
 
@@ -69,9 +63,7 @@ service cloud.firestore {
     match /clearanceApplications/{applicationId} {
       allow read: if isAuthenticated() && (
         resource.data.studentUid == request.auth.uid 
-        || isAdmin() 
-        || isAccountant()
-        || (isDean() && resource.data.adviserApproved == true)
+        || isAdmin()
       );
       allow write: if false; // Server-only writes via Server Actions
       
@@ -80,8 +72,6 @@ service cloud.firestore {
         allow read: if isAuthenticated() && (
           get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.studentUid == request.auth.uid
           || isAdmin()
-          || isAccountant()
-          || (isDean() && get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.adviserApproved == true)
         );
         allow write: if false; // Server-only writes
       }
@@ -91,8 +81,6 @@ service cloud.firestore {
         allow read: if isAuthenticated() && (
           get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.studentUid == request.auth.uid
           || isAdmin()
-          || isAccountant()
-          || (isDean() && get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.adviserApproved == true)
         );
         allow write: if false; // Server-only writes
       }
