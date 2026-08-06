@@ -1,19 +1,16 @@
 'use server';
 
 import { getAdminFirestore, getAdminAuth } from '@/lib/firebase/admin';
-import { verifySessionCookie } from '@/lib/auth/session';
+import { getAuthenticatedUser } from '@/lib/auth/session';
 import { UserRole } from '@/lib/types/roles';
 
 // Helper to authenticate Admin user
 async function getAuthenticatedAdmin() {
-  const claims = await verifySessionCookie();
-  const userDoc = await getAdminFirestore().collection('users').doc(claims.uid).get();
-  const user = userDoc.data();
-  if (!userDoc.exists || user?.role !== 'admin' || user?.accountStatus === 'inactive') {
+  const authenticated = await getAuthenticatedUser();
+  if (authenticated.user.role !== 'admin') {
     throw new Error('Unauthorized: Only system administrators can access this action.');
   }
-
-  return claims;
+  return authenticated;
 }
 
 // 1. Fetch All System Users
@@ -48,7 +45,7 @@ export async function fetchAdminUsersAction() {
 // 2. Update User Role (Firestore + Custom Claims)
 export async function updateUserRoleAction(data: { userId: string; newRole: UserRole }) {
   try {
-    const adminClaims = await getAuthenticatedAdmin();
+    const { uid: adminUid, user: adminUser } = await getAuthenticatedAdmin();
     const firestore = getAdminFirestore();
     const auth = getAdminAuth();
 
@@ -67,42 +64,65 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
       throw new Error(`Invalid role specified: ${data.newRole}`);
     }
 
-    // Check target user existence
+    // Check target user existence and read previous role
     const userRef = firestore.collection('users').doc(data.userId);
     const userSnap = await userRef.get();
     if (!userSnap.exists) {
       throw new Error('Target user profile not found.');
     }
 
+    const previousData = userSnap.data()!;
+    const previousRole: UserRole = (previousData.role as UserRole) || 'student';
+
+    // Read previous custom claims where possible to preserve unrelated claims
+    let previousClaims: Record<string, unknown> = {};
+    try {
+      const userAuthRecord = await auth.getUser(data.userId);
+      previousClaims = userAuthRecord.customClaims || {};
+    } catch {
+      // Ignore fetch error if Auth user doc is not present in local emulator
+    }
+
     // Prevent demoting self if admin is performing operation on own account
-    if (adminClaims.uid === data.userId && data.newRole !== 'admin') {
+    if (adminUid === data.userId && data.newRole !== 'admin') {
       throw new Error('Action blocked: You cannot demote your own administrator account.');
     }
 
-    // Update Auth custom claims first
-    await auth.setCustomUserClaims(data.userId, { role: data.newRole });
-
-    // Update Firestore users doc
     const now = new Date().toISOString();
-    await userRef.update({
-      role: data.newRole,
-      updatedAt: now,
-    });
-
-    // Update publicUsers doc projection
     const publicRef = firestore.collection('publicUsers').doc(data.userId);
-    await publicRef.set({ role: data.newRole }, { merge: true });
 
-    // Write Activity Log
+    // 1. Update Firestore users and publicUsers together using a batch
+    const batch = firestore.batch();
+    batch.update(userRef, { role: data.newRole, updatedAt: now });
+    batch.set(publicRef, { role: data.newRole }, { merge: true });
+    await batch.commit();
+
+    // 2. Update Auth custom claims with rollback protection
+    try {
+      await auth.setCustomUserClaims(data.userId, { ...previousClaims, role: data.newRole });
+    } catch {
+      // Rollback Firestore batch to previous role
+      try {
+        const rollbackBatch = firestore.batch();
+        rollbackBatch.update(userRef, { role: previousRole, updatedAt: new Date().toISOString() });
+        rollbackBatch.set(publicRef, { role: previousRole }, { merge: true });
+        await rollbackBatch.commit();
+        throw new Error('Role update failed while synchronizing Firebase Auth claims. Firestore rollback completed.');
+      } catch {
+        throw new Error('Role update partially failed and automatic rollback also failed. Manual administrator intervention is required.');
+      }
+    }
+
+    // 3. Write Activity Log after role synchronization succeeds
     const logRef = firestore.collection('activityLogs').doc();
     await logRef.set({
-      actorId: adminClaims.uid,
-      actorName: 'Administrator',
+      actorId: adminUid,
+      actorName: adminUser.fullName || 'Administrator',
       actorRole: 'admin',
       action: 'update_user_role',
       entityType: 'user',
       entityId: data.userId,
-      metadata: { newRole: data.newRole },
+      metadata: { previousRole, newRole: data.newRole },
       createdAt: now,
     });
 
@@ -149,9 +169,8 @@ export async function updateRequirementAssignmentAction(data: {
   assignedSignatoryName: string | null;
 }) {
   try {
-    const adminClaims = await getAuthenticatedAdmin();
+    const { uid: adminUid, user: adminUser } = await getAuthenticatedAdmin();
     const firestore = getAdminFirestore();
-
     const reqRef = firestore.collection('clearanceRequirements').doc(data.requirementId);
     const reqSnap = await reqRef.get();
     if (!reqSnap.exists) {
@@ -189,8 +208,8 @@ export async function updateRequirementAssignmentAction(data: {
     // Activity log
     const logRef = firestore.collection('activityLogs').doc();
     await logRef.set({
-      actorId: adminClaims.uid,
-      actorName: 'Administrator',
+      actorId: adminUid,
+      actorName: adminUser.fullName || 'Administrator',
       actorRole: 'admin',
       action: 'update_requirement_signatory',
       entityType: 'clearanceRequirement',
