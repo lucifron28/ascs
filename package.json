@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/clearance/status.test.ts"
+    "test": "tsx --test lib/clearance/status.test.ts lib/admin/lifecycle.test.ts"
   },
   "dependencies": {
     "@tanstack/react-form": "^1.33.0",
