@@ -89,8 +89,8 @@ listed above are part of the active ASCS system.
 ## Prototype scope and known limits
 
 The MVP demonstrates the core student, signatory, accountant, dean, and admin
-flows with in-app notifications and a print-friendly HTML record. Admin account
-creation, deactivation, password reset, and complete account lifecycle tooling
-remain deferred; the current admin module supports role changes, requirement
-assignment, seeded demo data, and audit-log viewing. Email notifications,
-electronic signatures, and production certificate issuance are also deferred.
+flows with in-app notifications, administrator account lifecycle management, and a print-friendly HTML record.
+System administrators can create student and staff accounts, deactivate and reactivate accounts,
+issue temporary passwords, change system roles, assign requirement signatories, and inspect activity logs.
+Newly created and reset accounts must complete a mandatory password change at `/change-password` before
+accessing normal dashboards. Email notifications, electronic signatures, and production certificate issuance remain deferred.

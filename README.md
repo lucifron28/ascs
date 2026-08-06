@@ -51,7 +51,7 @@ ASCS operates on nine core collections and subcollections:
 6. **Area Chair:** Reviews academic program / department clearance requirements.
 7. **Adviser:** Reviews section/class adviser clearance requirements. Approval unlocks application visibility for the Dean.
 8. **Dean:** Conducts final academic review on adviser-approved clearance applications.
-9. **System Administrator:** Manages user roles, assigns requirement signatories, seeds demo data, and views system activity logs.
+9. **System Administrator:** Provisions student and staff accounts, manages user roles, deactivates/reactivates accounts, issues temporary passwords, assigns requirement signatories, and inspects activity logs.
 ---
 
 ## Local Development & Setup
@@ -148,7 +148,7 @@ NEXT_PUBLIC_DEMO_MODE=false
 - `npm run build` — Compiles and builds the production App Router bundle
 - `npm run start` — Starts Next.js production server
 - `npm run lint` — Runs ESLint checks across project files
-- `npm test` — Executes automated unit tests for clearance status rules (`tsx --test lib/clearance/status.test.ts`)
+- `npm test` — Executes automated unit tests for clearance status rules and account lifecycle validation (`tsx --test lib/clearance/status.test.ts lib/admin/lifecycle.test.ts`)
 ---
 
 ## Security Notes
@@ -164,4 +164,4 @@ NEXT_PUBLIC_DEMO_MODE=false
 
 - **Capstone MVP Notice:** This repository is a research prototype developed for Pambayang Kolehiyo ng Mauban. It is intended for testing, demonstration, and evaluation purposes.
 - **Non-Production Disclaimer:** This system does not issue legal, binding institutional certificates, official electronic signatures, or production financial receipts.
-- **Admin Tooling:** Admin user creation, self-service password reset, and full account lifecycle management are deferred in this MVP build.
+- **Admin Tooling:** Batch CSV account import, self-service user profile editing, and email-based password delivery are deferred in this MVP build. Account creation and temporary password resets are performed via administrator server actions.

@@ -12,8 +12,8 @@
 | --- | --- | --- | --- | --- | --- |
 | **Outputs** | 6 | 0 | 0 | 1 | 7 |
 | **Roles** | 9 | 0 | 0 | 0 | 9 |
-| **Functional Requirements** | 13 | 2 | 1 | 2 | 18 |
-| **Overall Totals** | **28** | **2** | **1** | **3** | **34** |
+| **Functional Requirements** | 17 | 0 | 0 | 1 | 18 |
+| **Overall Totals** | **32** | **0** | **0** | **2** | **34** |
 
 ---
 
@@ -57,7 +57,7 @@
 
 | Requirement | Status | Description & Evidence |
 | --- | --- | --- |
-| **Admin-created accounts** | `Missing` | Administrator user profile creation form is unbuilt; accounts are provisioned via `seedDatabaseAction()` or Firebase Auth CLI. |
+| **Admin-created accounts** | `Implemented` | `createStudentAccountAction` and `createStaffAccountAction` provision Auth accounts, set custom claims, write Firestore profiles (`users`, `publicUsers`, `students`), and issue temporary passwords in Admin UI. |
 | **No student self-registration** | `Implemented` | Public registration is disabled; users authenticate against pre-created Firestore profiles. |
 | **Student application submission** | `Implemented` | `submitApplicationAction` creates application and approval subdocuments in a Firestore transaction. |
 | **Duplicate-term prevention** | `Implemented` | Enforces deterministic doc ID `{studentUid}_{academicYear}_{semester}`; duplicate submissions throw transactional error. |
@@ -72,36 +72,21 @@
 | **Printable clearance after full approval** | `Implemented` | `fetchClearanceCertificateAction` blocks certificate generation unless `printableAvailable === true`. |
 | **Notifications** | `Implemented` | Submissions, signatory actions, and financial updates write to `notifications` collection and appear in UI dropdown. |
 | **Activity logging** | `Implemented` | Server actions write audit events directly to `activityLogs` collection. |
-| **User management** | `Partial` | Admin dashboard supports changing user roles and custom claims; user profile creation form is unbuilt. |
-| **Account deactivation** | `Partial` | Server auth check blocks `accountStatus === 'inactive'`; admin UI UI button for deactivation toggle is unbuilt. |
-| **Password reset** | `Deferred` | Admin-initiated temporary password reset tooling. |
+| **User management** | `Implemented` | Admin dashboard supports creating student and staff accounts, updating user roles with Auth rollback, assigning requirement signatories, and filtering user records. |
+| **Account deactivation** | `Implemented` | `deactivateUserAccountAction` and `reactivateUserAccountAction` toggle Auth disabled status, revoke active refresh tokens, update Firestore flags, and block inactive users from session creation and actions. |
+| **Password reset** | `Implemented` | `resetUserTemporaryPasswordAction` issues a secure temporary password, revokes refresh tokens, and sets `mustChangePassword: true` which enforces mandatory password change at `/change-password`. |
 
 ---
 
 ## 4. Evaluation & Next Steps for Non-Implemented Items
 
-### Partial Items:
-1. **User Management:**
-   - *Evidence:* `updateUserRoleAction` updates user roles and Firebase Auth custom claims.
-   - *Missing Behavior:* No admin UI modal to create a new user profile or edit user contact details.
-   - *Recommended Next Step:* Build `/admin/users/new` modal for creating user profiles.
-
-2. **Account Deactivation:**
-   - *Evidence:* Backend session handler `getAuthenticatedUser()` strictly denies access to `accountStatus === 'inactive'`.
-   - *Missing Behavior:* Admin dashboard user table lacks an explicit toggle button to flip `accountStatus` between `active` and `inactive`.
-   - *Recommended Next Step:* Add an `Deactivate Account` / `Reactivate Account` action button in `AdminDashboard.tsx`.
-
-### Missing Items:
-1. **Admin-Created Accounts:**
-   - *Evidence:* Demo accounts are seeded via `seedDatabaseAction()`.
-   - *Missing Behavior:* Admin UI user account creation form / modal.
-   - *Recommended Next Step:* Implement `/admin/users/create` modal for provisioning staff and student accounts.
-2. **Password Reset:**
-   - *Evidence:* Password authentication uses standard Firebase Auth.
-   - *Missing Behavior:* Admin button to issue a temporary password or send a password reset link.
-   - *Recommended Next Step:* Integrate `sendPasswordResetEmail` in admin dashboard.
-
-3. **Reports:**
+### Deferred Items:
+1. **Reports:**
    - *Evidence:* All application and approval data is stored structured in Firestore.
-   - *Missing Behavior:* Printable aggregate report sheets for institutional archives.
-   - *Recommended Next Step:* Add CSV export action in post-MVP release.
+   - *Missing Behavior:* Aggregate department clearance completion rate reports and financial dues summaries.
+   - *Recommended Next Step:* Implement an admin/dean analytics dashboard route under `/admin/reports` in post-MVP phase.
+
+2. **Bulk CSV Account Import:**
+   - *Evidence:* Single account creation actions (`createStudentAccountAction`, `createStaffAccountAction`) are fully functional.
+   - *Missing Behavior:* Bulk CSV user account upload wizard.
+   - *Recommended Next Step:* Add CSV upload parser in post-MVP administrative tooling.
