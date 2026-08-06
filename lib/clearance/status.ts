@@ -12,6 +12,23 @@ export interface ClearanceStatusSummary {
   notApprovedCount: number;
   printableAvailable: boolean;
 }
+export const VALID_APPROVAL_STATUSES = ['approved', 'pending', 'not_approved'] as const;
+export const VALID_FINANCIAL_STATUSES = ['paid', 'unpaid'] as const;
+
+export function validateApprovalStatus(status: string): boolean {
+  return (VALID_APPROVAL_STATUSES as readonly string[]).includes(status);
+}
+
+export function validateFinancialStatus(status: string): boolean {
+  return (VALID_FINANCIAL_STATUSES as readonly string[]).includes(status);
+}
+
+export function mapApprovalDocToStatus(docData: { status?: unknown; signatoryRole?: unknown }): ClearanceApprovalStatus {
+  return {
+    status: typeof docData.status === 'string' ? docData.status : null,
+    signatoryRole: typeof docData.signatoryRole === 'string' ? docData.signatoryRole : null,
+  };
+}
 
 /**
  * Derive the application status from the approval rows and financial flag.

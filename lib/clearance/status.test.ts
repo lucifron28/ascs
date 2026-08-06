@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getClearanceStatusSummary } from './status';
+import {
+  getClearanceStatusSummary,
+  mapApprovalDocToStatus,
+  validateApprovalStatus,
+  validateFinancialStatus,
+} from './status';
 
-test('Rule 1: Any signatory not_approved produces overall not_approved', () => {
+test('1. Any signatory not_approved produces overall not_approved', () => {
   const summary = getClearanceStatusSummary(
     [{ status: 'approved', signatoryRole: 'librarian' }, { status: 'not_approved', signatoryRole: 'adviser' }],
     'paid'
@@ -11,7 +16,7 @@ test('Rule 1: Any signatory not_approved produces overall not_approved', () => {
   assert.equal(summary.printableAvailable, false);
 });
 
-test('Rule 2: All required signatories approved plus financial paid produces approved', () => {
+test('2. All five required signatories approved plus financial paid produces approved', () => {
   const summary = getClearanceStatusSummary(
     [
       { status: 'approved', signatoryRole: 'librarian' },
@@ -26,7 +31,7 @@ test('Rule 2: All required signatories approved plus financial paid produces app
   assert.equal(summary.printableAvailable, true);
 });
 
-test('Rule 3: All required signatories approved plus financial unpaid produces not_approved', () => {
+test('3. All five required signatories approved plus financial unpaid produces not_approved', () => {
   const summary = getClearanceStatusSummary(
     [
       { status: 'approved', signatoryRole: 'librarian' },
@@ -41,7 +46,7 @@ test('Rule 3: All required signatories approved plus financial unpaid produces n
   assert.equal(summary.printableAvailable, false);
 });
 
-test('Rule 4: A pending signatory produces pending', () => {
+test('4. A pending required signatory produces pending', () => {
   const summary = getClearanceStatusSummary(
     [
       { status: 'approved', signatoryRole: 'librarian' },
@@ -53,7 +58,7 @@ test('Rule 4: A pending signatory produces pending', () => {
   assert.equal(summary.printableAvailable, false);
 });
 
-test('Rule 5: Pending financial verification produces pending', () => {
+test('5. Pending financial verification produces pending', () => {
   const summary = getClearanceStatusSummary(
     [
       { status: 'approved', signatoryRole: 'librarian' },
@@ -65,13 +70,13 @@ test('Rule 5: Pending financial verification produces pending', () => {
   assert.equal(summary.printableAvailable, false);
 });
 
-test('Rule 6: No approval rows cannot produce approved status', () => {
+test('6. Empty approval list cannot produce approval', () => {
   const summary = getClearanceStatusSummary([], 'paid');
   assert.equal(summary.overallStatus, 'pending');
   assert.equal(summary.printableAvailable, false);
 });
 
-test('Rule 7: A legacy Accountant approval row does not block approval after financial-gate policy is applied', () => {
+test('7. Legacy pending Accountant approval is ignored when signatoryRole is provided', () => {
   const summary = getClearanceStatusSummary(
     [
       { status: 'approved', signatoryRole: 'librarian' },
@@ -87,7 +92,7 @@ test('Rule 7: A legacy Accountant approval row does not block approval after fin
   assert.equal(summary.printableAvailable, true);
 });
 
-test('Rule 8: Printable availability is true only when overall status is approved', () => {
+test('8. Printable availability is true only for approved status', () => {
   const pendingSummary = getClearanceStatusSummary(
     [{ status: 'approved', signatoryRole: 'librarian' }],
     'pending'
@@ -99,4 +104,31 @@ test('Rule 8: Printable availability is true only when overall status is approve
     'paid'
   );
   assert.equal(approvedSummary.printableAvailable, true);
+});
+
+test('9. Mapping approval documents preserves status and signatoryRole', () => {
+  const rawDocData = { status: 'approved', signatoryRole: 'librarian', id: 'approval-1' };
+  const mapped = mapApprovalDocToStatus(rawDocData);
+  assert.equal(mapped.status, 'approved');
+  assert.equal(mapped.signatoryRole, 'librarian');
+
+  const summary = getClearanceStatusSummary([mapped], 'paid');
+  assert.equal(summary.overallStatus, 'approved');
+});
+
+test('10. Invalid financial status is rejected by validator', () => {
+  assert.equal(validateFinancialStatus('paid'), true);
+  assert.equal(validateFinancialStatus('unpaid'), true);
+  assert.equal(validateFinancialStatus('pending'), false);
+  assert.equal(validateFinancialStatus('unknown_status'), false);
+  assert.equal(validateFinancialStatus(''), false);
+});
+
+test('11. Invalid signatory status is rejected by validator', () => {
+  assert.equal(validateApprovalStatus('approved'), true);
+  assert.equal(validateApprovalStatus('pending'), true);
+  assert.equal(validateApprovalStatus('not_approved'), true);
+  assert.equal(validateApprovalStatus('cleared'), false);
+  assert.equal(validateApprovalStatus('rejected'), false);
+  assert.equal(validateApprovalStatus(''), false);
 });
