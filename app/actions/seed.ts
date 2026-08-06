@@ -56,6 +56,7 @@ export async function seedDatabaseAction() {
 
     for (const user of DEMO_USERS) {
       // Create user in Auth Emulator if it does not exist
+      let authUid = user.uid;
       try {
         await auth.createUser({
           uid: user.uid,
@@ -64,18 +65,30 @@ export async function seedDatabaseAction() {
           emailVerified: true
         });
       } catch (authErr: any) {
-        // If user already exists, ignore and continue
-        if (authErr.code !== 'auth/uid-already-exists' && authErr.code !== 'auth/email-already-exists') {
-          console.warn(`Auth user creation failed for ${user.email}:`, authErr.message);
+        if (authErr.code === 'auth/uid-already-exists') {
+          authUid = user.uid;
+        } else if (authErr.code === 'auth/email-already-exists') {
+          // A previous emulator run may have created the same email with a
+          // different UID. Reuse that account so the demo remains repairable.
+          const existingUser = await auth.getUserByEmail(user.email);
+          authUid = existingUser.uid;
+        } else {
+          throw authErr;
         }
       }
 
-      // Set custom user claims for role-based middleware routing
-      await auth.setCustomUserClaims(user.uid, { role: user.role });
+      // Keep repeated demo seeding deterministic even when an account already
+      // exists with an old password or a different UID.
+      await auth.updateUser(authUid, {
+        email: user.email,
+        password: 'password123',
+        emailVerified: true,
+      });
+      await auth.setCustomUserClaims(authUid, { role: user.role });
 
       // Create users/{userId} document
-      await usersCol.doc(user.uid).set({
-        uid: user.uid,
+      await usersCol.doc(authUid).set({
+        uid: authUid,
         email: user.email,
         username: user.email.split('@')[0],
         fullName: user.fullName,
@@ -89,15 +102,15 @@ export async function seedDatabaseAction() {
       });
 
       // Create publicUsers/{userId} document
-      await publicCol.doc(user.uid).set({
+      await publicCol.doc(authUid).set({
         fullName: user.fullName,
         role: user.role
       });
 
       // If user is a student, create student document
       if (user.role === 'student') {
-        await studentsCol.doc(user.uid).set({
-          uid: user.uid,
+        await studentsCol.doc(authUid).set({
+          uid: authUid,
           studentNumber: user.studentNumber || 'STUD-2026-0001',
           fullName: user.fullName,
           program: 'BSIT',

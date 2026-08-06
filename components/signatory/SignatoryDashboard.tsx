@@ -78,9 +78,16 @@ export default function SignatoryDashboard() {
 
     // Validate mandatory remarks on pending / not_approved
     if (status !== 'approved' && (!remarks || remarks.trim() === '')) {
-      setModalError('Remarks are required when requesting revision or disapproving.');
+      setModalError('Remarks are required when marking an item Pending or Not Approved.');
       return;
     }
+
+    const confirmation = status === 'not_approved'
+      ? 'Mark this clearance requirement as Not Approved? The student will see your remarks.'
+      : status === 'pending'
+        ? 'Return this clearance requirement to Pending for revision?'
+        : 'Approve this clearance requirement?';
+    if (!window.confirm(confirmation)) return;
 
     setModalLoading(true);
     setModalError(null);
@@ -88,6 +95,7 @@ export default function SignatoryDashboard() {
 
     try {
       const res = await signClearanceAction({
+        applicationId: selectedApp.application_id,
         approvalId: selectedApp.approval_id,
         status: status,
         remarks: remarks,
@@ -279,7 +287,7 @@ export default function SignatoryDashboard() {
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 disabled={modalLoading || modalSuccess}
-                placeholder="Enter remarks here... (Mandatory for Pending/Disapprove actions)"
+                placeholder="Enter remarks here... (Mandatory for Mark Pending / Mark Not Approved actions)"
                 className="textarea textarea-bordered w-full h-24 bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-700 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs"
               />
             </div>
@@ -291,14 +299,14 @@ export default function SignatoryDashboard() {
                 disabled={modalLoading || modalSuccess}
                 className="btn btn-sm btn-error bg-rose-950/30 hover:bg-rose-600 border border-rose-800 text-rose-400 hover:text-white rounded-xl text-[10px] font-semibold tracking-wide transition-all uppercase h-9"
               >
-                Disapprove
+                Mark Not Approved
               </button>
               <button
                 onClick={() => handleAction('pending')}
                 disabled={modalLoading || modalSuccess}
                 className="btn btn-sm btn-warning bg-amber-950/30 hover:bg-amber-600 border border-amber-800 text-amber-400 hover:text-white rounded-xl text-[10px] font-semibold tracking-wide transition-all uppercase h-9"
               >
-                Revision
+                Mark Pending
               </button>
               <button
                 onClick={() => handleAction('approved')}

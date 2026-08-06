@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Automated Student Clearance System (ASCS)
 
-## Getting Started
+ASCS is a prototype/MVP for Pambayang Kolehiyo ng Mauban (PKM). It digitizes
+student clearance submissions, role-based signatory review, financial
+verification, adviser-gated Dean visibility, remarks, notifications, and a
+print-friendly clearance record.
 
-First, run the development server:
+## Stack
+
+- Next.js App Router and TypeScript
+- Firebase Authentication (email/password)
+- Cloud Firestore (primary database)
+- Firebase Admin SDK for trusted server actions and route handlers
+- Tailwind CSS, daisyUI, TanStack Form, and Firebase Emulator Suite
+
+## Local setup
+
+1. Install dependencies with Node.js and npm.
+2. Copy `.env.example` to `.env.local` and fill the Firebase values.
+3. Start the local app:
+
+   ```bash
+   npm run dev
+   ```
+
+4. Open `http://localhost:3000/login`.
+
+For local-only development with the Firebase Emulator Suite:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+firebase emulators:start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true`. The login server action can seed
+the idempotent demo accounts when the emulator is running. The optional
+quick-fill panel is shown only when `NEXT_PUBLIC_DEMO_MODE=true`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See `.env.example` for the complete list:
 
-## Learn More
+- `NEXT_PUBLIC_FIREBASE_*`: client Firebase configuration.
+- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`:
+  server-only Admin SDK credentials.
+- `SESSION_COOKIE_NAME`: shared HTTP-only session cookie name (default:
+  `ascs_session`).
+- `NEXT_PUBLIC_USE_FIREBASE_EMULATOR`: connect client/Admin SDKs to local
+  emulators.
+- `NEXT_PUBLIC_DEMO_MODE`: opt in to demo credential quick-fill UI.
 
-To learn more about Next.js, take a look at the following resources:
+Never commit `.env.local`, service-account JSON, private keys, or production
+credentials. The Firebase API key is a client identifier, but server
+credentials must remain server-only.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## MVP scope
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The MVP covers Student, Librarian, Accountant, OSA Coordinator, Guidance
+Counselor, Area Chair, Adviser, Dean, and Admin workflows. Firestore Rules deny
+direct workflow writes; Server Actions use the Admin SDK after session and
+profile checks. The printable view is explicitly a prototype/MVP record and is
+not an official school certificate.
 
-## Deploy on Vercel
+## Known limitations
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Admin account creation, deactivation, temporary-password reset, and full
+  account lifecycle management are deferred; the current admin module supports
+  role changes, requirement assignment, seeded demo data, and audit logs.
+- Notifications are in-app only; email delivery and electronic signatures are
+  deferred.
+- The local demo requires the Auth and Firestore emulators to be running when
+  emulator mode is enabled.
+- This repository does not claim production readiness or official PKM issuance.

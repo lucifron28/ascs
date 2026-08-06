@@ -157,6 +157,7 @@ export default function AdminDashboard() {
   const handleUpdateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
+    if (!window.confirm(`Change ${selectedUser.fullName}'s system role to ${selectedRole.replace('_', ' ')}?`)) return;
 
     setModalLoading(true);
     setModalError(null);
@@ -197,6 +198,8 @@ export default function AdminDashboard() {
   const handleUpdateRequirement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq) return;
+    const target = assignedSignatoryName || 'any signatory with the required role';
+    if (!window.confirm(`Assign ${selectedReq.label} to ${target}?`)) return;
 
     setReqModalLoading(true);
     setReqModalError(null);
@@ -484,7 +487,7 @@ export default function AdminDashboard() {
                           onClick={() => handleOpenRoleModal(u)}
                           className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 rounded-lg gap-1"
                         >
-                          <Edit className="w-3.5 h-3.5" /> Edit Role
+                          <Edit className="w-3.5 h-3.5" /> Change User Role
                         </button>
                       </td>
                     </tr>
@@ -598,7 +601,7 @@ export default function AdminDashboard() {
           <div className="modal-box bg-base-100 border border-base-content/10 rounded-2xl p-6 max-w-md">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg flex items-center gap-2">
-                <Edit className="w-5 h-5 text-primary" /> Edit User Role
+                <Edit className="w-5 h-5 text-primary" /> Change User Role
               </h3>
               <button
                 onClick={() => setSelectedUser(null)}
@@ -665,7 +668,7 @@ export default function AdminDashboard() {
                   className="btn btn-sm btn-primary rounded-xl font-semibold gap-1.5"
                 >
                   {modalLoading && <span className="loading loading-spinner loading-xs" />}
-                  Save Role Update
+                  Save User Role
                 </button>
               </div>
             </form>
@@ -679,7 +682,7 @@ export default function AdminDashboard() {
           <div className="modal-box bg-base-100 border border-base-content/10 rounded-2xl p-6 max-w-md">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-accent" /> Assign Requirement Signatory
+                <UserCheck className="w-5 h-5 text-accent" /> Assign Signatory
               </h3>
               <button
                 onClick={() => setSelectedReq(null)}
@@ -770,7 +773,7 @@ export default function AdminDashboard() {
                   className="btn btn-sm btn-accent rounded-xl font-semibold gap-1.5"
                 >
                   {reqModalLoading && <span className="loading loading-spinner loading-xs" />}
-                  Save Assignment
+                  Save Signatory Assignment
                 </button>
               </div>
             </form>

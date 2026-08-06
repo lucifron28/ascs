@@ -1,17 +1,15 @@
 'use server';
 
 import { getAdminFirestore, getAdminAuth } from '@/lib/firebase/admin';
-import { cookies } from 'next/headers';
+import { verifySessionCookie } from '@/lib/auth/session';
 import { UserRole } from '@/lib/types/roles';
 
 // Helper to authenticate Admin user
 async function getAuthenticatedAdmin() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('session')?.value;
-  if (!session) throw new Error('Unauthorized: No active session.');
-
-  const claims = await getAdminAuth().verifySessionCookie(session, true);
-  if (claims.role !== 'admin') {
+  const claims = await verifySessionCookie();
+  const userDoc = await getAdminFirestore().collection('users').doc(claims.uid).get();
+  const user = userDoc.data();
+  if (!userDoc.exists || user?.role !== 'admin' || user?.accountStatus === 'inactive') {
     throw new Error('Unauthorized: Only system administrators can access this action.');
   }
 

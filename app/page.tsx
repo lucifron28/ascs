@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { getSessionCookie } from '@/lib/auth/session';
 
 function decodeJwt(token: string) {
   try {
@@ -13,8 +13,7 @@ function decodeJwt(token: string) {
 }
 
 export default async function Home() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('session')?.value;
+  const session = await getSessionCookie();
 
   if (session) {
     const decoded = decodeJwt(session);

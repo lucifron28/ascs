@@ -4,9 +4,9 @@ import React from 'react';
 import { CreditCard, Check, AlertCircle, AlertTriangle } from 'lucide-react';
 
 interface ApplicationSummary {
-  application_number: string;
-  overall_status: 'pending' | 'approved' | 'not_approved';
-  submitted_at: string;
+  applicationNumber: string;
+  overallStatus: 'pending' | 'approved' | 'not_approved';
+  submittedAt: string;
 }
 
 interface FinancialRecord {
@@ -26,23 +26,23 @@ export default function StatusSummary({ application, financial }: StatusSummaryP
     switch (status) {
       case 'approved':
         return {
-          title: 'Cleared',
-          desc: 'Your application is fully approved. You can print your clearance.',
+          title: 'Approved',
+          desc: 'All configured signatories approved and financial status is Paid. You can print the prototype record.',
           cardBg: 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300',
           badgeBg: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400',
           icon: <Check className="w-8 h-8 text-emerald-400" />,
         };
       case 'not_approved':
         return {
-          title: 'Hold Clearance',
-          desc: 'One or more departments found remarks. Please review and resolve.',
+          title: 'Not Approved',
+          desc: 'A signatory or the financial review marked this application as not approved. Review the remarks.',
           cardBg: 'bg-rose-950/20 border-rose-800/40 text-rose-300',
           badgeBg: 'bg-rose-500/20 border-rose-500/30 text-rose-400',
           icon: <AlertCircle className="w-8 h-8 text-rose-400" />,
         };
       default:
         return {
-          title: 'Under Review',
+          title: 'Pending',
           desc: 'Your application is undergoing evaluation by clearance officers.',
           cardBg: 'bg-amber-950/20 border-amber-800/40 text-amber-300',
           badgeBg: 'bg-amber-500/20 border-amber-500/30 text-amber-400',
@@ -57,7 +57,7 @@ export default function StatusSummary({ application, financial }: StatusSummaryP
       case 'paid':
         return {
           title: 'Paid / Settled',
-          desc: 'All financial records are clear. No accountability flags found.',
+          desc: 'Financial accountability is marked paid. No outstanding balance is recorded.',
           cardBg: 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300',
           badgeBg: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400',
         };
@@ -78,7 +78,7 @@ export default function StatusSummary({ application, financial }: StatusSummaryP
     }
   };
 
-  const currentStyles = getOverallStyle(application.overall_status);
+  const currentStyles = getOverallStyle(application.overallStatus);
   const finStyles = getFinancialStyle(financial?.status || 'pending');
 
   return (
@@ -95,7 +95,7 @@ export default function StatusSummary({ application, financial }: StatusSummaryP
           <h2 className="text-2xl font-black tracking-tight">{currentStyles.title}</h2>
           <p className="text-xs text-slate-300 leading-relaxed">{currentStyles.desc}</p>
           <div className="text-[10px] text-slate-500 mt-2">
-            Ref: {application.application_number} • Submitted {new Date(application.submitted_at).toLocaleDateString()}
+            Ref: {application.applicationNumber} • Submitted {new Date(application.submittedAt).toLocaleDateString()}
           </div>
         </div>
       </div>
@@ -108,7 +108,7 @@ export default function StatusSummary({ application, financial }: StatusSummaryP
           </div>
         </div>
         <div className="space-y-1 flex-1">
-          <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Financial Account</span>
+          <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Financial Status</span>
           <h2 className="text-2xl font-black tracking-tight">{finStyles.title}</h2>
           <p className="text-xs text-slate-300 leading-relaxed">{finStyles.desc}</p>
           {financial?.verified_at && (

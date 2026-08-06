@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, Shield } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
+import NotificationDropdown from '@/components/ui/NotificationDropdown';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 
 export default function DashboardPage() {
@@ -31,6 +32,7 @@ export default function DashboardPage() {
           </span>
         </div>
         <div className="flex-none flex items-center gap-3">
+          <NotificationDropdown />
           <ThemeSelector />
           <button onClick={handleLogout} className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg flex items-center gap-1.5">
             <LogOut className="w-4 h-4" /> Logout

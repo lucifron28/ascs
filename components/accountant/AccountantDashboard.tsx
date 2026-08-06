@@ -82,6 +82,11 @@ export default function AccountantDashboard() {
     e.preventDefault();
     if (!selectedRecord) return;
 
+    const confirmation = statusInput === 'unpaid'
+      ? 'Mark this application Financially Unpaid? A remark is required and the clearance cannot be approved.'
+      : 'Mark this application Financially Paid? This can make the clearance printable once all signatories approve.';
+    if (!window.confirm(confirmation)) return;
+
     setModalLoading(true);
     setModalError(null);
     setModalSuccess(false);
@@ -381,7 +386,7 @@ export default function AccountantDashboard() {
                       disabled={modalLoading || modalSuccess}
                       className="radio radio-error"
                     />
-                    <span className="label-text text-slate-300 text-xs">Unpaid Balance</span>
+                    <span className="label-text text-slate-300 text-xs">Mark Financially Unpaid</span>
                   </label>
                   <label className="label cursor-pointer flex gap-2 justify-start py-1">
                     <input
@@ -393,7 +398,7 @@ export default function AccountantDashboard() {
                       disabled={modalLoading || modalSuccess}
                       className="radio radio-success"
                     />
-                    <span className="label-text text-slate-300 text-xs">Paid / Cleared</span>
+                    <span className="label-text text-slate-300 text-xs">Mark Financially Paid</span>
                   </label>
                 </div>
               </div>
@@ -421,7 +426,7 @@ export default function AccountantDashboard() {
                 {modalLoading ? (
                   <span className="loading loading-spinner loading-sm" />
                 ) : (
-                  'Update Balance Status'
+                  'Save Financial Status'
                 )}
               </button>
             </form>

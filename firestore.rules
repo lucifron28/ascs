@@ -52,8 +52,7 @@ service cloud.firestore {
       allow read: if isOwner(studentId) 
         || isAdmin() 
         || isAccountant() 
-        || isDean() 
-        || getUserRole() in ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'adviser'];
+        || isDean();
       allow write: if false; // Server-only creation and update
     }
 
@@ -70,7 +69,6 @@ service cloud.firestore {
         || isAdmin() 
         || isAccountant()
         || (isDean() && resource.data.adviserApproved == true)
-        || getUserRole() in ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'adviser']
       );
       allow write: if false; // Server-only writes via Server Actions
       
@@ -80,7 +78,7 @@ service cloud.firestore {
           get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.studentUid == request.auth.uid
           || isAdmin()
           || isAccountant()
-          || getUserRole() in ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'adviser']
+          || (isDean() && get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.adviserApproved == true)
         );
         allow write: if false; // Server-only writes
       }
@@ -90,7 +88,8 @@ service cloud.firestore {
         allow read: if isAuthenticated() && (
           get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.studentUid == request.auth.uid
           || isAdmin()
-          || getUserRole() in ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'adviser']
+          || isAccountant()
+          || (isDean() && get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.adviserApproved == true)
         );
         allow write: if false; // Server-only writes
       }
