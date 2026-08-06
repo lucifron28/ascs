@@ -5,11 +5,10 @@ import { getAdminFirestore, getAdminAuth } from '@/lib/firebase/admin';
 // Default Clearance Requirements
 const DEFAULT_REQUIREMENTS = [
   { id: 'librarian', role: 'librarian', label: 'Librarian Clearance', displayOrder: 1, isActive: true },
-  { id: 'accountant', role: 'accountant', label: 'Accountant Clearance', displayOrder: 2, isActive: true },
-  { id: 'osa_coordinator', role: 'osa_coordinator', label: 'OSA Coordinator Clearance', displayOrder: 3, isActive: true },
-  { id: 'guidance_counselor', role: 'guidance_counselor', label: 'Guidance Counselor Clearance', displayOrder: 4, isActive: true },
-  { id: 'area_chair', role: 'area_chair', label: 'Area Chair Clearance', displayOrder: 5, isActive: true },
-  { id: 'adviser', role: 'adviser', label: 'Adviser Clearance', displayOrder: 6, isActive: true }
+  { id: 'osa_coordinator', role: 'osa_coordinator', label: 'OSA Coordinator Clearance', displayOrder: 2, isActive: true },
+  { id: 'guidance_counselor', role: 'guidance_counselor', label: 'Guidance Counselor Clearance', displayOrder: 3, isActive: true },
+  { id: 'area_chair', role: 'area_chair', label: 'Area Chair Clearance', displayOrder: 4, isActive: true },
+  { id: 'adviser', role: 'adviser', label: 'Adviser Clearance', displayOrder: 5, isActive: true }
 ];
 
 
@@ -36,16 +35,19 @@ export async function seedDatabaseAction() {
     const firestore = getAdminFirestore();
     const auth = getAdminAuth();
 
-    // 1. Seed Clearance Requirements
+    // 1. Seed Clearance Requirements (5 default non-accountant signatories)
     const reqCol = firestore.collection('clearanceRequirements');
+    // Delete obsolete Accountant requirement doc if present in emulator/demo DB
+    await reqCol.doc('accountant').delete().catch(() => {});
+
     for (const req of DEFAULT_REQUIREMENTS) {
       await reqCol.doc(req.id).set({
         ...req,
         assignedSignatoryId: null,
         assignedSignatoryName: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
     }
 
 

@@ -93,6 +93,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
     };
     approvals: Array<{
       id: string;
+      signatoryRole?: string;
       label: string;
       status: string;
       assignedSignatoryName?: string;
@@ -173,7 +174,9 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {approvals.map((app: { id: string; label: string; status: string; assignedSignatoryName?: string; actedAt?: string | null }) => (
+              {approvals
+                .filter((app) => app.signatoryRole !== 'accountant')
+                .map((app) => (
                 <tr key={app.id}>
                   <td className="p-2 font-semibold border-r border-slate-200">{app.label}</td>
                   <td className="p-2 border-r border-slate-200 text-slate-700">{app.assignedSignatoryName || 'Role Queue'}</td>

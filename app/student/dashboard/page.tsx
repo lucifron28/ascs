@@ -234,7 +234,9 @@ export default function StudentDashboardPage() {
 
               {/* Signatory grid */}
               <div className="grid grid-cols-2 gap-6 mt-10">
-                {((dashboardData?.approvals as Array<{ id: string; assignee_name?: string; label?: string; acted_at?: string }>) || []).map((appr) => (
+                {((dashboardData?.approvals as Array<{ id: string; assignee_name?: string; label?: string; acted_at?: string; signatory_role?: string }>) || [])
+                  .filter((appr) => appr.signatory_role !== 'accountant')
+                  .map((appr) => (
                   <div key={appr.id} className="border-b border-slate-200 pb-3 flex flex-col justify-end min-h-[60px]">
                     <div className="font-bold text-slate-800 text-xs">{appr.assignee_name || 'APPROVED'}</div>
                     <div className="text-[10px] text-slate-500 italic uppercase">{appr.label}</div>

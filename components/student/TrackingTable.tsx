@@ -27,7 +27,10 @@ interface TrackingTableProps {
 }
 
 export default function TrackingTable({ approvals, remarks }: TrackingTableProps) {
-  // Helper to format timestamps
+  // Filter out legacy Accountant approval rows (Accountant is represented in Financial Status section)
+  const filteredApprovals = (approvals || []).filter(
+    (app) => app.signatory_role !== 'accountant'
+  );
   const formatTime = (timeStr: string | null) => {
     if (!timeStr) return '--';
     const d = new Date(timeStr);
@@ -83,7 +86,7 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
               </tr>
             </thead>
             <tbody>
-              {approvals.map((appr) => {
+              {filteredApprovals.map((appr) => {
                 const approvalRemarks = remarks.filter((r) => r.approval_id === appr.id);
 
                 return (

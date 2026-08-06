@@ -21,14 +21,19 @@ export function getClearanceStatusSummary(
   approvals: readonly ClearanceApprovalStatus[],
   financialStatus: FinancialStatus | string | null | undefined,
 ): ClearanceStatusSummary {
-  const pendingCount = approvals.filter((approval) => approval.status !== 'approved' && approval.status !== 'not_approved').length;
-  const approvedCount = approvals.filter((approval) => approval.status === 'approved').length;
-  const notApprovedCount = approvals.filter((approval) => approval.status === 'not_approved').length;
+  // Filter out legacy Accountant approval rows so the Accountant is purely a financial gate
+  const validApprovals = approvals.filter(
+    (approval) => approval.signatoryRole !== 'accountant'
+  );
+
+  const pendingCount = validApprovals.filter((approval) => approval.status !== 'approved' && approval.status !== 'not_approved').length;
+  const approvedCount = validApprovals.filter((approval) => approval.status === 'approved').length;
+  const notApprovedCount = validApprovals.filter((approval) => approval.status === 'not_approved').length;
 
   let overallStatus: ClearanceStatus = 'pending';
   if (notApprovedCount > 0) {
     overallStatus = 'not_approved';
-  } else if (approvals.length > 0 && pendingCount === 0) {
+  } else if (validApprovals.length > 0 && pendingCount === 0) {
     if (financialStatus === 'paid') {
       overallStatus = 'approved';
     } else if (financialStatus === 'unpaid') {
