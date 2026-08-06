@@ -48,8 +48,9 @@ export async function proxy(request: NextRequest) {
         issuer: `https://session.firebase.google.com/${projectId}`,
         audience: projectId,
       });
-    } catch (verifyError: any) {
-      console.error('Middleware JWT signature verification failed:', verifyError.message);
+    } catch (verifyError: unknown) {
+      const message = verifyError instanceof Error ? verifyError.message : 'JWKS Verification error';
+      console.error('Middleware JWT signature verification failed:', message);
       if (!isPublicRoute) {
         url.pathname = '/login';
         const redirectRes = NextResponse.redirect(url);

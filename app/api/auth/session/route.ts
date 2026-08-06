@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Session creation error:', error);
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }

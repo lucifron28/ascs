@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebase/admin';
-import { getSessionCookie, verifySessionCookie } from '@/lib/auth/session';
+import { getSessionCookie, getAuthenticatedUser } from '@/lib/auth/session';
 
 export async function GET() {
   try {
@@ -10,28 +9,22 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized: No session cookie' }, { status: 401 });
     }
 
-    let decodedClaims;
+    let authResult;
     try {
-      decodedClaims = await verifySessionCookie(session);
-    } catch (e: any) {
-      console.error('Session verification failed:', e.message);
-      return NextResponse.json({ error: 'Unauthorized: Invalid session' }, { status: 401 });
-    }
-
-    const uid = decodedClaims.uid;
-    const firestore = getAdminFirestore();
-    const userDoc = await firestore.collection('users').doc(uid).get();
-
-    if (!userDoc.exists) {
+      authResult = await getAuthenticatedUser(session);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unauthorized';
+      const isNotFound = message.includes('not found');
       return NextResponse.json(
-        { error: 'Profile not found. Contact the system administrator.' },
-        { status: 404 },
+        { error: message },
+        { status: isNotFound ? 404 : 401 }
       );
     }
 
-    return NextResponse.json({ profile: userDoc.data() });
-  } catch (error: any) {
+    return NextResponse.json({ profile: authResult.user });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
     console.error('Profile API error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

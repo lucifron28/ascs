@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { cookies } from 'next/headers';
-import { getAdminAuth } from '@/lib/firebase/admin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { getSessionCookieName, SESSION_COOKIE_NAME } from './session-name';
 
 export { getSessionCookieName, SESSION_COOKIE_NAME };
@@ -24,4 +24,33 @@ export async function verifySessionCookie(session?: string) {
   } catch {
     throw new Error('Unauthorized: Invalid session.');
   }
+}
+
+/** Obtain the authenticated user UID from the session cookie. */
+export async function getAuthUid(session?: string): Promise<string> {
+  const decoded = await verifySessionCookie(session);
+  return decoded.uid;
+}
+
+/**
+ * Verify session and retrieve user profile from Firestore users/{uid}.
+ * Enforces that profile exists and user account is active (accountStatus !== 'inactive' && isActive !== false).
+ */
+export async function getAuthenticatedUser(session?: string) {
+  const claims = await verifySessionCookie(session);
+  const uid = claims.uid;
+
+  const firestore = getAdminFirestore();
+  const userDoc = await firestore.collection('users').doc(uid).get();
+
+  if (!userDoc.exists) {
+    throw new Error('Unauthorized: User profile not found.');
+  }
+
+  const user = userDoc.data()!;
+  if (user.accountStatus === 'inactive' || user.isActive === false) {
+    throw new Error('Unauthorized: Account is inactive or deactivated.');
+  }
+
+  return { claims, uid, user };
 }
