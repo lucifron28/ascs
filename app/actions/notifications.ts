@@ -1,13 +1,12 @@
 'use server';
 
 import { getAdminFirestore } from '@/lib/firebase/admin';
-import { verifySessionCookie } from '@/lib/auth/session';
+import { getAuthenticatedUser } from '@/lib/auth/session';
 
 // 1. Fetch User-Scoped Notifications
 export async function fetchUserNotificationsAction() {
   try {
-    const claims = await verifySessionCookie();
-    const recipientId = claims.uid;
+    const { uid: recipientId } = await getAuthenticatedUser();
 
     const firestore = getAdminFirestore();
     const notifsSnap = await firestore
@@ -47,8 +46,7 @@ export async function fetchUserNotificationsAction() {
 // 2. Mark Single Notification as Read
 export async function markNotificationAsReadAction(data: { notificationId: string }) {
   try {
-    const claims = await verifySessionCookie();
-    const recipientId = claims.uid;
+    const { uid: recipientId } = await getAuthenticatedUser();
 
     const firestore = getAdminFirestore();
     const notifRef = firestore.collection('notifications').doc(data.notificationId);
@@ -74,12 +72,9 @@ export async function markNotificationAsReadAction(data: { notificationId: strin
   }
 }
 
-// 3. Mark All Notifications as Read for Recipient
 export async function markAllNotificationsAsReadAction() {
   try {
-    const claims = await verifySessionCookie();
-    const recipientId = claims.uid;
-
+    const { uid: recipientId } = await getAuthenticatedUser();
     const firestore = getAdminFirestore();
     const unreadSnap = await firestore
       .collection('notifications')

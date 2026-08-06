@@ -1,14 +1,9 @@
 'use server';
 
 import { getAdminFirestore } from '@/lib/firebase/admin';
-import { verifySessionCookie } from '@/lib/auth/session';
+import { getAuthenticatedUser } from '@/lib/auth/session';
 import { getClearanceStatusSummary } from '@/lib/clearance/status';
 import type { QueryDocumentSnapshot, Transaction, DocumentData } from 'firebase-admin/firestore';
-
-// Helper: Verify session and return claims
-async function getAuthenticatedUser() {
-  return verifySessionCookie();
-}
 
 // 1. Submit Clearance Application (Student)
 export async function submitApplicationAction(data: {
@@ -153,12 +148,13 @@ export async function submitApplicationAction(data: {
 // 2. Fetch Student Dashboard Details
 export async function fetchStudentDashboardAction() {
   try {
-    const claims = await getAuthenticatedUser();
-    const studentUid = claims.uid;
+    const { uid: studentUid, user } = await getAuthenticatedUser();
+
+    if (user.role !== 'student' && user.role !== 'admin') {
+      throw new Error('Unauthorized: Only students can access the student dashboard.');
+    }
 
     const firestore = getAdminFirestore();
-
-    // Query latest student application
     const appQuery = await firestore.collection('clearanceApplications')
       .where('studentUid', '==', studentUid)
       .orderBy('submittedAt', 'desc')
@@ -244,24 +240,14 @@ export async function fetchStudentDashboardAction() {
 // 3. Fetch Pending Approvals Queue (Signatory)
 export async function fetchPendingApprovalsAction() {
   try {
-    const claims = await getAuthenticatedUser();
-    const userId = claims.uid;
+    const { uid: userId, user } = await getAuthenticatedUser();
+    const role = user.role;
 
-    const firestore = getAdminFirestore();
-
-    // Fetch role
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
-      throw new Error('User profile not found.');
-    }
-
-    const role = userDoc.data()?.role;
     if (!role || role === 'student') {
       throw new Error('Unauthorized: Student role cannot access evaluator queues.');
     }
 
-    // Query only pending approvals for this role. The parent application is
-    // read per result instead of scanning every application document.
+    const firestore = getAdminFirestore();
     const approvalsQuery = await firestore.collectionGroup('approvals')
       .where('status', '==', 'pending')
       .get();
@@ -421,25 +407,16 @@ export async function signClearanceAction(data: {
 // 5. Fetch Accountant Financial Queue
 export async function fetchFinancialQueueAction() {
   try {
-    const claims = await getAuthenticatedUser();
-    const userId = claims.uid;
+    const { user } = await getAuthenticatedUser();
 
-    const firestore = getAdminFirestore();
-
-    // Verify accountant / admin role
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    if (!userDoc.exists) throw new Error('User profile not found.');
-    const role = userDoc.data()?.role;
-
-    if (role !== 'accountant' && role !== 'admin') {
+    if (user.role !== 'accountant' && user.role !== 'admin') {
       throw new Error('Unauthorized: Only accountants can access financial accounts.');
     }
 
-    // Query all clearance applications
+    const firestore = getAdminFirestore();
     const appsQuery = await firestore.collection('clearanceApplications')
       .orderBy('submittedAt', 'desc')
       .get();
-
     const financialQueue = appsQuery.docs.map(doc => {
       const data = doc.data();
       return {
@@ -556,21 +533,13 @@ export async function updateFinancialStatusAction(data: {
 // 7. Fetch Dean Clearance Applications Queue (restricted to adviserApproved === true)
 export async function fetchDeanApplicationsAction() {
   try {
-    const claims = await getAuthenticatedUser();
-    const deanId = claims.uid;
-
-    const firestore = getAdminFirestore();
-
-    // Verify role
-    const userDoc = await firestore.collection('users').doc(deanId).get();
-    if (!userDoc.exists) throw new Error('User profile not found.');
-    const user = userDoc.data()!;
+    const { user } = await getAuthenticatedUser();
 
     if (user.role !== 'dean' && user.role !== 'admin') {
       throw new Error('Unauthorized: Only the Dean can access the academic clearance queue.');
     }
 
-    // Query applications where adviserApproved === true
+    const firestore = getAdminFirestore();
     const appsQuery = await firestore.collection('clearanceApplications')
       .where('adviserApproved', '==', true)
       .orderBy('submittedAt', 'desc')
@@ -607,20 +576,11 @@ export async function fetchDeanApplicationsAction() {
 // 8. Fetch Clearance Certificate Details for Printing
 export async function fetchClearanceCertificateAction(applicationId: string) {
   try {
-    const claims = await getAuthenticatedUser();
-    const userId = claims.uid;
+    const { uid: userId, user } = await getAuthenticatedUser();
 
     const firestore = getAdminFirestore();
-
-    // Fetch User Doc
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    if (!userDoc.exists) throw new Error('User profile not found.');
-    const user = userDoc.data()!;
-
-    // Fetch Clearance Application
     const appRef = firestore.collection('clearanceApplications').doc(applicationId);
     const appSnap = await appRef.get();
-
     if (!appSnap.exists) {
       throw new Error('Clearance application not found.');
     }
