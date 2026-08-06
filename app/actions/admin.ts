@@ -106,6 +106,7 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
       createdAt: now,
     });
 
+    return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Update user role error';
     console.error('Update user role error:', error);
@@ -159,6 +160,7 @@ export async function updateRequirementAssignmentAction(data: {
 
     const reqData = reqSnap.data()!;
 
+    let derivedSignatoryName: string | null = null;
     if (data.assignedSignatoryId) {
       const targetUserSnap = await firestore.collection('users').doc(data.assignedSignatoryId).get();
       if (!targetUserSnap.exists) {
@@ -166,17 +168,21 @@ export async function updateRequirementAssignmentAction(data: {
       }
 
       const targetUser = targetUserSnap.data()!;
+      if (targetUser.accountStatus === 'inactive' || targetUser.isActive === false) {
+        throw new Error('Assigned signatory account is inactive or deactivated.');
+      }
       if (targetUser.role !== reqData.role) {
         throw new Error(
           `Role mismatch: User ${targetUser.fullName || data.assignedSignatoryId} has role '${targetUser.role}', which does not match required requirement role '${reqData.role}'.`
         );
       }
+      derivedSignatoryName = targetUser.fullName || targetUser.displayName || targetUser.email || 'Assigned Signatory';
     }
 
     const now = new Date().toISOString();
     await reqRef.update({
       assignedSignatoryId: data.assignedSignatoryId || null,
-      assignedSignatoryName: data.assignedSignatoryName || null,
+      assignedSignatoryName: derivedSignatoryName,
       updatedAt: now,
     });
 
@@ -189,10 +195,11 @@ export async function updateRequirementAssignmentAction(data: {
       action: 'update_requirement_signatory',
       entityType: 'clearanceRequirement',
       entityId: data.requirementId,
-      metadata: { assignedSignatoryId: data.assignedSignatoryId, assignedSignatoryName: data.assignedSignatoryName },
+      metadata: { assignedSignatoryId: data.assignedSignatoryId, assignedSignatoryName: derivedSignatoryName },
       createdAt: now,
     });
 
+    return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Update requirement assignment error';
     console.error('Update requirement assignment error:', error);
