@@ -62,18 +62,19 @@ export async function seedDatabaseAction() {
           uid: user.uid,
           email: user.email,
           password: 'password123',
-          emailVerified: true
+          displayName: user.fullName,
         });
-      } catch (authErr: any) {
-        if (authErr.code === 'auth/uid-already-exists') {
-          authUid = user.uid;
-        } else if (authErr.code === 'auth/email-already-exists') {
-          // A previous emulator run may have created the same email with a
-          // different UID. Reuse that account so the demo remains repairable.
+        authUid = user.uid;
+      } catch (authErr: unknown) {
+        const err = authErr as { code?: string; message?: string };
+        if (err.code === 'auth/email-already-exists') {
           const existingUser = await auth.getUserByEmail(user.email);
           authUid = existingUser.uid;
         } else {
-          throw authErr;
+          const msg = err.message || '';
+          if (!msg.includes('already exists') && !msg.includes('uid-already-exists')) {
+            console.warn(`Auth seed warning for ${user.email}:`, msg);
+          }
         }
       }
 
@@ -126,8 +127,9 @@ export async function seedDatabaseAction() {
     }
 
     return { success: true, message: 'Database seeded successfully with requirements and demo accounts.' };
-  } catch (error: any) {
-    console.error('Database seeding error:', error);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Database seeding error';
+    console.error('Seed database error:', error);
+    return { success: false, error: message };
   }
 }

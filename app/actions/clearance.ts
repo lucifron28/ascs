@@ -3,7 +3,7 @@
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { verifySessionCookie } from '@/lib/auth/session';
 import { getClearanceStatusSummary } from '@/lib/clearance/status';
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import type { QueryDocumentSnapshot, Transaction, DocumentData } from 'firebase-admin/firestore';
 
 // Helper: Verify session and return claims
 async function getAuthenticatedUser() {
@@ -17,26 +17,26 @@ export async function submitApplicationAction(data: {
   purpose: string;
 }) {
   try {
-    const claims = await getAuthenticatedUser();
-    const studentUid = claims.uid;
+    const { uid: studentUid, user } = await getAuthenticatedUser();
 
-    const firestore = getAdminFirestore();
-    
-    // Check user role from Firestore users collection
-    const userDoc = await firestore.collection('users').doc(studentUid).get();
-    if (!userDoc.exists || userDoc.data()?.role !== 'student') {
+    if (!data.academicYear?.trim() || !data.semester?.trim() || !data.purpose?.trim()) {
+      throw new Error('Academic year, semester, and purpose are required fields.');
+    }
+
+    if (user.role !== 'student') {
       throw new Error('Unauthorized: Only students can submit clearance applications.');
     }
 
+    const firestore = getAdminFirestore();
     // Deterministic Application Document ID: {studentUid}_{academicYear}_{semester}
     const cleanAcademicYear = data.academicYear.replace(/\s+/g, '-');
     const cleanSemester = data.semester.replace(/\s+/g, '-');
     const appId = `${studentUid}_${cleanAcademicYear}_${cleanSemester}`;
 
     // Execute submission in a Firestore Transaction
-    await firestore.runTransaction(async (transaction: any) => {
+    await firestore.runTransaction(async (transaction: Transaction) => {
       const appRef = firestore.collection('clearanceApplications').doc(appId);
-      const appSnap = (await transaction.get(appRef)) as any;
+      const appSnap = await transaction.get(appRef);
 
       if (appSnap.exists) {
         throw new Error(`Already submitted a clearance application for ${data.academicYear} ${data.semester} Semester.`);
@@ -44,7 +44,7 @@ export async function submitApplicationAction(data: {
 
       // Fetch student record for denormalization
       const studentRef = firestore.collection('students').doc(studentUid);
-      const studentSnap = (await transaction.get(studentRef)) as any;
+      const studentSnap = await transaction.get(studentRef);
 
       if (!studentSnap.exists) {
         throw new Error('Student profile record not found. Please contact administration.');
@@ -60,10 +60,15 @@ export async function submitApplicationAction(data: {
         throw new Error('No active clearance requirements found to initiate checklist.');
       }
 
-      const activeReqs = requirementsQuery.docs.map((doc: any) => ({
-        id: doc.id,
-        ...doc.data()
-      })) as any[];
+      const activeReqs = requirementsQuery.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          role: data.role as string,
+          assignedSignatoryId: (data.assignedSignatoryId as string | null) || null,
+          assignedSignatoryName: (data.assignedSignatoryName as string | null) || null,
+        };
+      });
 
       const appNumber = `CLR-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -138,9 +143,10 @@ export async function submitApplicationAction(data: {
     });
 
     return { success: true, applicationId: appId };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Submit application error';
     console.error('Submit application action error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -164,13 +170,13 @@ export async function fetchStudentDashboardAction() {
     }
 
     const appDoc = appQuery.docs[0];
-    const rawApplication = { id: appDoc.id, ...appDoc.data() } as any;
+    const rawApplication = { id: appDoc.id, ...appDoc.data() } as Record<string, unknown>;
 
     // Fetch approvals subcollection
     const approvalsQuery = await appDoc.ref.collection('approvals').get();
     const statusSummary = getClearanceStatusSummary(
       approvalsQuery.docs.map((doc) => ({ status: doc.data().status, signatoryRole: doc.data().signatoryRole })),
-      rawApplication.financialStatus,
+      rawApplication.financialStatus as string | null | undefined,
     );
     const application = {
       ...rawApplication,
@@ -216,9 +222,9 @@ export async function fetchStudentDashboardAction() {
 
     // Format financial segment to match student dashboard props
     const financial = {
-      status: application.financialStatus,
-      notes: application.financialRemarks || null,
-      verified_at: application.financialVerifiedAt
+      status: (rawApplication.financialStatus as string) || 'pending',
+      notes: (rawApplication.financialRemarks as string | null) || null,
+      verified_at: (rawApplication.financialVerifiedAt as string | null) || null,
     };
 
     return {
@@ -228,9 +234,10 @@ export async function fetchStudentDashboardAction() {
       remarks,
       financial
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Fetch student dashboard error';
     console.error('Fetch student dashboard action error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -258,7 +265,7 @@ export async function fetchPendingApprovalsAction() {
     const approvalsQuery = await firestore.collectionGroup('approvals')
       .where('status', '==', 'pending')
       .get();
-    const pendingQueue: any[] = [];
+    const pendingQueue: Array<Record<string, unknown>> = [];
 
     for (const approvalDoc of approvalsQuery.docs) {
       const approvalData = approvalDoc.data();
@@ -287,12 +294,13 @@ export async function fetchPendingApprovalsAction() {
     }
 
     // Sort by submission date ascending (oldest first)
-    pendingQueue.sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
+    pendingQueue.sort((a, b) => new Date(a.submitted_at as string).getTime() - new Date(b.submitted_at as string).getTime());
 
     return { success: true, role, pendingQueue };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Fetch pending approvals error';
     console.error('Fetch pending approvals error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -304,9 +312,7 @@ export async function signClearanceAction(data: {
   remarks: string;
 }) {
   try {
-    const claims = await getAuthenticatedUser();
-    const signatoryId = claims.uid;
-
+    const { uid: signatoryId, user } = await getAuthenticatedUser();
     if (!data.applicationId || !data.approvalId) {
       throw new Error('Application and approval identifiers are required.');
     }
@@ -315,17 +321,13 @@ export async function signClearanceAction(data: {
     }
 
     const firestore = getAdminFirestore();
-    const userDoc = await firestore.collection('users').doc(signatoryId).get();
-    if (!userDoc.exists) throw new Error('Signatory profile not found.');
-    const user = userDoc.data()!;
     const appRef = firestore.collection('clearanceApplications').doc(data.applicationId);
     const approvalRef = appRef.collection('approvals').doc(data.approvalId);
-
-    await firestore.runTransaction(async (transaction: any) => {
+    await firestore.runTransaction(async (transaction: Transaction) => {
       // Every read is completed before any write so the status decision is
       // based on one consistent application snapshot.
-      const appSnap = (await transaction.get(appRef)) as any;
-      const approvalSnap = (await transaction.get(approvalRef)) as any;
+      const appSnap = await transaction.get(appRef);
+      const approvalSnap = await transaction.get(approvalRef);
       const approvalsSnap = await transaction.get(appRef.collection('approvals'));
 
       if (!appSnap.exists || !approvalSnap.exists) {
@@ -409,9 +411,10 @@ export async function signClearanceAction(data: {
     });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Sign clearance error';
     console.error('Sign clearance action error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -458,9 +461,10 @@ export async function fetchFinancialQueueAction() {
     });
 
     return { success: true, financialQueue };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Fetch financial queue error';
     console.error('Fetch financial queue error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -471,20 +475,13 @@ export async function updateFinancialStatusAction(data: {
   financialRemarks: string;
 }) {
   try {
-    const claims = await getAuthenticatedUser();
-    const accountantId = claims.uid;
-
-    const firestore = getAdminFirestore();
-
-    // Verify role
-    const userDoc = await firestore.collection('users').doc(accountantId).get();
-    if (!userDoc.exists) throw new Error('User profile not found.');
-    const user = userDoc.data()!;
+    const { uid: accountantId, user } = await getAuthenticatedUser();
 
     if (user.role !== 'accountant' && user.role !== 'admin') {
       throw new Error('Unauthorized: Only accountants can modify financial status.');
     }
 
+    const firestore = getAdminFirestore();
     // Input validation
     if (data.status === 'unpaid' && (!data.financialRemarks || !data.financialRemarks.trim())) {
       throw new Error("Remarks are required when marking a student as 'unpaid'.");
@@ -492,10 +489,10 @@ export async function updateFinancialStatusAction(data: {
 
     const appRef = firestore.collection('clearanceApplications').doc(data.recordId);
 
-    await firestore.runTransaction(async (transaction: any) => {
+    await firestore.runTransaction(async (transaction: Transaction) => {
       // Read the application and every approval before writing any status so
       // concurrent signatory actions cannot compute from a stale snapshot.
-      const appSnap = (await transaction.get(appRef)) as any;
+      const appSnap = await transaction.get(appRef);
       const approvalsSnap = await transaction.get(appRef.collection('approvals'));
       if (!appSnap.exists) {
         throw new Error('Clearance application not found.');
@@ -549,9 +546,10 @@ export async function updateFinancialStatusAction(data: {
     });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Update financial status error';
     console.error('Update financial status error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -599,9 +597,10 @@ export async function fetchDeanApplicationsAction() {
     });
 
     return { success: true, deanQueue };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Fetch Dean queue error';
     console.error('Fetch Dean queue error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -626,7 +625,8 @@ export async function fetchClearanceCertificateAction(applicationId: string) {
       throw new Error('Clearance application not found.');
     }
 
-    const application = { id: appSnap.id, ...appSnap.data() } as any;
+    const applicationData = appSnap.data() || {};
+    const application = { id: appSnap.id, ...applicationData } as Record<string, unknown>;
 
     // Check Access Permission (Student owner, Dean, Accountant, or Admin)
     const isOwner = application.studentUid === userId;
@@ -642,7 +642,7 @@ export async function fetchClearanceCertificateAction(applicationId: string) {
         status: doc.data().status,
         signatoryRole: doc.data().signatoryRole,
       })),
-      application.financialStatus,
+      application.financialStatus as string | null | undefined,
     );
 
     // Derive availability from current approval rows instead of trusting a
@@ -687,9 +687,10 @@ export async function fetchClearanceCertificateAction(applicationId: string) {
         issuedAt: application.updatedAt || new Date().toISOString(),
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Fetch certificate error';
     console.error('Fetch certificate error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 

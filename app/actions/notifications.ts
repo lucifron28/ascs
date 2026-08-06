@@ -37,9 +37,10 @@ export async function fetchUserNotificationsAction() {
     const unreadCount = notifications.filter((n) => !n.isRead).length;
 
     return { success: true, notifications, unreadCount };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Fetch notifications error';
     console.error('Fetch notifications error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -66,9 +67,10 @@ export async function markNotificationAsReadAction(data: { notificationId: strin
     });
 
     return { success: true };
-  } catch (error: any) {
-    console.error('Mark notification read error:', error);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Mark notification error';
+    console.error('Mark notification error:', error);
+    return { success: false, error: message };
   }
 }
 
@@ -94,8 +96,9 @@ export async function markAllNotificationsAsReadAction() {
     }
 
     return { success: true };
-  } catch (error: any) {
-    console.error('Mark all notifications read error:', error);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Mark all notifications error';
+    console.error('Mark all notifications error:', error);
+    return { success: false, error: message };
   }
 }
