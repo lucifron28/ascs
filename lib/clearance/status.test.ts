@@ -1,78 +1,102 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
 import { getClearanceStatusSummary } from './status';
 
-/**
- * Dependency-free unit test suite for the ASCS clearance status matrix.
- * Enforces business rules 1-5 from the FRD specification.
- */
-export function runClearanceStatusTests() {
-  const results: Array<{ name: string; passed: boolean; detail?: string }> = [];
-
-  function assert(name: string, condition: boolean, detail?: string) {
-    if (condition) {
-      results.push({ name, passed: true });
-    } else {
-      results.push({ name, passed: false, detail: detail || 'Assertion failed' });
-    }
-  }
-
-  // Rule 1: Any not_approved approval -> overall not_approved
-  const r1 = getClearanceStatusSummary(
-    [{ status: 'approved' }, { status: 'not_approved' }],
+test('Rule 1: Any signatory not_approved produces overall not_approved', () => {
+  const summary = getClearanceStatusSummary(
+    [{ status: 'approved', signatoryRole: 'librarian' }, { status: 'not_approved', signatoryRole: 'adviser' }],
     'paid'
   );
-  assert(
-    'Rule 1: Any not_approved approval forces overall status to not_approved',
-    r1.overallStatus === 'not_approved' && !r1.printableAvailable
-  );
+  assert.equal(summary.overallStatus, 'not_approved');
+  assert.equal(summary.printableAvailable, false);
+});
 
-  // Rule 2: All approved and financial status paid -> overall approved
-  const r2 = getClearanceStatusSummary(
-    [{ status: 'approved' }, { status: 'approved' }],
+test('Rule 2: All required signatories approved plus financial paid produces approved', () => {
+  const summary = getClearanceStatusSummary(
+    [
+      { status: 'approved', signatoryRole: 'librarian' },
+      { status: 'approved', signatoryRole: 'osa_coordinator' },
+      { status: 'approved', signatoryRole: 'guidance_counselor' },
+      { status: 'approved', signatoryRole: 'area_chair' },
+      { status: 'approved', signatoryRole: 'adviser' },
+    ],
     'paid'
   );
-  assert(
-    'Rule 2: All approved and financialStatus paid results in overall approved & printableAvailable',
-    r2.overallStatus === 'approved' && r2.printableAvailable
-  );
+  assert.equal(summary.overallStatus, 'approved');
+  assert.equal(summary.printableAvailable, true);
+});
 
-  // Rule 3: All approved but financial status unpaid -> overall not_approved
-  const r3 = getClearanceStatusSummary(
-    [{ status: 'approved' }, { status: 'approved' }],
+test('Rule 3: All required signatories approved plus financial unpaid produces not_approved', () => {
+  const summary = getClearanceStatusSummary(
+    [
+      { status: 'approved', signatoryRole: 'librarian' },
+      { status: 'approved', signatoryRole: 'osa_coordinator' },
+      { status: 'approved', signatoryRole: 'guidance_counselor' },
+      { status: 'approved', signatoryRole: 'area_chair' },
+      { status: 'approved', signatoryRole: 'adviser' },
+    ],
     'unpaid'
   );
-  assert(
-    'Rule 3: All approved but financialStatus unpaid forces overall not_approved & not printable',
-    r3.overallStatus === 'not_approved' && !r3.printableAvailable
-  );
+  assert.equal(summary.overallStatus, 'not_approved');
+  assert.equal(summary.printableAvailable, false);
+});
 
-  // Rule 4: Pending approvals or pending financial status -> overall pending
-  const r4a = getClearanceStatusSummary(
-    [{ status: 'approved' }, { status: 'pending' }],
+test('Rule 4: A pending signatory produces pending', () => {
+  const summary = getClearanceStatusSummary(
+    [
+      { status: 'approved', signatoryRole: 'librarian' },
+      { status: 'pending', signatoryRole: 'adviser' },
+    ],
     'paid'
   );
-  assert(
-    'Rule 4a: Pending approval results in overall status pending',
-    r4a.overallStatus === 'pending' && !r4a.printableAvailable
-  );
+  assert.equal(summary.overallStatus, 'pending');
+  assert.equal(summary.printableAvailable, false);
+});
 
-  const r4b = getClearanceStatusSummary(
-    [{ status: 'approved' }, { status: 'approved' }],
+test('Rule 5: Pending financial verification produces pending', () => {
+  const summary = getClearanceStatusSummary(
+    [
+      { status: 'approved', signatoryRole: 'librarian' },
+      { status: 'approved', signatoryRole: 'adviser' },
+    ],
     'pending'
   );
-  assert(
-    'Rule 4b: Pending financial status results in overall status pending',
-    r4b.overallStatus === 'pending' && !r4b.printableAvailable
-  );
+  assert.equal(summary.overallStatus, 'pending');
+  assert.equal(summary.printableAvailable, false);
+});
 
-  // Rule 5: printableAvailable true ONLY when overall status is approved
-  const r5 = getClearanceStatusSummary(
-    [{ status: 'approved' }],
+test('Rule 6: No approval rows cannot produce approved status', () => {
+  const summary = getClearanceStatusSummary([], 'paid');
+  assert.equal(summary.overallStatus, 'pending');
+  assert.equal(summary.printableAvailable, false);
+});
+
+test('Rule 7: A legacy Accountant approval row does not block approval after financial-gate policy is applied', () => {
+  const summary = getClearanceStatusSummary(
+    [
+      { status: 'approved', signatoryRole: 'librarian' },
+      { status: 'approved', signatoryRole: 'osa_coordinator' },
+      { status: 'approved', signatoryRole: 'guidance_counselor' },
+      { status: 'approved', signatoryRole: 'area_chair' },
+      { status: 'approved', signatoryRole: 'adviser' },
+      { status: 'pending', signatoryRole: 'accountant' },
+    ],
     'paid'
   );
-  assert(
-    'Rule 5: printableAvailable is true only when overall status is approved',
-    r5.overallStatus === 'approved' && r5.printableAvailable === true
-  );
+  assert.equal(summary.overallStatus, 'approved');
+  assert.equal(summary.printableAvailable, true);
+});
 
-  return results;
-}
+test('Rule 8: Printable availability is true only when overall status is approved', () => {
+  const pendingSummary = getClearanceStatusSummary(
+    [{ status: 'approved', signatoryRole: 'librarian' }],
+    'pending'
+  );
+  assert.equal(pendingSummary.printableAvailable, false);
+
+  const approvedSummary = getClearanceStatusSummary(
+    [{ status: 'approved', signatoryRole: 'librarian' }],
+    'paid'
+  );
+  assert.equal(approvedSummary.printableAvailable, true);
+});
