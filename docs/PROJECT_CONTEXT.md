@@ -35,35 +35,33 @@
 | --- | --- |
 | Student | Submit and track a clearance application; view remarks and financial status |
 | Librarian | Review library clearance approval |
-| Accountant | Mark the application financially paid or unpaid |
+| Accountant | Financial gate only: verify financial status (`paid` vs `unpaid`) |
 | OSA Coordinator | Review Office of Student Affairs clearance |
 | Guidance Counselor | Review guidance clearance |
 | Area Chair | Review area/department clearance |
 | Adviser | Review adviser clearance and unlock Dean visibility after approval |
 | Dean | View adviser-approved applications for academic review |
 | Admin | Manage profiles, roles, requirement assignments, and audit visibility |
-
 ## Workflow and status rules
 
 1. A student submits one application for an academic year/semester.
-2. The server creates the application, approval rows, submission notification,
-   and activity log in a Firestore transaction.
-3. Signatories act on their own role queue. An assigned approval can only be
-   acted on by its assigned user; an unassigned row is a role-wide queue item.
-4. Remarks are required for `pending` and `not_approved` decisions and are
-   visible to the student.
-5. A new application starts with `financialStatus = 'pending'`.
+2. The server creates the application, approval rows (5 default required signatories: Librarian, OSA Coordinator, Guidance Counselor, Area Chair, Adviser), submission notification, and activity log in a Firestore transaction.
+3. The Accountant acts as a financial gate only via `financialStatus: 'pending' | 'paid' | 'unpaid'`. The Accountant does not have a duplicate signatory approval row.
+4. Signatories act on their own role queue. An assigned approval can only be acted on by its assigned user; an unassigned row is a role-wide queue item.
+5. Remarks are required for `pending` and `not_approved` decisions and are visible to the student.
+6. A new application starts with `financialStatus = 'pending'`.
    - `paid` means the Accountant verified that the student is financially cleared.
    - `unpaid` means the Accountant verified unresolved financial accountability.
    - `unpaid` blocks overall approval (derives `not_approved`).
-6. Status is derived by `lib/clearance/status.ts`:
-   - If any required approval is `not_approved`, overall status is `not_approved`.
-   - If all required approvals are `approved` and `financialStatus` is `paid`, overall status is `approved`.
-   - If all required approvals are `approved` and `financialStatus` is `unpaid`, overall status is `not_approved`.
+7. Status is derived by `lib/clearance/status.ts` (`getClearanceStatusSummary`):
+   - Legacy `accountant` approval rows are filtered out of signatory status calculation.
+   - If any required signatory approval is `not_approved`, overall status is `not_approved`.
+   - If all 5 required signatory approvals are `approved` and `financialStatus` is `paid`, overall status is `approved`.
+   - If all required signatory approvals are `approved` and `financialStatus` is `unpaid`, overall status is `not_approved`.
    - Otherwise, overall status is `pending`.
-7. Printable clearance (`printableAvailable`) is true and available only when overall status is `approved`.
+8. Printable clearance (`printableAvailable`) is true and available only when overall status is `approved`.
    The print view is a prototype/MVP record and makes no official institutional approval claim.
-8. The Dean sees applications only after the Adviser approval is `approved`.
+9. The Dean sees applications only after the Adviser approval is `approved`.
 
 ## Data model
 

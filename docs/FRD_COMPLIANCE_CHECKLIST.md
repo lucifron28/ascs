@@ -24,7 +24,7 @@
 | **Clearance Status Display** | `Implemented` | Shows real-time overall status (`pending`, `approved`, `not_approved`) and summary counts in `StatusSummary.tsx` & `TrackingTable.tsx`. |
 | **Remarks Section** | `Implemented` | Displays mandatory remark history from `clearanceApplications/{id}/remarks` on student tracking and signatory modals. |
 | **Clearance Tracking Interface** | `Implemented` | Student dashboard table (`TrackingTable.tsx`) details requirement sign-off matrix, acted date, assigned signatory, and latest remark. |
-| **Financial Status Indicator** | `Implemented` | Dedicated `financialStatus` badge (`pending`, `paid`, `unpaid`) with accountant verification timestamp and dues breakdown. |
+| **Financial Status Indicator** | `Implemented` | Dedicated `financialStatus` badge (`pending`, `paid`, `unpaid`) with accountant verification timestamp and financial remarks (ASCS tracks financial status and remarks, not an itemized dues ledger). |
 | **Automated Notifications** | `Implemented` | In-app `NotificationDropdown.tsx` displays real-time notification items triggered by submissions, approvals, and financial status updates. |
 | **Printable Clearance Document** | `Implemented` | `ClearanceCertificate.tsx` renders print-ready MVP document accessible exclusively when `overallStatus === 'approved'`. |
 | **Reports** | `Deferred` | Advanced statistical reporting, batch PDF export, and aggregate clearance analytics. |
@@ -43,7 +43,7 @@
 | --- | --- | --- |
 | **Student** | `Implemented` | Can submit applications, view clearance status, track requirement checklist, read remarks, and print clearance certificate. |
 | **Librarian** | `Implemented` | Accesses role-scoped pending queue for library requirements to approve, mark pending, or set not approved with mandatory remarks. |
-| **Accountant** | `Implemented` | Accesses financial queue to verify student account dues and update status to `paid` or `unpaid`. |
+| **Accountant** | `Implemented` | Financial gate only: accesses financial queue to verify student financial status and update status to `paid` or `unpaid`. |
 | **OSA Coordinator** | `Implemented` | Accesses role-scoped queue for Office of Student Affairs clearance sign-off. |
 | **Guidance Counselor** | `Implemented` | Accesses role-scoped queue for guidance department clearance sign-off. |
 | **Area Chair** | `Implemented` | Accesses role-scoped queue for academic program clearance sign-off. |

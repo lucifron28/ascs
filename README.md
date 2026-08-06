@@ -45,14 +45,13 @@ ASCS operates on nine core collections and subcollections:
 
 1. **Student:** Submits term clearance applications, tracks sign-off progress, views remarks, and views the printable clearance summary upon full approval.
 2. **Librarian:** Reviews library clearance requirements.
-3. **Accountant:** Verifies financial status (`paid` vs `unpaid`). Marking `unpaid` requires a remark and blocks overall clearance approval.
+3. **Accountant:** Financial gate only. Verifies financial status (`paid` vs `unpaid`) on `clearanceApplications`. Marking `unpaid` requires a remark and blocks overall clearance approval. (Accountant does not have a duplicate signatory approval row).
 4. **OSA Coordinator:** Reviews Office of Student Affairs clearance requirements.
 5. **Guidance Counselor:** Reviews guidance department clearance requirements.
 6. **Area Chair:** Reviews academic program / department clearance requirements.
 7. **Adviser:** Reviews section/class adviser clearance requirements. Approval unlocks application visibility for the Dean.
 8. **Dean:** Conducts final academic review on adviser-approved clearance applications.
 9. **System Administrator:** Manages user roles, assigns requirement signatories, seeds demo data, and views system activity logs.
-
 ---
 
 ## Local Development & Setup
@@ -149,7 +148,7 @@ NEXT_PUBLIC_DEMO_MODE=false
 - `npm run build` — Compiles and builds the production App Router bundle
 - `npm run start` — Starts Next.js production server
 - `npm run lint` — Runs ESLint checks across project files
-
+- `npm test` — Executes automated unit tests for clearance status rules (`tsx --test lib/clearance/status.test.ts`)
 ---
 
 ## Security Notes
