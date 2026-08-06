@@ -38,9 +38,10 @@ export async function fetchAdminUsersAction() {
     });
 
     return { success: true, users };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Fetch admin users error';
     console.error('Fetch admin users error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -51,26 +52,44 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
     const firestore = getAdminFirestore();
     const auth = getAdminAuth();
 
+    const validRoles: UserRole[] = [
+      'student',
+      'librarian',
+      'accountant',
+      'osa_coordinator',
+      'guidance_counselor',
+      'area_chair',
+      'adviser',
+      'dean',
+      'admin',
+    ];
+    if (!validRoles.includes(data.newRole)) {
+      throw new Error(`Invalid role specified: ${data.newRole}`);
+    }
+
+    // Check target user existence
+    const userRef = firestore.collection('users').doc(data.userId);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) {
+      throw new Error('Target user profile not found.');
+    }
+
     // Prevent demoting self if admin is performing operation on own account
     if (adminClaims.uid === data.userId && data.newRole !== 'admin') {
       throw new Error('Action blocked: You cannot demote your own administrator account.');
     }
 
-    // Update Auth custom claims
-    try {
-      await auth.setCustomUserClaims(data.userId, { role: data.newRole });
-    } catch (authErr: any) {
-      console.warn(`Auth custom claims update failed for ${data.userId}:`, authErr.message);
-    }
+    // Update Auth custom claims first
+    await auth.setCustomUserClaims(data.userId, { role: data.newRole });
 
     // Update Firestore users doc
-    const userRef = firestore.collection('users').doc(data.userId);
+    const now = new Date().toISOString();
     await userRef.update({
       role: data.newRole,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     });
 
-    // Update publicUsers doc
+    // Update publicUsers doc projection
     const publicRef = firestore.collection('publicUsers').doc(data.userId);
     await publicRef.set({ role: data.newRole }, { merge: true });
 
@@ -84,13 +103,13 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
       entityType: 'user',
       entityId: data.userId,
       metadata: { newRole: data.newRole },
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     });
 
-    return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Update user role error';
     console.error('Update user role error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -115,9 +134,10 @@ export async function fetchClearanceRequirementsAction() {
     });
 
     return { success: true, requirements };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Fetch clearance requirements error';
     console.error('Fetch clearance requirements error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -132,10 +152,32 @@ export async function updateRequirementAssignmentAction(data: {
     const firestore = getAdminFirestore();
 
     const reqRef = firestore.collection('clearanceRequirements').doc(data.requirementId);
+    const reqSnap = await reqRef.get();
+    if (!reqSnap.exists) {
+      throw new Error('Clearance requirement record not found.');
+    }
+
+    const reqData = reqSnap.data()!;
+
+    if (data.assignedSignatoryId) {
+      const targetUserSnap = await firestore.collection('users').doc(data.assignedSignatoryId).get();
+      if (!targetUserSnap.exists) {
+        throw new Error('Assigned signatory user profile not found.');
+      }
+
+      const targetUser = targetUserSnap.data()!;
+      if (targetUser.role !== reqData.role) {
+        throw new Error(
+          `Role mismatch: User ${targetUser.fullName || data.assignedSignatoryId} has role '${targetUser.role}', which does not match required requirement role '${reqData.role}'.`
+        );
+      }
+    }
+
+    const now = new Date().toISOString();
     await reqRef.update({
-      assignedSignatoryId: data.assignedSignatoryId,
-      assignedSignatoryName: data.assignedSignatoryName,
-      updatedAt: new Date().toISOString(),
+      assignedSignatoryId: data.assignedSignatoryId || null,
+      assignedSignatoryName: data.assignedSignatoryName || null,
+      updatedAt: now,
     });
 
     // Activity log
@@ -148,13 +190,13 @@ export async function updateRequirementAssignmentAction(data: {
       entityType: 'clearanceRequirement',
       entityId: data.requirementId,
       metadata: { assignedSignatoryId: data.assignedSignatoryId, assignedSignatoryName: data.assignedSignatoryName },
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     });
 
-    return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Update requirement assignment error';
     console.error('Update requirement assignment error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
 
@@ -181,8 +223,9 @@ export async function fetchActivityLogsAction() {
     });
 
     return { success: true, logs };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Fetch activity logs error';
     console.error('Fetch activity logs error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }

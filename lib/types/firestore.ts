@@ -117,7 +117,7 @@ export interface ActivityLog {
   action: string;
   entityType: string;
   entityId: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: FirestoreTimestamp;
 }
 
