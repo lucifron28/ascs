@@ -2,13 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword,
-} from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { firebaseAuth } from '@/lib/firebase/client';
-import { completeMandatoryPasswordChangeAction } from '@/app/actions/admin-accounts';
 import { Lock, ShieldAlert, CheckCircle2, ArrowRight } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
 
@@ -65,41 +60,37 @@ export default function ChangePasswordPage() {
     setLoading(true);
 
     try {
-      // 1. Reauthenticate with current password
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
 
-      // 2. Update Auth password on client Firebase SDK
-      await updatePassword(user, newPassword);
+      const data = await res.json().catch(() => ({}));
 
-      // 3. Clear mustChangePassword flag via trusted server action
-      const res = await completeMandatoryPasswordChangeAction();
-      if (!res.success) {
-        throw new Error(res.error || 'Failed to update account password flag.');
+      if (!res.ok) {
+        throw new Error(typeof data.error === 'string' ? data.error : 'Failed to update password.');
       }
 
       setSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
 
-      // 4. Fetch profile to determine role dashboard
-      const profileRes = await fetch('/api/auth/profile');
-      const profileData = await profileRes.json();
-      const role = profileData?.profile?.role || 'student';
+      await signOut(firebaseAuth).catch(() => {});
 
       setTimeout(() => {
-        router.push(`/${role}/dashboard`);
+        router.push('/login');
         router.refresh();
-      }, 1200);
+      }, 1500);
     } catch (err: unknown) {
       console.error('Password change error:', err);
-      const errObj = err as { code?: string; message?: string };
-      let msg = 'Failed to change password. Please check your current password.';
-      if (errObj.code === 'auth/wrong-password' || errObj.code === 'auth/invalid-credential') {
-        msg = 'Incorrect current temporary password.';
-      } else if (errObj.code === 'auth/weak-password') {
-        msg = 'Password is too weak. Please choose a stronger password.';
-      } else if (errObj.message) {
-        msg = errObj.message;
-      }
+      const msg = err instanceof Error ? err.message : 'Failed to change password. Please check your credentials.';
       setError(msg);
     } finally {
       setLoading(false);

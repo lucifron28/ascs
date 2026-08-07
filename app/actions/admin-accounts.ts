@@ -483,39 +483,13 @@ export async function resetUserTemporaryPasswordAction(data: { userId: string; t
 }
 
 // 6. Complete Mandatory Password Change (Called by user after changing client Auth password)
+/**
+ * @deprecated Mandatory password change must be performed via /api/auth/change-password.
+ * Direct flag clearing is disabled to prevent password change bypass.
+ */
 export async function completeMandatoryPasswordChangeAction() {
-  try {
-    const { uid: callerUid, user: callerUser } = await getAuthenticatedUser();
-    const firestore = getAdminFirestore();
-    const auth = getAdminAuth();
-
-    const userRef = firestore.collection('users').doc(callerUid);
-    const now = new Date().toISOString();
-
-    await userRef.update({
-      mustChangePassword: false,
-      updatedAt: now,
-    });
-
-    await auth.setCustomUserClaims(callerUid, { role: callerUser.role, mustChangePassword: false });
-
-    // Activity Log
-    const logRef = firestore.collection('activityLogs').doc();
-    await logRef.set({
-      actorId: callerUid,
-      actorName: callerUser.fullName,
-      actorRole: callerUser.role,
-      action: 'complete_mandatory_password_change',
-      entityType: 'user',
-      entityId: callerUid,
-      metadata: {},
-      createdAt: now,
-    });
-
-    return { success: true };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Complete mandatory password change error';
-    console.error('Complete mandatory password change error:', error);
-    return { success: false, error: message };
-  }
+  return {
+    success: false,
+    error: 'Direct completion action is deprecated. Use the secure /api/auth/change-password endpoint.',
+  };
 }

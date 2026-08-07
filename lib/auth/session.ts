@@ -33,10 +33,10 @@ export async function getAuthUid(session?: string): Promise<string> {
 }
 
 /**
- * Verify session and retrieve user profile from Firestore users/{uid}.
- * Enforces that profile exists and user account is active (accountStatus !== 'inactive' && isActive !== false).
+ * Retrieve user profile from Firestore users/{uid} for an active authenticated session
+ * without blocking password-change-required users.
  */
-export async function getAuthenticatedUser(session?: string) {
+export async function getAuthenticatedUserForPasswordChange(session?: string) {
   const claims = await verifySessionCookie(session);
   const uid = claims.uid;
 
@@ -53,4 +53,17 @@ export async function getAuthenticatedUser(session?: string) {
   }
 
   return { claims, uid, user };
+}
+
+/**
+ * Verify session and retrieve user profile from Firestore users/{uid}.
+ * Enforces that profile exists, user account is active, and mandatory password change is not pending.
+ */
+export async function getAuthenticatedUser(session?: string) {
+  const result = await getAuthenticatedUserForPasswordChange(session);
+  if (result.user.mustChangePassword === true) {
+    throw new Error('Password change required before accessing this operation.');
+  }
+
+  return result;
 }

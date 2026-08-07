@@ -98,17 +98,24 @@ export default function LoginPage() {
           throw new Error(typeof profileBody.error === 'string' ? profileBody.error : 'Failed to retrieve profile details.');
         }
 
-        const { profile } = profileBody as { profile?: { role?: string } };
+        const { profile } = profileBody as {
+          profile?: { role?: string; mustChangePassword?: boolean; accountStatus?: string; isActive?: boolean };
+        };
         if (!profile) {
           throw new Error('Profile not found. Contact the system administrator.');
         }
         const role = profile.role || 'student';
+        const mustChangePassword = profile.mustChangePassword === true;
 
         setSuccess(true);
 
         // 5. Short timeout for smooth visual transition
         setTimeout(() => {
-          router.push(`/${role}/dashboard`);
+          if (mustChangePassword) {
+            router.push('/change-password');
+          } else {
+            router.push(`/${role}/dashboard`);
+          }
           router.refresh();
         }, 1000);
       } catch (err: unknown) {
