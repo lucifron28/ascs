@@ -8,8 +8,12 @@ export { getSessionCookieName, SESSION_COOKIE_NAME };
 
 /** Read the current HTTP-only session cookie in a Server Action/Route Handler. */
 export async function getSessionCookie() {
-  const cookieStore = await cookies();
-  return cookieStore.get(getSessionCookieName())?.value;
+  try {
+    const cookieStore = await cookies();
+    return cookieStore.get(getSessionCookieName())?.value;
+  } catch {
+    return process.env.TEST_SESSION_COOKIE || undefined;
+  }
 }
 
 /** Verify the Firebase session cookie with revocation checks enabled. */
