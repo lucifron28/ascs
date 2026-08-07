@@ -6,13 +6,26 @@ import { getSessionCookieName, SESSION_COOKIE_NAME } from './session-name';
 
 export { getSessionCookieName, SESSION_COOKIE_NAME };
 
+export function canUseTestSessionOverride(): boolean {
+  return (
+    process.env.ASCS_ACCEPTANCE_TEST_MODE === 'true' &&
+    process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true' &&
+    Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) &&
+    Boolean(process.env.FIRESTORE_EMULATOR_HOST) &&
+    process.env.NODE_ENV !== 'production'
+  );
+}
+
 /** Read the current HTTP-only session cookie in a Server Action/Route Handler. */
 export async function getSessionCookie() {
   try {
     const cookieStore = await cookies();
     return cookieStore.get(getSessionCookieName())?.value;
-  } catch {
-    return process.env.TEST_SESSION_COOKIE || undefined;
+  } catch (error) {
+    if (canUseTestSessionOverride() && process.env.TEST_SESSION_COOKIE) {
+      return process.env.TEST_SESSION_COOKIE;
+    }
+    throw error;
   }
 }
 

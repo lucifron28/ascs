@@ -2,6 +2,7 @@ import { getAdminAuth } from '../../lib/firebase/admin';
 import { assertEmulatorEnvironment } from '../../scripts/emulator-safety';
 
 export function setupTestEnvironment() {
+  process.env.ASCS_ACCEPTANCE_TEST_MODE = 'true';
   process.env.FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080';
   process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099';
   process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR = 'true';
@@ -9,6 +10,10 @@ export function setupTestEnvironment() {
   process.env.FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'ascs11';
 
   assertEmulatorEnvironment();
+}
+
+export function cleanupTestSessionCookie() {
+  delete process.env.TEST_SESSION_COOKIE;
 }
 
 /**
