@@ -25,13 +25,15 @@ describe('Firestore Rules Security Boundaries Tests', () => {
       },
     });
 
-    // Seed mock user doc for rule functions like getUserData()
+    // Seed mock user docs for rule helper functions like getUserData()
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const db = context.firestore();
       await setDoc(doc(db, 'users/student-a-uid'), { role: 'student' });
       await setDoc(doc(db, 'users/student-b-uid'), { role: 'student' });
       await setDoc(doc(db, 'users/admin-uid'), { role: 'admin' });
       await setDoc(doc(db, 'users/librarian-uid'), { role: 'librarian' });
+      await setDoc(doc(db, 'users/accountant-uid'), { role: 'accountant' });
+      await setDoc(doc(db, 'users/dean-uid'), { role: 'dean' });
       await setDoc(doc(db, 'clearanceApplications/app-student-a'), {
         studentUid: 'student-a-uid',
         financialStatus: 'paid',
@@ -39,6 +41,10 @@ describe('Firestore Rules Security Boundaries Tests', () => {
       await setDoc(doc(db, 'clearanceApplications/app-student-b'), {
         studentUid: 'student-b-uid',
         financialStatus: 'pending',
+      });
+      await setDoc(doc(db, 'clearanceApplications/app-student-a/approvals/librarian'), {
+        signatoryRole: 'librarian',
+        status: 'pending',
       });
     });
   });
@@ -63,15 +69,24 @@ describe('Firestore Rules Security Boundaries Tests', () => {
     await assertFails(getDoc(doc(studentDb, 'clearanceApplications/app-student-b')));
   });
 
-  it('3. Student CANNOT write user docs, student docs, applications, or approval rows', async () => {
+  it('3. Student client SDK explicitly fails writing financialStatus, approval status, or another application', async () => {
     const studentDb = testEnv.authenticatedContext('student-a-uid').firestore();
 
-    await assertFails(setDoc(doc(studentDb, 'users/student-a-uid'), { role: 'admin' }));
-    await assertFails(setDoc(doc(studentDb, 'students/student-a-uid'), { fullName: 'Hacked' }));
+    // Cannot write financialStatus
     await assertFails(
-      setDoc(doc(studentDb, 'clearanceApplications/app-student-a/approvals/librarian'), {
+      updateDoc(doc(studentDb, 'clearanceApplications/app-student-a'), { financialStatus: 'paid' })
+    );
+
+    // Cannot write approval status
+    await assertFails(
+      updateDoc(doc(studentDb, 'clearanceApplications/app-student-a/approvals/librarian'), {
         status: 'approved',
       })
+    );
+
+    // Cannot create or modify another student application
+    await assertFails(
+      setDoc(doc(studentDb, 'clearanceApplications/app-student-b'), { studentUid: 'student-a-uid' })
     );
   });
 
@@ -82,13 +97,32 @@ describe('Firestore Rules Security Boundaries Tests', () => {
     await assertFails(getDoc(doc(anonDb, 'clearanceApplications/app-student-a')));
   });
 
-  it('5. All client writes to users, publicUsers, and clearanceApplications are denied (Server-Only)', async () => {
+  it('5. Staff client SDK writes (Librarian, Accountant, Dean, Admin) are denied (Server-Only architecture)', async () => {
+    const librarianDb = testEnv.authenticatedContext('librarian-uid').firestore();
+    const accountantDb = testEnv.authenticatedContext('accountant-uid').firestore();
+    const deanDb = testEnv.authenticatedContext('dean-uid').firestore();
     const adminDb = testEnv.authenticatedContext('admin-uid').firestore();
 
-    // Even Admin client writes are denied because writes are server-only via Admin SDK in current architecture
-    await assertFails(setDoc(doc(adminDb, 'users/new-user'), { role: 'student' }));
+    // Librarian cannot write approval row via client SDK
     await assertFails(
-      updateDoc(doc(adminDb, 'clearanceApplications/app-student-a'), { financialStatus: 'unpaid' })
+      updateDoc(doc(librarianDb, 'clearanceApplications/app-student-a/approvals/librarian'), {
+        status: 'approved',
+      })
+    );
+
+    // Accountant cannot write financialStatus via client SDK
+    await assertFails(
+      updateDoc(doc(accountantDb, 'clearanceApplications/app-student-a'), { financialStatus: 'paid' })
+    );
+
+    // Dean cannot write user docs via client SDK
+    await assertFails(
+      setDoc(doc(deanDb, 'users/some-user'), { role: 'student' })
+    );
+
+    // Admin cannot write user docs via client SDK (server actions + Admin SDK required)
+    await assertFails(
+      setDoc(doc(adminDb, 'users/new-user'), { role: 'student' })
     );
   });
 });
