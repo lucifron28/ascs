@@ -5,6 +5,7 @@ import { Calendar, UserCheck, MessageSquare, Clock } from 'lucide-react';
 
 interface ApprovalRow {
   id: string;
+  requirementId?: string;
   signatory_role: string;
   status: 'approved' | 'pending' | 'not_approved';
   acted_at: string | null;
@@ -15,10 +16,13 @@ interface ApprovalRow {
 
 interface Remark {
   id: string;
-  approval_id: string;
-  author_name: string;
+  approval_id?: string;
+  approvalId?: string;
+  author_name?: string;
+  authorName?: string;
   content: string;
-  created_at: string;
+  created_at?: string;
+  createdAt?: string;
 }
 
 interface TrackingTableProps {
@@ -87,8 +91,9 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
             </thead>
             <tbody>
               {filteredApprovals.map((appr) => {
-                const approvalRemarks = remarks.filter((r) => r.approval_id === appr.id);
-
+                const approvalRemarks = remarks.filter(
+                  (r) => r.approval_id === appr.id || r.approvalId === appr.id || r.approvalId === appr.requirementId
+                );
                 return (
                   <React.Fragment key={appr.id}>
                     <tr className="bg-slate-950/40 hover:bg-slate-950/70 border border-slate-850 rounded-xl transition-all">
@@ -122,9 +127,9 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
                               <div key={remark.id} className="border-l border-indigo-500/30 pl-3 py-1 space-y-1">
                                 <p className="text-slate-300 italic">&ldquo;{remark.content}&rdquo;</p>
                                 <div className="text-[10px] text-slate-500 flex gap-2">
-                                  <span>By: {remark.author_name}</span>
+                                  <span>By: {remark.author_name || remark.authorName || 'Signatory'}</span>
                                   <span>•</span>
-                                  <span>{formatTime(remark.created_at)}</span>
+                                  <span>{formatTime(remark.created_at || remark.createdAt || null)}</span>
                                 </div>
                               </div>
                             ))}
