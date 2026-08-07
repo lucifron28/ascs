@@ -9,12 +9,19 @@ import {
   calculateFinancialMetrics,
   calculateRequirementMetrics,
   calculateGroupMetrics,
+  parseApplicationStatus,
+  parseFinancialStatus,
   type RawApplicationData,
   type RawApprovalData,
 } from '@/lib/reports/metrics';
 import type { ReportFilters, ReportSummary, AdminReportExportType, DeanReportExportType } from '@/lib/reports/types';
 import { mapLifecycleError, logSafeAuthError, sanitizeAuditMetadata } from '@/lib/admin/lifecycle-validation';
-import { assertReportScope } from '@/lib/reports/authorization';
+import {
+  assertReportScope,
+  parseReportFilterScope,
+  assertReportDatasetWithinLimit,
+  MAX_REPORT_APPLICATIONS,
+} from '@/lib/reports/authorization';
 import {
   generateSummaryCsv,
   generateRequirementBreakdownCsv,
@@ -24,7 +31,6 @@ import {
   type ApplicationDetailRow,
 } from '@/lib/reports/csv';
 
-const MAX_REPORT_APPLICATIONS = 5000;
 const APPROVAL_BATCH_SIZE = 25;
 
 export const ADMIN_EXPORT_TYPES = [
@@ -94,12 +100,7 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
     if (filters.financialStatus) query = query.where('financialStatus', '==', filters.financialStatus);
 
     const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
-
-    if (appSnap.docs.length > MAX_REPORT_APPLICATIONS) {
-      throw new Error(
-        'The selected report contains more than 5,000 submitted applications. Narrow the academic term or filters before generating the report.'
-      );
-    }
+    assertReportDatasetWithinLimit(appSnap.docs.length, 'summary');
 
     const rawApplications: RawApplicationData[] = appSnap.docs.map((doc) => {
       const d = doc.data();
@@ -186,12 +187,7 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
     if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
 
     const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
-
-    if (appSnap.docs.length > MAX_REPORT_APPLICATIONS) {
-      throw new Error(
-        'The selected report contains more than 5,000 submitted applications. Narrow the academic term or filters before generating the report.'
-      );
-    }
+    assertReportDatasetWithinLimit(appSnap.docs.length, 'summary');
 
     const rawApplications: RawApplicationData[] = appSnap.docs.map((doc) => {
       const d = doc.data();
@@ -253,12 +249,14 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
 }
 
 /** Fetch available distinct filter options authorized by role scope ('admin' | 'dean'). */
-export async function fetchReportFilterOptionsAction(inputScope: 'admin' | 'dean' = 'admin') {
+export async function fetchReportFilterOptionsAction(inputScope: unknown) {
   let userUid: string | undefined;
   try {
     const authenticated = await getAuthenticatedUser();
     userUid = authenticated.uid;
-    assertReportScope(authenticated.user, inputScope);
+
+    const scope = parseReportFilterScope(inputScope);
+    assertReportScope(authenticated.user, scope);
 
     const firestore = getAdminFirestore();
     const academicYearsSet = new Set<string>();
@@ -277,22 +275,21 @@ export async function fetchReportFilterOptionsAction(inputScope: 'admin' | 'dean
 
     // Build scope-aware application query
     let appsQuery: Query = firestore.collection('clearanceApplications');
-    if (inputScope === 'dean') {
+    if (scope === 'dean') {
       appsQuery = appsQuery.where('adviserApproved', '==', true);
     }
 
-    const appsSnap = await appsQuery.limit(MAX_REPORT_APPLICATIONS).get().catch(() => null);
+    const appsSnap = await appsQuery.limit(MAX_REPORT_APPLICATIONS + 1).get();
+    assertReportDatasetWithinLimit(appsSnap.docs.length, 'filter-options');
 
-    if (appsSnap) {
-      appsSnap.docs.forEach((doc) => {
-        const d = doc.data();
-        if (d.academicYear) academicYearsSet.add(String(d.academicYear));
-        if (d.semester) semestersSet.add(String(d.semester));
-        if (d.program) programsSet.add(String(d.program));
-        if (d.yearLevel) yearLevelsSet.add(String(d.yearLevel));
-        if (d.section) sectionsSet.add(String(d.section));
-      });
-    }
+    appsSnap.docs.forEach((doc) => {
+      const d = doc.data();
+      if (d.academicYear) academicYearsSet.add(String(d.academicYear));
+      if (d.semester) semestersSet.add(String(d.semester));
+      if (d.program) programsSet.add(String(d.program));
+      if (d.yearLevel) yearLevelsSet.add(String(d.yearLevel));
+      if (d.section) sectionsSet.add(String(d.section));
+    });
 
     return {
       success: true,
@@ -356,15 +353,13 @@ export async function exportAdminReportCsvAction(
       if (filters.financialStatus) query = query.where('financialStatus', '==', filters.financialStatus);
 
       const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
-
-      if (appSnap.docs.length > MAX_REPORT_APPLICATIONS) {
-        throw new Error(
-          'The selected report export contains more than 5,000 submitted applications. Narrow the academic term or filters before exporting CSV.'
-        );
-      }
+      assertReportDatasetWithinLimit(appSnap.docs.length, 'export');
 
       const rows: ApplicationDetailRow[] = appSnap.docs.map((doc) => {
         const d = doc.data();
+        const overallStatus = parseApplicationStatus(d.overallStatus);
+        const financialStatus = parseFinancialStatus(d.financialStatus);
+
         return {
           studentNumber: (d.studentNumber as string) || '',
           studentName: (d.studentName as string) || '',
@@ -373,8 +368,8 @@ export async function exportAdminReportCsvAction(
           section: (d.section as string) || '',
           academicYear: (d.academicYear as string) || '',
           semester: (d.semester as string) || '',
-          overallStatus: (d.overallStatus as string) || 'pending',
-          financialStatus: (d.financialStatus as string) || 'pending',
+          overallStatus,
+          financialStatus,
           submittedAt: (d.submittedAt as string) || '',
         };
       });
@@ -460,15 +455,15 @@ export async function exportDeanReportCsvAction(
       if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
 
       const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
-
-      if (appSnap.docs.length > MAX_REPORT_APPLICATIONS) {
-        throw new Error(
-          'The selected report export contains more than 5,000 submitted applications. Narrow the academic term or filters before exporting CSV.'
-        );
-      }
+      assertReportDatasetWithinLimit(appSnap.docs.length, 'export');
 
       const rows: ApplicationDetailRow[] = appSnap.docs.map((doc) => {
         const d = doc.data();
+        const overallStatus = parseApplicationStatus(d.overallStatus);
+        if (d.adviserApproved !== true) {
+          throw new Error('Report data integrity error: Dean export encountered an application without adviser approval.');
+        }
+
         return {
           studentNumber: (d.studentNumber as string) || '',
           studentName: (d.studentName as string) || '',
@@ -477,8 +472,8 @@ export async function exportDeanReportCsvAction(
           section: (d.section as string) || '',
           academicYear: (d.academicYear as string) || '',
           semester: (d.semester as string) || '',
-          overallStatus: (d.overallStatus as string) || 'pending',
-          adviserApproved: d.adviserApproved === true,
+          overallStatus,
+          adviserApproved: true,
           submittedAt: (d.submittedAt as string) || '',
         };
       });
