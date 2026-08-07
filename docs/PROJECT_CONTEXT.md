@@ -103,3 +103,33 @@ System Administrators and the Academic Dean have access to role-scoped clearance
   * Approval Aggregation: Requirement metrics read subcollections in controlled parallel batches (`APPROVAL_BATCH_SIZE = 25`) to ensure complete requirement metrics across 500+ applications.
   * CSV Privacy & Safety: Cells beginning with `=`, `+`, `-`, or `@` are prepended with `'` to prevent formula injection. Exports write activity log entries.
 Email notifications, electronic signatures, and production certificate issuance remain deferred.
+
+## Acceptance testing evidence
+
+A repeatable acceptance environment proves the main ASCS workflows against the Firebase
+Emulator Suite with a deterministic fictional dataset (`tests/fixtures/demo-data.ts`):
+
+- **Emulator seeding is CLI-managed and production-safe**: `npm run demo:reset` clears and
+  reseeds the Auth + Firestore emulators through `scripts/reset-emulator.ts` /
+  `scripts/seed-emulator.ts`; every seed/reset path first passes `assertEmulatorEnvironment()`
+  (`scripts/emulator-safety.ts`), which refuses to run without
+  `FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST`, `NEXT_PUBLIC_USE_FIREBASE_EMULATOR`,
+  and rejects known production project IDs. `scripts/verify-seed-invariants.ts` fails the seed
+  when any invariant (roles, profiles, student records, clearance requirements, Student A–F
+  lifecycle states, report variety) does not hold.
+- **Integration tests** (`tests/integration/`) execute real server actions and service
+  functions against the emulators and assert persisted state: account lifecycle, mandatory
+  password change, clearance submission, signatory workflow, accountant financial gate,
+  Adviser→Dean visibility, final approval/printability, reports, and CSV export audit logs.
+- **Firestore Rules tests** (`tests/rules/security-boundaries.test.ts`) use the Firebase client
+  SDK with authenticated emulator users to prove Rules boundaries (Admin SDK bypasses Rules,
+  so these are separate): own-record reads allowed, cross-student reads denied, all
+  privileged writes denied for every role.
+- **Browser acceptance** (`tests/e2e/`, Playwright + Chromium) covers the mandatory password
+  journey, approved/pending/not-approved/unpaid student dashboards, and Admin/Dean reports
+  (including the Dean financial-privacy boundary).
+- `npm run test:acceptance` runs unit + lint + build + integration + Rules + browser layers
+  and writes `artifacts/acceptance-summary.json` from actual results.
+
+See `docs/ACCEPTANCE_TESTING.md` for the full test architecture and traceability matrix, and
+`docs/DEMO_SCENARIO.md` for the live defense/demo walkthrough.

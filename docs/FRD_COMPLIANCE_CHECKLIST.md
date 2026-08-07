@@ -74,6 +74,23 @@
 
 ## 4. Evaluation & Next Steps for Non-Implemented Items
 
+### Acceptance evidence (added without changing functional counts)
+
+The FRD statuses above remain **33 Implemented / 1 Deferred**. Acceptance testing added
+verification evidence, not new requirements:
+
+- `tests/integration/` runs real server actions against the Auth + Firestore emulators and
+  asserts persisted state for account lifecycle, mandatory password change, clearance
+  submission, signatory workflow, the accountant financial gate, Adviser→Dean visibility,
+  final approval/printability, reports, and CSV export audit logging.
+- `tests/rules/security-boundaries.test.ts` verifies Firestore Rules with authenticated
+  client SDKs (own-record reads allowed; cross-student reads and all privileged client
+  writes denied).
+- `tests/e2e/` covers the browser journeys: mandatory password change, approved/pending/
+  not-approved/unpaid dashboards, and Admin/Dean reports (Dean financial-privacy boundary).
+- The deterministic emulator dataset, safety guards, and seed/reset commands are documented
+  in `docs/ACCEPTANCE_TESTING.md` and `docs/DEMO_SCENARIO.md`.
+
 ### Deferred Items:
 1. **Bulk CSV Account Import:**
    - *Evidence:* Single account creation actions (`createStudentAccountAction`, `createStaffAccountAction`) are fully functional.
