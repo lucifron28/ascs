@@ -33,14 +33,14 @@ import {
 
 const APPROVAL_BATCH_SIZE = 25;
 
-export const ADMIN_EXPORT_TYPES = [
+const ADMIN_EXPORT_TYPES = [
   'summary',
   'requirement-breakdown',
   'program-breakdown',
   'application-detail',
 ] as const;
 
-export const DEAN_EXPORT_TYPES = [
+const DEAN_EXPORT_TYPES = [
   'summary',
   'requirement-breakdown',
   'program-breakdown',
