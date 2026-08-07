@@ -9,11 +9,10 @@
 
 | Category | Implemented | Partial | Missing | Deferred | Total Evaluated |
 | --- | --- | --- | --- | --- | --- |
-| **Outputs** | 6 | 0 | 0 | 1 | 7 |
+| **Outputs** | 7 | 0 | 0 | 0 | 7 |
 | **Roles** | 9 | 0 | 0 | 0 | 9 |
 | **Functional Requirements** | 17 | 0 | 0 | 1 | 18 |
-| **Overall Totals** | **32** | **0** | **0** | **2** | **34** |
-
+| **Overall Totals** | **33** | **0** | **0** | **1** | **34** |
 ---
 
 ## 1. Outputs Compliance
@@ -26,14 +25,10 @@
 | **Financial Status Indicator** | `Implemented` | Dedicated `financialStatus` badge (`pending`, `paid`, `unpaid`) with accountant verification timestamp and financial remarks (ASCS tracks financial status and remarks, not an itemized dues ledger). |
 | **Automated Notifications** | `Implemented` | In-app `NotificationDropdown.tsx` displays real-time notification items for student submissions (confirming to student and alerting assigned or role-wide signatories), signatory evaluations, and financial updates. |
 | **Printable Clearance Document** | `Implemented` | `ClearanceCertificate.tsx` renders print-ready MVP document accessible exclusively when `overallStatus === 'approved'`. |
-| **Reports** | `Deferred` | Advanced statistical reporting, batch PDF export, and aggregate clearance analytics. |
+| **Reports** | `Implemented` | `app/admin/reports/page.tsx` and `app/dean/reports/page.tsx` render role-scoped analytical dashboards, requirement bottleneck tables (`Highest Unresolved Requirements`), program/year-level/section breakdowns, completion rate metrics, and secure CSV exports (`exportAdminReportCsvAction`, `exportDeanReportCsvAction`) with activity audit logging. Denominator is submitted applications; Dean scope is `adviserApproved === true`; `financialSummary` is excluded from Dean scope; 5,000-application dataset limit guard is enforced; CSV formula injection is prevented. |
 
 ### Details for Non-Implemented Outputs:
-- **Reports:**
-  - *Evidence:* No dedicated reports page or CSV/PDF analytics export in current App Router routes.
-  - *Missing Behavior:* Aggregate department clearance completion rate reports and financial dues summaries.
-  - *Recommended Next Step:* Implement an admin/dean analytics dashboard route under `/admin/reports` in post-MVP phase.
-
+- None. All 7 Output requirements are fully implemented.
 ---
 
 ## 2. Roles Compliance

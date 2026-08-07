@@ -95,6 +95,11 @@ issue temporary passwords, change system roles, assign requirement signatories, 
 Newly created and reset accounts must complete a mandatory password change at `/change-password` before
 accessing normal dashboards.
 System Administrators and the Academic Dean have access to role-scoped clearance reports and CSV exports:
-- `/admin/reports`: Institution-wide clearance metrics, financial summaries, requirement bottlenecks (`Highest Unresolved Requirements`), program/year-level/section breakdowns, and safe CSV data exports.
-- `/dean/reports`: Academic clearance progress for adviser-approved applications, program breakdowns, requirement bottlenecks, and role-scoped Dean CSV exports.
+- `/admin/reports`: Institution-wide clearance metrics, financial summaries (Paid / Unpaid / Pending), requirement bottlenecks (`Highest Unresolved Requirements`), program/year-level/section breakdowns, and safe CSV data exports.
+- `/dean/reports`: Academic clearance progress for adviser-approved applications (`adviserApproved === true`), program breakdowns, requirement bottlenecks, and role-scoped Dean CSV exports. Financial summaries are excluded from Dean scope.
+- **Reporting Architecture & Scaling Guards**:
+  * Submitted clearance applications within scope serve as the denominator for completion rates.
+  * Dataset Limit Guard: Report queries are bounded to `MAX_REPORT_APPLICATIONS = 5000`. Requests exceeding 5,000 documents throw an explicit error requiring filter narrowing.
+  * Approval Aggregation: Requirement metrics read subcollections in controlled parallel batches (`APPROVAL_BATCH_SIZE = 25`) to ensure complete requirement metrics across 500+ applications.
+  * CSV Privacy & Safety: Cells beginning with `=`, `+`, `-`, or `@` are prepended with `'` to prevent formula injection. Exports write activity log entries.
 Email notifications, electronic signatures, and production certificate issuance remain deferred.
