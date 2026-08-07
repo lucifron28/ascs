@@ -55,8 +55,8 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
 
     const tempPassword = input.temporaryPassword || generateRandomTemporaryPassword();
 
-    // Step A: Create Auth user & set custom claims
-    let uid: string;
+    // Step A: Create Auth user & set custom claims with cleanup compensation
+    let createdUid: string | null = null;
     try {
       const userRecord = await auth.createUser({
         email: input.email,
@@ -64,14 +64,31 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         displayName: input.fullName,
         emailVerified: true,
       });
-      uid = userRecord.uid;
-      await auth.setCustomUserClaims(uid, { role: 'student', mustChangePassword: true });
+      createdUid = userRecord.uid;
+      await auth.setCustomUserClaims(createdUid, { role: 'student', mustChangePassword: true });
     } catch (authErr: unknown) {
+      if (createdUid) {
+        let deleted = false;
+        try {
+          await auth.deleteUser(createdUid);
+          deleted = true;
+        } catch {}
+        if (!deleted) {
+          throw new Error(
+            'Account creation partially failed and Auth cleanup also failed. Manual intervention is required.'
+          );
+        }
+        throw new Error(
+          'Account creation failed during custom claim setup. Auth cleanup completed.'
+        );
+      }
       const msg = authErr instanceof Error ? authErr.message : 'Auth user creation failed.';
       throw new Error(`Failed to create authentication user: ${msg}`);
     }
 
-    // Step B: Write Firestore profiles with compensation
+    const uid = createdUid;
+
+    // Step B: Write Firestore profiles & Activity Log in ONE atomic batch
     const now = new Date().toISOString();
     try {
       const batch = firestore.batch();
@@ -85,6 +102,7 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         accountStatus: 'active',
         isActive: true,
         mustChangePassword: true,
+        studentNumber: input.studentNumber,
         contactNumber: input.contactNumber,
         createdAt: now,
         updatedAt: now,
@@ -115,30 +133,34 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         updatedAt: now,
       });
 
+      const logRef = firestore.collection('activityLogs').doc();
+      batch.set(logRef, {
+        actorId: adminUid,
+        actorName: adminUser.fullName || 'Administrator',
+        actorRole: 'admin',
+        action: 'create_student_account',
+        entityType: 'user',
+        entityId: uid,
+        metadata: sanitizeAuditMetadata({
+          email: input.email,
+          studentNumber: input.studentNumber,
+          program: input.program,
+          role: 'student',
+        }),
+        createdAt: now,
+      });
+
       await batch.commit();
     } catch (dbErr: unknown) {
-      await auth.deleteUser(uid).catch(() => {});
+      let deleted = false;
+      try {
+        await auth.deleteUser(uid);
+        deleted = true;
+      } catch {}
+      const cleanupStatus = deleted ? 'Auth cleanup completed.' : 'Auth cleanup failed (manual intervention required).';
       const msg = dbErr instanceof Error ? dbErr.message : 'Database profile creation failed.';
-      throw new Error(`Account creation failed during Firestore profile creation: ${msg}. Compensation deleted the un-configured Auth account.`);
+      throw new Error(`Account creation failed during Firestore write: ${msg}. ${cleanupStatus}`);
     }
-
-    // Step C: Write Activity Log
-    const logRef = firestore.collection('activityLogs').doc();
-    await logRef.set({
-      actorId: adminUid,
-      actorName: adminUser.fullName || 'Administrator',
-      actorRole: 'admin',
-      action: 'create_student_account',
-      entityType: 'user',
-      entityId: uid,
-      metadata: sanitizeAuditMetadata({
-        email: input.email,
-        studentNumber: input.studentNumber,
-        program: input.program,
-        role: 'student',
-      }),
-      createdAt: now,
-    });
 
     return {
       success: true,
@@ -159,10 +181,16 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
 }
 
 // 2. Create Staff Account
-export async function createStaffAccountAction(data: StaffAccountInput) {
+export async function createStaffAccountAction(
+  data: StaffAccountInput & { confirmElevatedAdminCreation?: boolean }
+) {
   try {
     const { uid: adminUid, user: adminUser } = await getAuthenticatedAdmin();
     const input = validateStaffInput(data);
+
+    if (input.role === 'admin' && data.confirmElevatedAdminCreation !== true) {
+      throw new Error('Creating an administrator account requires explicit confirmation.');
+    }
 
     const auth = getAdminAuth();
     const firestore = getAdminFirestore();
@@ -180,8 +208,8 @@ export async function createStaffAccountAction(data: StaffAccountInput) {
 
     const tempPassword = input.temporaryPassword || generateRandomTemporaryPassword();
 
-    // Step A: Create Auth user & set custom claims
-    let uid: string;
+    // Step A: Create Auth user & set custom claims with compensation
+    let createdUid: string | null = null;
     try {
       const userRecord = await auth.createUser({
         email: input.email,
@@ -189,14 +217,31 @@ export async function createStaffAccountAction(data: StaffAccountInput) {
         displayName: input.fullName,
         emailVerified: true,
       });
-      uid = userRecord.uid;
-      await auth.setCustomUserClaims(uid, { role: input.role, mustChangePassword: true });
+      createdUid = userRecord.uid;
+      await auth.setCustomUserClaims(createdUid, { role: input.role, mustChangePassword: true });
     } catch (authErr: unknown) {
+      if (createdUid) {
+        let deleted = false;
+        try {
+          await auth.deleteUser(createdUid);
+          deleted = true;
+        } catch {}
+        if (!deleted) {
+          throw new Error(
+            'Staff creation partially failed and Auth cleanup also failed. Manual intervention is required.'
+          );
+        }
+        throw new Error(
+          'Staff creation failed during custom claim setup. Auth cleanup completed.'
+        );
+      }
       const msg = authErr instanceof Error ? authErr.message : 'Auth staff creation failed.';
       throw new Error(`Failed to create staff authentication user: ${msg}`);
     }
 
-    // Step B: Write Firestore profiles with compensation
+    const uid = createdUid;
+
+    // Step B: Write Firestore profiles & Activity Log in ONE atomic batch
     const now = new Date().toISOString();
     try {
       const batch = firestore.batch();
@@ -226,29 +271,34 @@ export async function createStaffAccountAction(data: StaffAccountInput) {
         isActive: true,
       });
 
+      const logRef = firestore.collection('activityLogs').doc();
+      batch.set(logRef, {
+        actorId: adminUid,
+        actorName: adminUser.fullName || 'Administrator',
+        actorRole: 'admin',
+        action: input.role === 'admin' ? 'create_admin_account' : 'create_staff_account',
+        entityType: 'user',
+        entityId: uid,
+        metadata: sanitizeAuditMetadata({
+          email: input.email,
+          role: input.role,
+          fullName: input.fullName,
+          confirmElevatedAdminCreation: data.confirmElevatedAdminCreation ?? false,
+        }),
+        createdAt: now,
+      });
+
       await batch.commit();
     } catch (dbErr: unknown) {
-      await auth.deleteUser(uid).catch(() => {});
+      let deleted = false;
+      try {
+        await auth.deleteUser(uid);
+        deleted = true;
+      } catch {}
+      const cleanupStatus = deleted ? 'Auth cleanup completed.' : 'Auth cleanup failed (manual intervention required).';
       const msg = dbErr instanceof Error ? dbErr.message : 'Database profile creation failed.';
-      throw new Error(`Staff creation failed during Firestore write: ${msg}. Compensation deleted the un-configured Auth account.`);
+      throw new Error(`Staff creation failed during Firestore write: ${msg}. ${cleanupStatus}`);
     }
-
-    // Step C: Write Activity Log
-    const logRef = firestore.collection('activityLogs').doc();
-    await logRef.set({
-      actorId: adminUid,
-      actorName: adminUser.fullName || 'Administrator',
-      actorRole: 'admin',
-      action: 'create_staff_account',
-      entityType: 'user',
-      entityId: uid,
-      metadata: sanitizeAuditMetadata({
-        email: input.email,
-        role: input.role,
-        fullName: input.fullName,
-      }),
-      createdAt: now,
-    });
 
     return {
       success: true,
@@ -290,19 +340,36 @@ export async function deactivateUserAccountAction(data: { userId: string }) {
         .where('accountStatus', '==', 'active')
         .get();
 
-      checkFinalActiveAdmin(activeAdminsSnap.size);
+      // Count only users with active accountStatus and isActive !== false
+      const activeCount = activeAdminsSnap.docs.filter((doc) => doc.data().isActive !== false).length;
+      checkFinalActiveAdmin(activeCount);
     }
 
-    // Step A: Disable Auth user and revoke tokens
+    // Step A: Disable Auth user & revoke refresh tokens with explicit compensation
     try {
       await auth.updateUser(data.userId, { disabled: true });
-      await auth.revokeRefreshTokens(data.userId);
     } catch (authErr: unknown) {
       const msg = authErr instanceof Error ? authErr.message : 'Failed to disable authentication user.';
       throw new Error(`Deactivation failed on authentication service: ${msg}`);
     }
 
-    // Step B: Update Firestore with compensation
+    try {
+      await auth.revokeRefreshTokens(data.userId);
+    } catch (tokenErr: unknown) {
+      // Re-enable Auth user since token revocation failed
+      let restored = false;
+      try {
+        await auth.updateUser(data.userId, { disabled: false });
+        restored = true;
+      } catch {}
+      const restorationMsg = restored
+        ? 'Auth user status has been restored.'
+        : 'Auth status restoration failed (manual intervention required).';
+      const msg = tokenErr instanceof Error ? tokenErr.message : 'Token revocation failed.';
+      throw new Error(`Deactivation failed during token revocation: ${msg}. ${restorationMsg}`);
+    }
+
+    // Step B: Update Firestore profiles & Activity Log in ONE atomic batch
     const now = new Date().toISOString();
     try {
       const batch = firestore.batch();
@@ -317,28 +384,34 @@ export async function deactivateUserAccountAction(data: { userId: string }) {
       const publicRef = firestore.collection('publicUsers').doc(data.userId);
       batch.set(publicRef, { accountStatus: 'inactive', isActive: false }, { merge: true });
 
+      const logRef = firestore.collection('activityLogs').doc();
+      batch.set(logRef, {
+        actorId: adminUid,
+        actorName: adminUser.fullName || 'Administrator',
+        actorRole: 'admin',
+        action: 'deactivate_user_account',
+        entityType: 'user',
+        entityId: data.userId,
+        metadata: sanitizeAuditMetadata({
+          targetEmail: targetUser.email,
+          targetRole: targetUser.role,
+        }),
+        createdAt: now,
+      });
+
       await batch.commit();
     } catch (dbErr: unknown) {
-      await auth.updateUser(data.userId, { disabled: false }).catch(() => {});
-      const msg = dbErr instanceof Error ? dbErr.message : 'Firestore deactivation update failed.';
-      throw new Error(`Deactivation failed during database update: ${msg}. Auth account status has been restored.`);
+      let restored = false;
+      try {
+        await auth.updateUser(data.userId, { disabled: false });
+        restored = true;
+      } catch {}
+      const restorationMsg = restored
+        ? 'Auth account disabled status was restored to active, but revoked refresh tokens cannot be restored. The user must sign in again.'
+        : 'Auth account restoration failed (manual intervention required).';
+      const msg = dbErr instanceof Error ? dbErr.message : 'Firestore update failed.';
+      throw new Error(`Deactivation failed during database update: ${msg}. ${restorationMsg}`);
     }
-
-    // Step C: Write Activity Log
-    const logRef = firestore.collection('activityLogs').doc();
-    await logRef.set({
-      actorId: adminUid,
-      actorName: adminUser.fullName || 'Administrator',
-      actorRole: 'admin',
-      action: 'deactivate_user_account',
-      entityType: 'user',
-      entityId: data.userId,
-      metadata: sanitizeAuditMetadata({
-        targetEmail: targetUser.email,
-        targetRole: targetUser.role,
-      }),
-      createdAt: now,
-    });
 
     return { success: true };
   } catch (error: unknown) {
@@ -371,7 +444,7 @@ export async function reactivateUserAccountAction(data: { userId: string }) {
       throw new Error(`Reactivation failed on authentication service: ${msg}`);
     }
 
-    // Step B: Update Firestore
+    // Step B: Update Firestore profiles & Activity Log in ONE atomic batch
     const now = new Date().toISOString();
     try {
       const batch = firestore.batch();
@@ -386,28 +459,34 @@ export async function reactivateUserAccountAction(data: { userId: string }) {
       const publicRef = firestore.collection('publicUsers').doc(data.userId);
       batch.set(publicRef, { accountStatus: 'active', isActive: true }, { merge: true });
 
+      const logRef = firestore.collection('activityLogs').doc();
+      batch.set(logRef, {
+        actorId: adminUid,
+        actorName: adminUser.fullName || 'Administrator',
+        actorRole: 'admin',
+        action: 'reactivate_user_account',
+        entityType: 'user',
+        entityId: data.userId,
+        metadata: sanitizeAuditMetadata({
+          targetEmail: targetUser.email,
+          targetRole: targetUser.role,
+        }),
+        createdAt: now,
+      });
+
       await batch.commit();
     } catch (dbErr: unknown) {
-      await auth.updateUser(data.userId, { disabled: true }).catch(() => {});
-      const msg = dbErr instanceof Error ? dbErr.message : 'Firestore reactivation update failed.';
-      throw new Error(`Reactivation failed during database update: ${msg}. Auth account status restored.`);
+      let reDisabled = false;
+      try {
+        await auth.updateUser(data.userId, { disabled: true });
+        reDisabled = true;
+      } catch {}
+      const restorationMsg = reDisabled
+        ? 'Auth account status restored to disabled.'
+        : 'Auth account re-disabling failed (manual intervention required).';
+      const msg = dbErr instanceof Error ? dbErr.message : 'Firestore update failed.';
+      throw new Error(`Reactivation failed during database update: ${msg}. ${restorationMsg}`);
     }
-
-    // Step C: Write Activity Log
-    const logRef = firestore.collection('activityLogs').doc();
-    await logRef.set({
-      actorId: adminUid,
-      actorName: adminUser.fullName || 'Administrator',
-      actorRole: 'admin',
-      action: 'reactivate_user_account',
-      entityType: 'user',
-      entityId: data.userId,
-      metadata: sanitizeAuditMetadata({
-        targetEmail: targetUser.email,
-        targetRole: targetUser.role,
-      }),
-      createdAt: now,
-    });
 
     return { success: true };
   } catch (error: unknown) {
@@ -421,55 +500,111 @@ export async function reactivateUserAccountAction(data: { userId: string }) {
 export async function resetUserTemporaryPasswordAction(data: { userId: string; temporaryPassword?: string }) {
   try {
     const { uid: adminUid, user: adminUser } = await getAuthenticatedAdmin();
+
+    if (!data.userId || typeof data.userId !== 'string') {
+      throw new Error('Target User ID is required.');
+    }
+
     checkSelfOperation(adminUid, data.userId, 'temporary password reset');
 
     const firestore = getAdminFirestore();
     const auth = getAdminAuth();
 
+    // Confirm Firestore user profile exists
     const userRef = firestore.collection('users').doc(data.userId);
     const userSnap = await userRef.get();
     if (!userSnap.exists) {
-      throw new Error('Target user profile not found.');
+      throw new Error('Target user profile not found in Firestore.');
+    }
+
+    // Confirm Firebase Auth record exists & read previous claims
+    let userAuthRecord;
+    try {
+      userAuthRecord = await auth.getUser(data.userId);
+    } catch {
+      throw new Error('Target authentication record not found in Firebase Auth.');
     }
 
     const targetUser = userSnap.data()!;
-    const tempPassword = data.temporaryPassword || generateRandomTemporaryPassword();
+    const previousClaims = userAuthRecord.customClaims || {};
 
-    // Step A: Update Auth password & revoke tokens
-    try {
-      await auth.updateUser(data.userId, { password: tempPassword });
-      await auth.revokeRefreshTokens(data.userId);
-
-      const targetRole = (targetUser.role as UserRole) || 'student';
-      await auth.setCustomUserClaims(data.userId, { role: targetRole, mustChangePassword: true });
-    } catch (authErr: unknown) {
-      const msg = authErr instanceof Error ? authErr.message : 'Failed to update authentication password.';
-      throw new Error(`Password reset failed on authentication service: ${msg}`);
+    let tempPassword: string;
+    if (data.temporaryPassword !== undefined && data.temporaryPassword !== '') {
+      tempPassword = validateTemporaryPassword(data.temporaryPassword);
+    } else {
+      tempPassword = generateRandomTemporaryPassword();
     }
 
-    // Step B: Set mustChangePassword: true in Firestore
-    const now = new Date().toISOString();
-    await userRef.update({
-      mustChangePassword: true,
-      updatedAt: now,
-    });
-
-    // Step C: Write Activity Log (NEVER log tempPassword)
-    const logRef = firestore.collection('activityLogs').doc();
-    await logRef.set({
-      actorId: adminUid,
-      actorName: adminUser.fullName || 'Administrator',
-      actorRole: 'admin',
-      action: 'reset_temporary_password',
-      entityType: 'user',
-      entityId: data.userId,
-      metadata: sanitizeAuditMetadata({
-        targetEmail: targetUser.email,
-        targetRole: targetUser.role,
+    // Step A: Set custom claim mustChangePassword: true preserving existing claims
+    try {
+      await auth.setCustomUserClaims(data.userId, {
+        ...previousClaims,
+        role: targetUser.role || 'student',
         mustChangePassword: true,
-      }),
-      createdAt: now,
-    });
+      });
+    } catch (claimErr: unknown) {
+      const msg = claimErr instanceof Error ? claimErr.message : 'Claim update failed.';
+      throw new Error(`Password reset failed during custom claim update: ${msg}`);
+    }
+
+    // Step B: Update Auth password with claim rollback protection
+    try {
+      await auth.updateUser(data.userId, { password: tempPassword });
+    } catch (passErr: unknown) {
+      let rollbackSuccess = false;
+      try {
+        await auth.setCustomUserClaims(data.userId, previousClaims);
+        rollbackSuccess = true;
+      } catch {}
+      const statusMsg = rollbackSuccess
+        ? 'Previous custom claims restored.'
+        : 'Custom claim rollback failed (manual intervention required).';
+      const msg = passErr instanceof Error ? passErr.message : 'Password update failed.';
+      throw new Error(`Password reset failed during Auth password update: ${msg}. ${statusMsg}`);
+    }
+
+    // Step C: Revoke refresh tokens
+    let tokenRevocationFailed = false;
+    try {
+      await auth.revokeRefreshTokens(data.userId);
+    } catch (tokenErr: unknown) {
+      tokenRevocationFailed = true;
+      console.error('Refresh token revocation failed during password reset:', tokenErr);
+    }
+
+    // Step D: Write Firestore profile flag & Activity Log in ONE atomic batch
+    const now = new Date().toISOString();
+    try {
+      const batch = firestore.batch();
+      batch.update(userRef, {
+        mustChangePassword: true,
+        updatedAt: now,
+      });
+
+      const logRef = firestore.collection('activityLogs').doc();
+      batch.set(logRef, {
+        actorId: adminUid,
+        actorName: adminUser.fullName || 'Administrator',
+        actorRole: 'admin',
+        action: 'reset_temporary_password',
+        entityType: 'user',
+        entityId: data.userId,
+        metadata: sanitizeAuditMetadata({
+          targetEmail: targetUser.email,
+          targetRole: targetUser.role,
+          mustChangePassword: true,
+          tokenRevocationWarning: tokenRevocationFailed,
+        }),
+        createdAt: now,
+      });
+
+      await batch.commit();
+    } catch (dbErr: unknown) {
+      const dbMsg = dbErr instanceof Error ? dbErr.message : 'Database update failed.';
+      throw new Error(
+        `Auth password changed and claim set to mustChangePassword: true, but Firestore write failed: ${dbMsg}. Account is in password-change-required state.`
+      );
+    }
 
     return {
       success: true,

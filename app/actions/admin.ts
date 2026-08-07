@@ -3,6 +3,12 @@
 import { getAdminFirestore, getAdminAuth } from '@/lib/firebase/admin';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { UserRole } from '@/lib/types/roles';
+import {
+  checkRoleConversion,
+  checkFinalActiveAdmin,
+  checkSelfOperation,
+  sanitizeAuditMetadata,
+} from '@/lib/admin/lifecycle-validation';
 
 // Helper to authenticate Admin user
 async function getAuthenticatedAdmin() {
@@ -74,6 +80,26 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
     const previousData = userSnap.data()!;
     const previousRole: UserRole = (previousData.role as UserRole) || 'student';
 
+    // 1. Safeguard: Block student <-> staff role conversions
+    checkRoleConversion(previousRole, data.newRole);
+
+    // 2. Safeguard: Prevent self-demotion
+    checkSelfOperation(adminUid, data.userId, 'role demotion');
+
+    // 3. Safeguard: Protect final active administrator from demotion
+    if (previousRole === 'admin' && data.newRole !== 'admin') {
+      const activeAdminsSnap = await firestore
+        .collection('users')
+        .where('role', '==', 'admin')
+        .where('accountStatus', '==', 'active')
+        .get();
+
+      const activeAdminCount = activeAdminsSnap.docs.filter(
+        (doc) => doc.data().isActive !== false
+      ).length;
+      checkFinalActiveAdmin(activeAdminCount);
+    }
+
     // Read previous custom claims where possible to preserve unrelated claims
     let previousClaims: Record<string, unknown> = {};
     try {
@@ -82,12 +108,6 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
     } catch {
       // Ignore fetch error if Auth user doc is not present in local emulator
     }
-
-    // Prevent demoting self if admin is performing operation on own account
-    if (adminUid === data.userId && data.newRole !== 'admin') {
-      throw new Error('Action blocked: You cannot demote your own administrator account.');
-    }
-
     const now = new Date().toISOString();
     const publicRef = firestore.collection('publicUsers').doc(data.userId);
 
@@ -127,7 +147,7 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
       action: 'update_user_role',
       entityType: 'user',
       entityId: data.userId,
-      metadata: { previousRole, newRole: data.newRole },
+      metadata: sanitizeAuditMetadata({ previousRole, newRole: data.newRole }),
       createdAt: now,
     });
 

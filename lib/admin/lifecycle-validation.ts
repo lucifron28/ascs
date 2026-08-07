@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import type { UserRole } from '@/lib/types/roles';
 
 export interface StudentAccountInput {
@@ -218,12 +219,32 @@ export function shouldRedirectToChangePassword(
   return user.mustChangePassword === true;
 }
 
-/** Generate a random 10-character secure temporary password. */
+/** Generate a cryptographically secure random temporary password (minimum 12 chars with upper, lower, digit, symbol). */
 export function generateRandomTemporaryPassword(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$';
-  let pass = 'P@ss'; // guarantee symbol + letter
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const digits = '23456789';
+  const symbols = '!@#$%^&*';
+  const all = upper + lower + digits + symbols;
+
+  const chars: string[] = [
+    upper[randomInt(upper.length)],
+    lower[randomInt(lower.length)],
+    digits[randomInt(digits.length)],
+    symbols[randomInt(symbols.length)],
+  ];
+
   for (let i = 0; i < 8; i++) {
-    pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    chars.push(all[randomInt(all.length)]);
   }
-  return pass;
+
+  // Fisher-Yates shuffle using cryptographically secure random numbers
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    const temp = chars[i];
+    chars[i] = chars[j];
+    chars[j] = temp;
+  }
+
+  return chars.join('');
 }
