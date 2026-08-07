@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/clearance/status.test.ts lib/admin/lifecycle.test.ts lib/auth/edge-session.test.ts lib/auth/password-transition.test.ts"
+    "test": "tsx --test lib/clearance/status.test.ts lib/admin/lifecycle.test.ts lib/auth/edge-session.test.ts lib/auth/password-transition.test.ts lib/reports/metrics.test.ts lib/reports/filters.test.ts lib/reports/csv.test.ts lib/reports/authorization.test.ts"
   },
   "dependencies": {
     "@tanstack/react-form": "^1.33.0",
