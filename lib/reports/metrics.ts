@@ -11,6 +11,24 @@ import {
 
 export const VALID_APPROVAL_STATUSES = ['pending', 'approved', 'not_approved'] as const;
 
+/** Parse and validate overallStatus against allowlist. Throws a report data integrity error if invalid. */
+export function parseApplicationStatus(status: unknown): 'pending' | 'approved' | 'not_approved' {
+  const s = status || 'pending';
+  if (!VALID_OVERALL_STATUSES.includes(s as (typeof VALID_OVERALL_STATUSES)[number])) {
+    throw new Error(`Report data integrity error: Unknown application overallStatus '${String(status)}'.`);
+  }
+  return s as 'pending' | 'approved' | 'not_approved';
+}
+
+/** Parse and validate financialStatus against allowlist. Throws a report data integrity error if invalid. */
+export function parseFinancialStatus(status: unknown): 'pending' | 'paid' | 'unpaid' {
+  const s = status || 'pending';
+  if (!VALID_FINANCIAL_STATUSES.includes(s as (typeof VALID_FINANCIAL_STATUSES)[number])) {
+    throw new Error(`Report data integrity error: Unknown application financialStatus '${String(status)}'.`);
+  }
+  return s as 'pending' | 'paid' | 'unpaid';
+}
+
 /** Safe completion rate calculation (0..1 numeric ratio). Returns 0 when denominator is zero. */
 export function calculateCompletionRate(approved: number, total: number): number {
   if (!total || total <= 0) return 0;
@@ -37,7 +55,8 @@ export interface RawApprovalData {
 
 /**
  * Deduplicates applications by ID.
- * Throws a report data-integrity error if duplicate IDs contain contradictory status fields.
+ * Throws a report data-integrity error if duplicate IDs contain contradictory reporting fields
+ * (overallStatus, financialStatus, program, yearLevel, section, or adviserApproved).
  */
 export function deduplicateApplicationsById(
   applications: RawApplicationData[]
@@ -48,10 +67,15 @@ export function deduplicateApplicationsById(
     if (!app || !app.id) continue;
     const existing = map.get(app.id);
     if (existing) {
-      if (
+      const isContradictory =
         (existing.overallStatus || 'pending') !== (app.overallStatus || 'pending') ||
-        (existing.financialStatus || 'pending') !== (app.financialStatus || 'pending')
-      ) {
+        (existing.financialStatus || 'pending') !== (app.financialStatus || 'pending') ||
+        (existing.program || '').trim() !== (app.program || '').trim() ||
+        String(existing.yearLevel || '').trim() !== String(app.yearLevel || '').trim() ||
+        (existing.section || '').trim() !== (app.section || '').trim() ||
+        Boolean(existing.adviserApproved) !== Boolean(app.adviserApproved);
+
+      if (isContradictory) {
         throw new Error(
           `Report data integrity error: Contradictory records found for duplicate application ID '${app.id}'.`
         );
@@ -75,10 +99,7 @@ export function calculateApplicationMetrics(
   let notApproved = 0;
 
   for (const app of deduplicated) {
-    const status = app.overallStatus || 'pending';
-    if (!VALID_OVERALL_STATUSES.includes(status as (typeof VALID_OVERALL_STATUSES)[number])) {
-      throw new Error(`Report data integrity error: Unknown application overallStatus '${status}'.`);
-    }
+    const status = parseApplicationStatus(app.overallStatus);
     if (status === 'approved') {
       approved++;
     } else if (status === 'not_approved') {
@@ -109,10 +130,7 @@ export function calculateFinancialMetrics(
   let pending = 0;
 
   for (const app of deduplicated) {
-    const status = app.financialStatus || 'pending';
-    if (!VALID_FINANCIAL_STATUSES.includes(status as (typeof VALID_FINANCIAL_STATUSES)[number])) {
-      throw new Error(`Report data integrity error: Unknown application financialStatus '${status}'.`);
-    }
+    const status = parseFinancialStatus(app.financialStatus);
     if (status === 'paid') {
       paid++;
     } else if (status === 'unpaid') {
@@ -262,7 +280,7 @@ export function calculateGroupMetrics(
     }
 
     item.total++;
-    const status = app.overallStatus || 'pending';
+    const status = parseApplicationStatus(app.overallStatus);
     if (status === 'approved') {
       item.approved++;
     } else if (status === 'not_approved') {
