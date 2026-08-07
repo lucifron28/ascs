@@ -134,7 +134,7 @@ export default function ChangePasswordPage() {
           {success && (
             <div className="alert alert-success bg-emerald-950/80 border-emerald-800 text-emerald-300 text-xs rounded-xl flex items-center gap-2.5 p-3">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>Password updated successfully! Redirecting to your dashboard...</span>
+              <span>Password updated successfully. Redirecting to sign in…</span>
             </div>
           )}
 
