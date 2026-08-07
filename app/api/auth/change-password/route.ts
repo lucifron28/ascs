@@ -1,30 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
-import { getAuthenticatedUserForPasswordChange, getSessionCookieName } from '@/lib/auth/session';
+import { getAuthenticatedUserForPasswordChange } from '@/lib/auth/session';
 import { logSafeAuthError } from '@/lib/admin/lifecycle-validation';
-
-function passwordChangedResponse(body: Record<string, unknown>, statusCode: number) {
-  const response = NextResponse.json(
-    {
-      ...body,
-      passwordChanged: true,
-    },
-    {
-      status: statusCode,
-      headers: { 'Cache-Control': 'no-store' },
-    }
-  );
-
-  response.cookies.set(getSessionCookieName(), '', {
-    maxAge: 0,
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    sameSite: 'lax',
-  });
-
-  return response;
-}
+import { createPasswordChangedResponse } from '@/lib/auth/password-transition';
 export async function POST(request: NextRequest) {
   const headers = { 'Cache-Control': 'no-store' };
 
@@ -168,9 +146,8 @@ export async function POST(request: NextRequest) {
     try {
       await auth.revokeRefreshTokens(uid);
     } catch (tokenErr: unknown) {
-      const msg = tokenErr instanceof Error ? tokenErr.message : 'Unknown error';
-      console.error('Session token revocation failed during change-password:', msg);
-      return passwordChangedResponse(
+      logSafeAuthError('change_password_token_revocation', tokenErr, uid);
+      return createPasswordChangedResponse(
         {
           error:
             'The password changed, but session revocation did not complete. Sign in with the new password and retry the mandatory password-change process.',
@@ -187,9 +164,8 @@ export async function POST(request: NextRequest) {
         mustChangePassword: false,
       });
     } catch (claimErr: unknown) {
-      const msg = claimErr instanceof Error ? claimErr.message : 'Unknown error';
-      console.error('Custom claim update failed during change-password:', msg);
-      return passwordChangedResponse(
+      logSafeAuthError('change_password_claim_update', claimErr, uid);
+      return createPasswordChangedResponse(
         {
           error:
             'The password changed, but mandatory-change completion remains pending. Sign in with your new password to retry mandatory password change.',
@@ -222,8 +198,7 @@ export async function POST(request: NextRequest) {
 
       await batch.commit();
     } catch (dbErr: unknown) {
-      const msg = dbErr instanceof Error ? dbErr.message : 'Unknown error';
-      console.error('Firestore batch write failed during change-password:', msg);
+      logSafeAuthError('change_password_db_write', dbErr, uid);
 
       // Attempt rollback of custom claim to mustChangePassword: true
       let rollbackSucceeded = false;
@@ -234,10 +209,12 @@ export async function POST(request: NextRequest) {
           mustChangePassword: true,
         });
         rollbackSucceeded = true;
-      } catch {}
+      } catch (rollbackErr: unknown) {
+        logSafeAuthError('change_password_claim_rollback', rollbackErr, uid);
+      }
 
       if (rollbackSucceeded) {
-        return passwordChangedResponse(
+        return createPasswordChangedResponse(
           {
             error:
               'Password changed and claims restored to mandatory-change-required state, but profile update failed. Sign in with your new password to retry.',
@@ -252,15 +229,14 @@ export async function POST(request: NextRequest) {
         await auth.updateUser(uid, { disabled: true });
         accountDisabled = true;
       } catch (disableErr: unknown) {
-        const dMsg = disableErr instanceof Error ? disableErr.message : 'Unknown error';
-        console.error('Account disable fallback failed:', dMsg);
+        logSafeAuthError('change_password_disable_fallback', disableErr, uid);
       }
 
       const errorMsg = accountDisabled
         ? 'Password changed, but account synchronization failed. The account was disabled for security. Contact an administrator.'
         : 'Password changed, account synchronization failed, and the account could not be disabled automatically. Immediate administrator intervention is required.';
 
-      return passwordChangedResponse(
+      return createPasswordChangedResponse(
         {
           error: errorMsg,
           accountDisabled,
@@ -271,7 +247,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 5. Clear session cookie & return success response
-    return passwordChangedResponse(
+    return createPasswordChangedResponse(
       {
         success: true,
         message: 'Password updated successfully. Redirecting to sign in...',

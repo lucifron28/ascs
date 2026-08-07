@@ -1,79 +1,71 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {
+  createPasswordChangedResponse,
+  getPasswordChangeRecovery,
+} from './password-transition';
 
-export function createPasswordTransitionResult(params: {
-  passwordChanged: boolean;
-  success?: boolean;
-  error?: string;
-  accountDisabled?: boolean;
-  manualInterventionRequired?: boolean;
-}) {
-  return {
-    success: params.success ?? false,
-    passwordChanged: params.passwordChanged,
-    ...(params.error ? { error: params.error } : {}),
-    ...(params.accountDisabled !== undefined ? { accountDisabled: params.accountDisabled } : {}),
-    ...(params.manualInterventionRequired !== undefined
-      ? { manualInterventionRequired: params.manualInterventionRequired }
-      : {}),
-  };
-}
+test('1. createPasswordChangedResponse sets status, Cache-Control, body, and cookie clearing header', async () => {
+  const res = createPasswordChangedResponse(
+    { error: 'Synchronization failed', accountDisabled: true },
+    400,
+    false
+  );
 
-test('1. Pre-password failure does not set passwordChanged flag', () => {
-  const result = createPasswordTransitionResult({
+  assert.equal(res.status, 400);
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+
+  const body = await res.json();
+  assert.equal(body.passwordChanged, true);
+  assert.equal(body.accountDisabled, true);
+  assert.equal(body.error, 'Synchronization failed');
+
+  const setCookie = res.headers.get('set-cookie');
+  assert.ok(setCookie, 'Set-Cookie header must be set');
+  assert.match(setCookie, /ascs_session=/);
+  assert.match(setCookie, /Max-Age=0/i);
+  assert.match(setCookie, /HttpOnly/i);
+  assert.match(setCookie, /SameSite=Lax/i);
+});
+
+test('2. createPasswordChangedResponse includes Secure flag in production', () => {
+  const resProd = createPasswordChangedResponse({ success: true }, 200, true);
+  const setCookie = resProd.headers.get('set-cookie');
+  assert.ok(setCookie);
+  assert.match(setCookie, /Secure/i);
+});
+
+test('3. getPasswordChangeRecovery leaves form state untouched on pre-password failure', () => {
+  const recovery = getPasswordChangeRecovery(false, {
+    error: 'Incorrect current password.',
     passwordChanged: false,
-    error: 'Current password verification failed.',
   });
-  assert.equal(result.passwordChanged, false);
-  assert.equal(result.success, false);
+
+  assert.equal(recovery.clearFields, false);
+  assert.equal(recovery.signOut, false);
+  assert.equal(recovery.redirectTo, null);
+  assert.equal(recovery.message, 'Incorrect current password.');
 });
 
-test('2. Token revocation failure sets passwordChanged: true for cookie clearing', () => {
-  const result = createPasswordTransitionResult({
+test('4. getPasswordChangeRecovery clears fields, signs out, and redirects to login on post-password failure', () => {
+  const recovery = getPasswordChangeRecovery(false, {
+    error: 'Password changed, but token revocation failed.',
     passwordChanged: true,
-    error: 'The password changed, but session revocation did not complete.',
   });
-  assert.equal(result.passwordChanged, true);
-  assert.equal(result.success, false);
+
+  assert.equal(recovery.clearFields, true);
+  assert.equal(recovery.signOut, true);
+  assert.equal(recovery.redirectTo, '/login');
+  assert.equal(recovery.message, 'Password changed, but token revocation failed.');
 });
 
-test('3. Custom claim update failure sets passwordChanged: true', () => {
-  const result = createPasswordTransitionResult({
+test('5. getPasswordChangeRecovery handles successful password change redirect', () => {
+  const recovery = getPasswordChangeRecovery(true, {
     passwordChanged: true,
-    error: 'The password changed, but mandatory-change completion remains pending.',
   });
-  assert.equal(result.passwordChanged, true);
-});
 
-test('4. Firestore batch failure with successful rollback returns recoverable result', () => {
-  const result = createPasswordTransitionResult({
-    passwordChanged: true,
-    error: 'Password changed and claims restored to mandatory-change-required state, but profile update failed.',
-  });
-  assert.equal(result.passwordChanged, true);
-  assert.equal(result.accountDisabled, undefined);
-});
-
-test('5. Firestore batch failure with successful disable reports accountDisabled: true', () => {
-  const result = createPasswordTransitionResult({
-    passwordChanged: true,
-    accountDisabled: true,
-    manualInterventionRequired: true,
-    error: 'Password changed, but account synchronization failed. The account was disabled for security.',
-  });
-  assert.equal(result.passwordChanged, true);
-  assert.equal(result.accountDisabled, true);
-  assert.equal(result.manualInterventionRequired, true);
-});
-
-test('6. Disable failure reports accountDisabled: false with manual intervention required', () => {
-  const result = createPasswordTransitionResult({
-    passwordChanged: true,
-    accountDisabled: false,
-    manualInterventionRequired: true,
-    error: 'Password changed, account synchronization failed, and the account could not be disabled automatically.',
-  });
-  assert.equal(result.passwordChanged, true);
-  assert.equal(result.accountDisabled, false);
-  assert.equal(result.manualInterventionRequired, true);
+  assert.equal(recovery.clearFields, true);
+  assert.equal(recovery.signOut, true);
+  assert.equal(recovery.redirectTo, '/login');
+  assert.equal(recovery.message, null);
 });

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { firebaseAuth } from '@/lib/firebase/client';
+import { getPasswordChangeRecovery } from '@/lib/auth/password-transition';
 import { Lock, ShieldAlert, CheckCircle2, ArrowRight } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
 
@@ -72,23 +73,26 @@ export default function ChangePasswordPage() {
       });
 
       const data = await res.json().catch(() => ({}));
+      const recovery = getPasswordChangeRecovery(res.ok, data);
+
+      if (recovery.clearFields) {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+
+      if (recovery.signOut) {
+        await signOut(firebaseAuth).catch(() => {});
+      }
 
       if (!res.ok) {
-        if (data.passwordChanged === true) {
-          setCurrentPassword('');
-          setNewPassword('');
-          setConfirmPassword('');
-
-          await signOut(firebaseAuth).catch(() => {});
-
-          const msg =
-            typeof data.error === 'string'
-              ? data.error
-              : 'Your password changed, but account synchronization is incomplete. Sign in using the new password.';
-          setError(msg);
-
+        if (recovery.redirectTo) {
+          setError(
+            recovery.message ||
+              'Your password changed, but account synchronization is incomplete. Sign in using the new password.'
+          );
           setTimeout(() => {
-            router.replace('/login');
+            router.replace(recovery.redirectTo!);
             router.refresh();
           }, 2500);
           return;
@@ -98,11 +102,6 @@ export default function ChangePasswordPage() {
       }
 
       setSuccess(true);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-
-      await signOut(firebaseAuth).catch(() => {});
 
       setTimeout(() => {
         router.replace('/login');
