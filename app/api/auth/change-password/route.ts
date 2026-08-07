@@ -1,7 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { getAuthenticatedUserForPasswordChange, getSessionCookieName } from '@/lib/auth/session';
+import { logSafeAuthError } from '@/lib/admin/lifecycle-validation';
 
+function passwordChangedResponse(body: Record<string, unknown>, statusCode: number) {
+  const response = NextResponse.json(
+    {
+      ...body,
+      passwordChanged: true,
+    },
+    {
+      status: statusCode,
+      headers: { 'Cache-Control': 'no-store' },
+    }
+  );
+
+  response.cookies.set(getSessionCookieName(), '', {
+    maxAge: 0,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    sameSite: 'lax',
+  });
+
+  return response;
+}
 export async function POST(request: NextRequest) {
   const headers = { 'Cache-Control': 'no-store' };
 
@@ -137,18 +160,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const HTTP_OK = 200;
+    const BAD_REQUEST = 400;
+    const SERVER_ERROR = 500;
+
     // Step 2. Revoke refresh tokens
     try {
       await auth.revokeRefreshTokens(uid);
     } catch (tokenErr: unknown) {
-      console.error('Session token revocation failed during change-password:', tokenErr);
-      return NextResponse.json(
+      const msg = tokenErr instanceof Error ? tokenErr.message : 'Unknown error';
+      console.error('Session token revocation failed during change-password:', msg);
+      return passwordChangedResponse(
         {
           error:
             'The password changed, but session revocation did not complete. Sign in with the new password and retry the mandatory password-change process.',
-          passwordChanged: true,
         },
-        { status: 400, headers }
+        BAD_REQUEST
       );
     }
 
@@ -160,14 +187,14 @@ export async function POST(request: NextRequest) {
         mustChangePassword: false,
       });
     } catch (claimErr: unknown) {
-      console.error('Custom claim update failed during change-password:', claimErr);
-      return NextResponse.json(
+      const msg = claimErr instanceof Error ? claimErr.message : 'Unknown error';
+      console.error('Custom claim update failed during change-password:', msg);
+      return passwordChangedResponse(
         {
           error:
             'The password changed, but mandatory-change completion remains pending. Sign in with your new password to retry mandatory password change.',
-          passwordChanged: true,
         },
-        { status: 400, headers }
+        BAD_REQUEST
       );
     }
 
@@ -195,7 +222,8 @@ export async function POST(request: NextRequest) {
 
       await batch.commit();
     } catch (dbErr: unknown) {
-      console.error('Firestore batch write failed during change-password:', dbErr);
+      const msg = dbErr instanceof Error ? dbErr.message : 'Unknown error';
+      console.error('Firestore batch write failed during change-password:', msg);
 
       // Attempt rollback of custom claim to mustChangePassword: true
       let rollbackSucceeded = false;
@@ -209,50 +237,49 @@ export async function POST(request: NextRequest) {
       } catch {}
 
       if (rollbackSucceeded) {
-        return NextResponse.json(
+        return passwordChangedResponse(
           {
             error:
               'Password changed and claims restored to mandatory-change-required state, but profile update failed. Sign in with your new password to retry.',
-            passwordChanged: true,
           },
-          { status: 400, headers }
+          BAD_REQUEST
         );
       }
 
-      // Disable Auth account if state synchronization & claim rollback both fail
-      await auth.updateUser(uid, { disabled: true }).catch(() => {});
-      return NextResponse.json(
+      // Explicit disable tracking if state synchronization & claim rollback both fail
+      let accountDisabled = false;
+      try {
+        await auth.updateUser(uid, { disabled: true });
+        accountDisabled = true;
+      } catch (disableErr: unknown) {
+        const dMsg = disableErr instanceof Error ? disableErr.message : 'Unknown error';
+        console.error('Account disable fallback failed:', dMsg);
+      }
+
+      const errorMsg = accountDisabled
+        ? 'Password changed, but account synchronization failed. The account was disabled for security. Contact an administrator.'
+        : 'Password changed, account synchronization failed, and the account could not be disabled automatically. Immediate administrator intervention is required.';
+
+      return passwordChangedResponse(
         {
-          error:
-            'Password changed, but account state synchronization and claim rollback failed. Account has been disabled for security. Contact administrator.',
-          passwordChanged: true,
-          accountDisabled: true,
+          error: errorMsg,
+          accountDisabled,
+          manualInterventionRequired: true,
         },
-        { status: 500, headers }
+        accountDisabled ? BAD_REQUEST : SERVER_ERROR
       );
     }
 
     // Step 5. Clear session cookie & return success response
-    const response = NextResponse.json(
+    return passwordChangedResponse(
       {
         success: true,
         message: 'Password updated successfully. Redirecting to sign in...',
       },
-      { status: 200, headers }
+      HTTP_OK
     );
-
-    response.cookies.set(getSessionCookieName(), '', {
-      maxAge: 0,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      sameSite: 'lax',
-    });
-
-    return response;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to process password change.';
-    console.error('Password change handler error:', message);
+    logSafeAuthError('change_password_route', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred while changing your password.' },
       { status: 500, headers }

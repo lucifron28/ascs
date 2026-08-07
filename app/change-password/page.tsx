@@ -74,6 +74,26 @@ export default function ChangePasswordPage() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (data.passwordChanged === true) {
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+
+          await signOut(firebaseAuth).catch(() => {});
+
+          const msg =
+            typeof data.error === 'string'
+              ? data.error
+              : 'Your password changed, but account synchronization is incomplete. Sign in using the new password.';
+          setError(msg);
+
+          setTimeout(() => {
+            router.replace('/login');
+            router.refresh();
+          }, 2500);
+          return;
+        }
+
         throw new Error(typeof data.error === 'string' ? data.error : 'Failed to update password.');
       }
 
@@ -85,7 +105,7 @@ export default function ChangePasswordPage() {
       await signOut(firebaseAuth).catch(() => {});
 
       setTimeout(() => {
-        router.push('/login');
+        router.replace('/login');
         router.refresh();
       }, 1500);
     } catch (err: unknown) {
