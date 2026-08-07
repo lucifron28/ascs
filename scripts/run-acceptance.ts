@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { INTEGRATION_SCENARIOS, RULES_TEST_FILE } from './acceptance-manifest';
 
 interface ScenarioStatus {
   [scenario: string]: string;
@@ -15,16 +16,6 @@ interface AcceptanceSummary {
   build: string;
   scenarios: ScenarioStatus;
 }
-
-const SCENARIO_FILES: Array<[string, string]> = [
-  ['accountLifecycle', 'tests/integration/account-lifecycle.test.ts'],
-  ['mandatoryPassword', 'tests/integration/password-change.test.ts'],
-  ['studentSubmission', 'tests/integration/clearance-submission.test.ts'],
-  ['signatoryWorkflow', 'tests/integration/signatory-workflow.test.ts'],
-  ['financialGate', 'tests/integration/financial-workflow.test.ts'],
-  ['deanVisibility', 'tests/integration/dean-visibility.test.ts'],
-  ['reports', 'tests/integration/reports.test.ts'],
-];
 
 function run(command: string, label: string, cwd = process.cwd()): boolean {
   process.stdout.write(`\n▶ ${label}\n`);
@@ -62,16 +53,18 @@ export async function runAcceptance(): Promise<AcceptanceSummary> {
   results.build = run('npm run build', 'Build') ? 'passed' : 'failed';
 
   const integrationResults: boolean[] = [];
-  for (const [scenario, file] of SCENARIO_FILES) {
-    const ok = runScenario(scenario, file);
-    results.scenarios[scenario] = ok ? 'passed' : 'failed';
+
+  for (const item of INTEGRATION_SCENARIOS) {
+    const ok = runScenario(item.scenario, item.file);
+    results.scenarios[item.scenario] = ok ? 'passed' : 'failed';
     integrationResults.push(ok);
   }
 
   const rulesOk = run(
-    'npx firebase emulators:exec --only auth,firestore "npx tsx -r ./tests/helpers/mock-server-only.cjs --test --test-concurrency=1 tests/rules/security-boundaries.test.ts"',
+    `npx firebase emulators:exec --only auth,firestore "npx tsx -r ./tests/helpers/mock-server-only.cjs --test --test-concurrency=1 ${RULES_TEST_FILE}"`,
     'Firestore Rules tests'
   );
+  results.scenarios.firestoreRules = rulesOk ? 'passed' : 'failed';
   integrationResults.push(rulesOk);
 
   results.integration = integrationResults.every(Boolean) ? 'passed' : 'failed';
