@@ -1,6 +1,12 @@
 import type { UserRole } from '@/lib/types/roles';
 
-export type ReportScope = 'admin' | 'dean' | 'shared';
+export const VALID_REPORT_SCOPES = ['admin', 'dean', 'shared'] as const;
+export type ReportScope = (typeof VALID_REPORT_SCOPES)[number];
+
+export const REPORT_FILTER_SCOPES = ['admin', 'dean'] as const;
+export type ReportFilterScope = (typeof REPORT_FILTER_SCOPES)[number];
+
+export const MAX_REPORT_APPLICATIONS = 5000;
 
 export interface UserAuthProfile {
   uid?: string;
@@ -11,14 +17,21 @@ export interface UserAuthProfile {
 }
 
 /**
- * Asserts that the authenticated user profile is active, has completed mandatory password change,
- * and possesses the required role for the requested report scope ('admin', 'dean', or 'shared').
+ * Asserts at runtime that the requested scope is valid and that the authenticated user profile is active,
+ * has completed mandatory password change, and possesses the required role for the scope.
  * Throws an explicit authorization Error if any condition fails.
  */
 export function assertReportScope(
   user: UserAuthProfile | null | undefined,
-  requestedScope: ReportScope
-): void {
+  requestedScope: unknown
+): asserts requestedScope is ReportScope {
+  if (
+    typeof requestedScope !== 'string' ||
+    !VALID_REPORT_SCOPES.includes(requestedScope as ReportScope)
+  ) {
+    throw new Error('Unauthorized: Invalid report scope.');
+  }
+
   if (!user) {
     throw new Error('Unauthorized: No active session found.');
   }
@@ -53,7 +66,7 @@ export function assertReportScope(
  */
 export function checkReportRoleAuthorization(
   user: UserAuthProfile | null | undefined,
-  requestedScope: ReportScope
+  requestedScope: unknown
 ): { authorized: boolean; reason?: string } {
   try {
     assertReportScope(user, requestedScope);
@@ -61,5 +74,43 @@ export function checkReportRoleAuthorization(
   } catch (err: unknown) {
     const reason = err instanceof Error ? err.message : 'Unauthorized';
     return { authorized: false, reason };
+  }
+}
+
+/**
+ * Parses and validates report filter scope argument at runtime ('admin' or 'dean').
+ * Throws an Error if value is missing, not a string, or not in allowlist.
+ */
+export function parseReportFilterScope(value: unknown): ReportFilterScope {
+  if (
+    typeof value !== 'string' ||
+    !REPORT_FILTER_SCOPES.includes(value as ReportFilterScope)
+  ) {
+    throw new Error('Invalid report filter scope.');
+  }
+  return value as ReportFilterScope;
+}
+
+/**
+ * Asserts that the dataset size does not exceed the supported MAX_REPORT_APPLICATIONS limit of 5,000.
+ */
+export function assertReportDatasetWithinLimit(
+  count: number,
+  operation: 'summary' | 'export' | 'filter-options'
+): void {
+  if (count > MAX_REPORT_APPLICATIONS) {
+    if (operation === 'filter-options') {
+      throw new Error(
+        'Reporting filter options exceed the supported 5,000-application range. Narrow or archive historical reporting data before generating filter options.'
+      );
+    }
+    if (operation === 'export') {
+      throw new Error(
+        'The selected report export contains more than 5,000 submitted applications. Narrow the academic term or filters before exporting CSV.'
+      );
+    }
+    throw new Error(
+      'The selected report contains more than 5,000 submitted applications. Narrow the academic term or filters before generating the report.'
+    );
   }
 }
