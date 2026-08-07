@@ -4,6 +4,12 @@ import type {
   RequirementMetric,
   GroupMetric,
 } from './types';
+import {
+  VALID_OVERALL_STATUSES,
+  VALID_FINANCIAL_STATUSES,
+} from './filters';
+
+export const VALID_APPROVAL_STATUSES = ['pending', 'approved', 'not_approved'] as const;
 
 /** Safe completion rate calculation (0..1 numeric ratio). Returns 0 when denominator is zero. */
 export function calculateCompletionRate(approved: number, total: number): number {
@@ -29,17 +35,50 @@ export interface RawApprovalData {
   status?: string;
 }
 
+/**
+ * Deduplicates applications by ID.
+ * Throws a report data-integrity error if duplicate IDs contain contradictory status fields.
+ */
+export function deduplicateApplicationsById(
+  applications: RawApplicationData[]
+): RawApplicationData[] {
+  const map = new Map<string, RawApplicationData>();
+
+  for (const app of applications) {
+    if (!app || !app.id) continue;
+    const existing = map.get(app.id);
+    if (existing) {
+      if (
+        (existing.overallStatus || 'pending') !== (app.overallStatus || 'pending') ||
+        (existing.financialStatus || 'pending') !== (app.financialStatus || 'pending')
+      ) {
+        throw new Error(
+          `Report data integrity error: Contradictory records found for duplicate application ID '${app.id}'.`
+        );
+      }
+    } else {
+      map.set(app.id, app);
+    }
+  }
+
+  return Array.from(map.values());
+}
+
 /** Calculate summary metrics for submitted applications within scope. */
 export function calculateApplicationMetrics(
   applications: RawApplicationData[]
 ): ApplicationSummaryMetrics {
-  const total = applications.length;
+  const deduplicated = deduplicateApplicationsById(applications);
+  const total = deduplicated.length;
   let approved = 0;
   let pending = 0;
   let notApproved = 0;
 
-  for (const app of applications) {
+  for (const app of deduplicated) {
     const status = app.overallStatus || 'pending';
+    if (!VALID_OVERALL_STATUSES.includes(status as (typeof VALID_OVERALL_STATUSES)[number])) {
+      throw new Error(`Report data integrity error: Unknown application overallStatus '${status}'.`);
+    }
     if (status === 'approved') {
       approved++;
     } else if (status === 'not_approved') {
@@ -64,12 +103,16 @@ export function calculateApplicationMetrics(
 export function calculateFinancialMetrics(
   applications: RawApplicationData[]
 ): FinancialSummaryMetrics {
+  const deduplicated = deduplicateApplicationsById(applications);
   let paid = 0;
   let unpaid = 0;
   let pending = 0;
 
-  for (const app of applications) {
+  for (const app of deduplicated) {
     const status = app.financialStatus || 'pending';
+    if (!VALID_FINANCIAL_STATUSES.includes(status as (typeof VALID_FINANCIAL_STATUSES)[number])) {
+      throw new Error(`Report data integrity error: Unknown application financialStatus '${status}'.`);
+    }
     if (status === 'paid') {
       paid++;
     } else if (status === 'unpaid') {
@@ -104,8 +147,9 @@ export function calculateRequirementMetrics(
     }
   >();
 
-  // Seed known requirements
+  // Seed known active requirements (excluding accountant requirement role)
   for (const req of knownRequirements) {
+    if (req.role === 'accountant') continue;
     map.set(req.id, {
       requirementId: req.id,
       role: req.role,
@@ -118,6 +162,8 @@ export function calculateRequirementMetrics(
   }
 
   for (const approval of approvals) {
+    if (approval.signatoryRole === 'accountant') continue;
+
     const reqId = approval.requirementId || approval.signatoryRole || 'unknown';
     const role = approval.signatoryRole || 'unknown';
     const label = approval.label || role;
@@ -138,6 +184,9 @@ export function calculateRequirementMetrics(
 
     item.total++;
     const status = approval.status || 'pending';
+    if (!VALID_APPROVAL_STATUSES.includes(status as (typeof VALID_APPROVAL_STATUSES)[number])) {
+      throw new Error(`Report data integrity error: Unknown approval status '${status}'.`);
+    }
     if (status === 'approved') {
       item.approved++;
     } else if (status === 'not_approved') {
@@ -189,6 +238,7 @@ export function calculateGroupMetrics(
   applications: RawApplicationData[],
   field: 'program' | 'yearLevel' | 'section'
 ): GroupMetric[] {
+  const deduplicated = deduplicateApplicationsById(applications);
   const map = new Map<
     string,
     {
@@ -199,7 +249,7 @@ export function calculateGroupMetrics(
     }
   >();
 
-  for (const app of applications) {
+  for (const app of deduplicated) {
     const rawVal = app[field];
     const key = rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== ''
       ? String(rawVal).trim()

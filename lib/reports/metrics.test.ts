@@ -7,6 +7,7 @@ import {
   calculateRequirementMetrics,
   sortBottlenecks,
   calculateGroupMetrics,
+  deduplicateApplicationsById,
   type RawApplicationData,
   type RawApprovalData,
 } from './metrics';
@@ -56,37 +57,74 @@ test('3. calculateFinancialMetrics accurately counts paid, unpaid, and pending f
   assert.equal(fin.pending, 1);
 });
 
-test('4. calculateRequirementMetrics groups approvals and calculates unresolved counts', () => {
-  const knownReqs = [
-    { id: 'lib', role: 'librarian', label: 'Library Clearance' },
-    { id: 'osa', role: 'osa_coordinator', label: 'OSA Clearance' },
+test('4. deduplicateApplicationsById prevents double counting and throws on contradictory duplicates', () => {
+  const duplicates: RawApplicationData[] = [
+    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid' },
+    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid' },
+    { id: 'app-2', overallStatus: 'pending', financialStatus: 'pending' },
   ];
 
-  const approvals: RawApprovalData[] = [
-    { requirementId: 'lib', signatoryRole: 'librarian', label: 'Library Clearance', status: 'approved' },
-    { requirementId: 'lib', signatoryRole: 'librarian', label: 'Library Clearance', status: 'not_approved' },
-    { requirementId: 'osa', signatoryRole: 'osa_coordinator', label: 'OSA Clearance', status: 'pending' },
+  const deduplicated = deduplicateApplicationsById(duplicates);
+  assert.equal(deduplicated.length, 2);
+
+  const contradictory: RawApplicationData[] = [
+    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid' },
+    { id: 'app-1', overallStatus: 'not_approved', financialStatus: 'paid' },
   ];
 
-  const metrics = calculateRequirementMetrics(approvals, knownReqs);
-  assert.equal(metrics.length, 2);
-
-  const osa = metrics.find((m) => m.requirementId === 'osa');
-  assert.ok(osa);
-  assert.equal(osa.totalAssigned, 1);
-  assert.equal(osa.pending, 1);
-  assert.equal(osa.unresolvedCount, 1);
-
-  const lib = metrics.find((m) => m.requirementId === 'lib');
-  assert.ok(lib);
-  assert.equal(lib.totalAssigned, 2);
-  assert.equal(lib.approved, 1);
-  assert.equal(lib.notApproved, 1);
-  assert.equal(lib.unresolvedCount, 1);
-  assert.equal(lib.completionRate, 0.5);
+  assert.throws(
+    () => deduplicateApplicationsById(contradictory),
+    /Contradictory records found for duplicate application ID/
+  );
 });
 
-test('5. sortBottlenecks sorts deterministically by unresolvedCount desc, notApproved desc, pending desc, label asc', () => {
+test('5. Unknown status throws data integrity error in metrics calculation', () => {
+  const invalidApp: RawApplicationData[] = [{ id: 'app-1', overallStatus: 'corrupted_status' }];
+  assert.throws(() => calculateApplicationMetrics(invalidApp), /Unknown application overallStatus/);
+
+  const invalidFin: RawApplicationData[] = [{ id: 'app-1', financialStatus: 'corrupted_fin' }];
+  assert.throws(() => calculateFinancialMetrics(invalidFin), /Unknown application financialStatus/);
+
+  const invalidAppr: RawApprovalData[] = [
+    { requirementId: 'lib', signatoryRole: 'librarian', status: 'corrupted_approval' },
+  ];
+  assert.throws(() => calculateRequirementMetrics(invalidAppr), /Unknown approval status/);
+});
+
+test('6. calculateRequirementMetrics handles 500+ applications and excludes accountant requirement role', () => {
+  const knownReqs = [
+    { id: 'lib', role: 'librarian', label: 'Library Clearance' },
+    { id: 'acc', role: 'accountant', label: 'Accountant Clearance' }, // should be excluded
+  ];
+
+  const approvals: RawApprovalData[] = [];
+  // 600 approvals for librarian
+  for (let i = 0; i < 600; i++) {
+    approvals.push({
+      requirementId: 'lib',
+      signatoryRole: 'librarian',
+      label: 'Library Clearance',
+      status: i < 400 ? 'approved' : 'pending',
+    });
+    // accountant approval should be ignored
+    approvals.push({
+      requirementId: 'acc',
+      signatoryRole: 'accountant',
+      label: 'Accountant Clearance',
+      status: 'approved',
+    });
+  }
+
+  const metrics = calculateRequirementMetrics(approvals, knownReqs);
+  assert.equal(metrics.length, 1);
+  assert.equal(metrics[0].requirementId, 'lib');
+  assert.equal(metrics[0].totalAssigned, 600);
+  assert.equal(metrics[0].approved, 400);
+  assert.equal(metrics[0].pending, 200);
+  assert.equal(metrics[0].unresolvedCount, 200);
+});
+
+test('7. sortBottlenecks sorts deterministically by unresolvedCount desc, notApproved desc, pending desc, label asc', () => {
   const unSorted = [
     { requirementId: '1', role: 'r1', label: 'Alpha Office', totalAssigned: 10, approved: 8, pending: 1, notApproved: 1, completionRate: 0.8, unresolvedCount: 2 },
     { requirementId: '2', role: 'r2', label: 'Beta Office', totalAssigned: 10, approved: 5, pending: 2, notApproved: 3, completionRate: 0.5, unresolvedCount: 5 },
@@ -94,13 +132,12 @@ test('5. sortBottlenecks sorts deterministically by unresolvedCount desc, notApp
   ];
 
   const sorted = sortBottlenecks(unSorted);
-  // Beta and Gamma both have unresolvedCount = 5. Beta has notApproved = 3, Gamma has notApproved = 1 -> Beta comes first.
   assert.equal(sorted[0].requirementId, '2');
   assert.equal(sorted[1].requirementId, '3');
   assert.equal(sorted[2].requirementId, '1');
 });
 
-test('6. calculateGroupMetrics aggregates data by program, yearLevel, or section', () => {
+test('8. calculateGroupMetrics aggregates data by program, yearLevel, or section and handles duplicates', () => {
   const apps: RawApplicationData[] = [
     { id: '1', program: 'BSIT', yearLevel: '1', section: 'A', overallStatus: 'approved' },
     { id: '2', program: 'BSIT', yearLevel: '1', section: 'A', overallStatus: 'pending' },
