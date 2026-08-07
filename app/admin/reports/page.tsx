@@ -41,7 +41,7 @@ export default function AdminReportsPage() {
 
   const loadFilterOptions = async () => {
     try {
-      const res = await fetchReportFilterOptionsAction();
+      const res = await fetchReportFilterOptionsAction('admin');
       if (res.success && res.filterOptions) {
         setFilterOptions(res.filterOptions);
       }

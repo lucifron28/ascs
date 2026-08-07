@@ -1,7 +1,7 @@
 'use server';
 
 import { getAdminFirestore } from '@/lib/firebase/admin';
-import type { Query } from 'firebase-admin/firestore';
+import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { parseReportFilters } from '@/lib/reports/filters';
 import {
@@ -14,6 +14,7 @@ import {
 } from '@/lib/reports/metrics';
 import type { ReportFilters, ReportSummary, AdminReportExportType, DeanReportExportType } from '@/lib/reports/types';
 import { mapLifecycleError, logSafeAuthError, sanitizeAuditMetadata } from '@/lib/admin/lifecycle-validation';
+import { assertReportScope } from '@/lib/reports/authorization';
 import {
   generateSummaryCsv,
   generateRequirementBreakdownCsv,
@@ -24,35 +25,63 @@ import {
 } from '@/lib/reports/csv';
 
 const MAX_REPORT_APPLICATIONS = 5000;
+const APPROVAL_BATCH_SIZE = 25;
 
-// Helper to authenticate Admin user
-async function getAuthenticatedAdmin() {
-  const authenticated = await getAuthenticatedUser();
-  if (authenticated.user.role !== 'admin') {
-    throw new Error('Unauthorized: Only system administrators can access Admin reports.');
-  }
-  return authenticated;
-}
+export const ADMIN_EXPORT_TYPES = [
+  'summary',
+  'requirement-breakdown',
+  'program-breakdown',
+  'application-detail',
+] as const;
 
-// Helper to authenticate Dean user
-async function getAuthenticatedDean() {
-  const authenticated = await getAuthenticatedUser();
-  if (authenticated.user.role !== 'dean') {
-    throw new Error('Unauthorized: Only the Academic Dean can access Dean clearance reports.');
+export const DEAN_EXPORT_TYPES = [
+  'summary',
+  'requirement-breakdown',
+  'program-breakdown',
+  'application-detail',
+] as const;
+
+/**
+ * Fetches approval subcollections for a list of application documents in controlled parallel batches.
+ */
+async function fetchApprovalsInBatches(
+  appDocs: QueryDocumentSnapshot[]
+): Promise<RawApprovalData[]> {
+  const rawApprovals: RawApprovalData[] = [];
+
+  for (let i = 0; i < appDocs.length; i += APPROVAL_BATCH_SIZE) {
+    const chunk = appDocs.slice(i, i + APPROVAL_BATCH_SIZE);
+    const approvalFetches = chunk.map((doc) => doc.ref.collection('approvals').get());
+    const approvalSnaps = await Promise.all(approvalFetches);
+
+    for (const snap of approvalSnaps) {
+      for (const doc of snap.docs) {
+        const d = doc.data();
+        rawApprovals.push({
+          requirementId: (d.requirementId as string) || doc.id,
+          signatoryRole: d.signatoryRole as string | undefined,
+          label: d.label as string | undefined,
+          status: d.status as string | undefined,
+        });
+      }
+    }
   }
-  return authenticated;
+
+  return rawApprovals;
 }
 
 /** Fetch institution-wide clearance report summary for System Administrators. */
 export async function fetchAdminReportSummaryAction(inputFilters: Partial<ReportFilters>) {
   let adminUid: string | undefined;
   try {
-    const authenticated = await getAuthenticatedAdmin();
+    const authenticated = await getAuthenticatedUser();
     adminUid = authenticated.uid;
-    const filters = parseReportFilters(inputFilters);
+    assertReportScope(authenticated.user, 'admin');
+
+    const filters = parseReportFilters(inputFilters, 'admin');
     const firestore = getAdminFirestore();
 
-    // 1. Build application query
+    // 1. Build application query with MAX_REPORT_APPLICATIONS + 1 limit guard
     let query: Query = firestore
       .collection('clearanceApplications')
       .where('academicYear', '==', filters.academicYear)
@@ -64,7 +93,13 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
     if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
     if (filters.financialStatus) query = query.where('financialStatus', '==', filters.financialStatus);
 
-    const appSnap = await query.limit(MAX_REPORT_APPLICATIONS).get();
+    const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
+
+    if (appSnap.docs.length > MAX_REPORT_APPLICATIONS) {
+      throw new Error(
+        'The selected report contains more than 5,000 submitted applications. Narrow the academic term or filters before generating the report.'
+      );
+    }
 
     const rawApplications: RawApplicationData[] = appSnap.docs.map((doc) => {
       const d = doc.data();
@@ -79,38 +114,26 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
       };
     });
 
-    // 2. Fetch known active requirements
+    // 2. Fetch known active requirements (excluding accountant requirement role)
     const reqsSnap = await firestore.collection('clearanceRequirements').get().catch(() => null);
     const knownReqs = reqsSnap
-      ? reqsSnap.docs.map((doc) => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            role: (d.role as string) || 'unknown',
-            label: (d.label as string) || (d.role as string) || 'Requirement',
-          };
-        })
+      ? reqsSnap.docs
+          .map((doc) => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              role: (d.role as string) || 'unknown',
+              label: (d.label as string) || (d.role as string) || 'Requirement',
+              isActive: d.isActive ?? true,
+            };
+          })
+          .filter((req) => req.role !== 'accountant' && req.isActive === true)
       : [];
 
-    // 3. Fetch approvals for reporting applications
-    const rawApprovals: RawApprovalData[] = [];
-    if (appSnap.docs.length > 0 && appSnap.docs.length <= 500) {
-      const approvalFetches = appSnap.docs.map((doc) => doc.ref.collection('approvals').get());
-      const approvalSnaps = await Promise.all(approvalFetches);
-      for (const snap of approvalSnaps) {
-        for (const doc of snap.docs) {
-          const d = doc.data();
-          rawApprovals.push({
-            requirementId: d.requirementId || doc.id,
-            signatoryRole: d.signatoryRole,
-            label: d.label,
-            status: d.status,
-          });
-        }
-      }
-    }
+    // 3. Fetch approvals in batched chunks for ALL scoped applications
+    const rawApprovals = await fetchApprovalsInBatches(appSnap.docs);
 
-    // 4. Calculate metrics
+    // 4. Calculate Admin metrics
     const applicationSummary = calculateApplicationMetrics(rawApplications);
     const financialSummary = calculateFinancialMetrics(rawApplications);
     const requirementBreakdown = calculateRequirementMetrics(rawApprovals, knownReqs);
@@ -133,7 +156,7 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
 
     return { success: true, summary };
   } catch (error: unknown) {
-    logSafeAuthError('fetch_admin_report_summary', error, adminUid);
+    logSafeAuthError('fetch_admin_report_summary', error, { targetUid: adminUid });
     return { success: false, error: mapLifecycleError(error, 'Failed to generate Admin clearance report.') };
   }
 }
@@ -142,12 +165,15 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
 export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportFilters>) {
   let deanUid: string | undefined;
   try {
-    const authenticated = await getAuthenticatedDean();
+    const authenticated = await getAuthenticatedUser();
     deanUid = authenticated.uid;
-    const filters = parseReportFilters(inputFilters);
+    assertReportScope(authenticated.user, 'dean');
+
+    // Parse filters enforcing Dean scope (rejecting financialStatus)
+    const filters = parseReportFilters(inputFilters, 'dean');
     const firestore = getAdminFirestore();
 
-    // 1. Build application query enforcing Dean oversight scope (adviserApproved === true)
+    // 1. Build application query enforcing Dean oversight scope (adviserApproved === true) with limit guard
     let query: Query = firestore
       .collection('clearanceApplications')
       .where('adviserApproved', '==', true)
@@ -159,7 +185,13 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
     if (filters.section) query = query.where('section', '==', filters.section);
     if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
 
-    const appSnap = await query.limit(MAX_REPORT_APPLICATIONS).get();
+    const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
+
+    if (appSnap.docs.length > MAX_REPORT_APPLICATIONS) {
+      throw new Error(
+        'The selected report contains more than 5,000 submitted applications. Narrow the academic term or filters before generating the report.'
+      );
+    }
 
     const rawApplications: RawApplicationData[] = appSnap.docs.map((doc) => {
       const d = doc.data();
@@ -174,40 +206,27 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
       };
     });
 
-    // 2. Fetch known requirements
+    // 2. Fetch known active requirements (excluding accountant requirement role)
     const reqsSnap = await firestore.collection('clearanceRequirements').get().catch(() => null);
     const knownReqs = reqsSnap
-      ? reqsSnap.docs.map((doc) => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            role: (d.role as string) || 'unknown',
-            label: (d.label as string) || (d.role as string) || 'Requirement',
-          };
-        })
+      ? reqsSnap.docs
+          .map((doc) => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              role: (d.role as string) || 'unknown',
+              label: (d.label as string) || (d.role as string) || 'Requirement',
+              isActive: d.isActive ?? true,
+            };
+          })
+          .filter((req) => req.role !== 'accountant' && req.isActive === true)
       : [];
 
-    // 3. Fetch approvals for reporting applications
-    const rawApprovals: RawApprovalData[] = [];
-    if (appSnap.docs.length > 0 && appSnap.docs.length <= 500) {
-      const approvalFetches = appSnap.docs.map((doc) => doc.ref.collection('approvals').get());
-      const approvalSnaps = await Promise.all(approvalFetches);
-      for (const snap of approvalSnaps) {
-        for (const doc of snap.docs) {
-          const d = doc.data();
-          rawApprovals.push({
-            requirementId: d.requirementId || doc.id,
-            signatoryRole: d.signatoryRole,
-            label: d.label,
-            status: d.status,
-          });
-        }
-      }
-    }
+    // 3. Fetch approvals in batched chunks for ALL Dean-visible applications
+    const rawApprovals = await fetchApprovalsInBatches(appSnap.docs);
 
-    // 4. Calculate Dean metrics
+    // 4. Calculate Dean metrics (financialSummary is EXCLUDED from Dean report contract)
     const applicationSummary = calculateApplicationMetrics(rawApplications);
-    const financialSummary = calculateFinancialMetrics(rawApplications);
     const requirementBreakdown = calculateRequirementMetrics(rawApprovals, knownReqs);
     const programBreakdown = calculateGroupMetrics(rawApplications, 'program');
     const yearLevelBreakdown = calculateGroupMetrics(rawApplications, 'yearLevel');
@@ -218,7 +237,7 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
       filters,
       scope: 'dean',
       applicationSummary,
-      financialSummary,
+      financialSummary: undefined, // Omitted from Dean scope
       requirementBreakdown,
       programBreakdown,
       yearLevelBreakdown,
@@ -228,24 +247,20 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
 
     return { success: true, summary };
   } catch (error: unknown) {
-    logSafeAuthError('fetch_dean_report_summary', error, deanUid);
+    logSafeAuthError('fetch_dean_report_summary', error, { targetUid: deanUid });
     return { success: false, error: mapLifecycleError(error, 'Failed to generate Dean clearance report.') };
   }
 }
 
-/** Fetch available distinct filter options (academic years, semesters, programs, year levels, sections). */
-export async function fetchReportFilterOptionsAction() {
+/** Fetch available distinct filter options authorized by role scope ('admin' | 'dean'). */
+export async function fetchReportFilterOptionsAction(inputScope: 'admin' | 'dean' = 'admin') {
   let userUid: string | undefined;
   try {
     const authenticated = await getAuthenticatedUser();
     userUid = authenticated.uid;
+    assertReportScope(authenticated.user, inputScope);
+
     const firestore = getAdminFirestore();
-
-    const [appsSnap, studentsSnap] = await Promise.all([
-      firestore.collection('clearanceApplications').limit(200).get().catch(() => null),
-      firestore.collection('students').limit(200).get().catch(() => null),
-    ]);
-
     const academicYearsSet = new Set<string>();
     const semestersSet = new Set<string>();
     const programsSet = new Set<string>();
@@ -260,20 +275,19 @@ export async function fetchReportFilterOptionsAction() {
     semestersSet.add('2nd Semester');
     semestersSet.add('Summer Semester');
 
+    // Build scope-aware application query
+    let appsQuery: Query = firestore.collection('clearanceApplications');
+    if (inputScope === 'dean') {
+      appsQuery = appsQuery.where('adviserApproved', '==', true);
+    }
+
+    const appsSnap = await appsQuery.limit(MAX_REPORT_APPLICATIONS).get().catch(() => null);
+
     if (appsSnap) {
       appsSnap.docs.forEach((doc) => {
         const d = doc.data();
         if (d.academicYear) academicYearsSet.add(String(d.academicYear));
         if (d.semester) semestersSet.add(String(d.semester));
-        if (d.program) programsSet.add(String(d.program));
-        if (d.yearLevel) yearLevelsSet.add(String(d.yearLevel));
-        if (d.section) sectionsSet.add(String(d.section));
-      });
-    }
-
-    if (studentsSnap) {
-      studentsSnap.docs.forEach((doc) => {
-        const d = doc.data();
         if (d.program) programsSet.add(String(d.program));
         if (d.yearLevel) yearLevelsSet.add(String(d.yearLevel));
         if (d.section) sectionsSet.add(String(d.section));
@@ -291,8 +305,8 @@ export async function fetchReportFilterOptionsAction() {
       },
     };
   } catch (error: unknown) {
-    logSafeAuthError('fetch_report_filter_options', error, userUid);
-    return { success: false, error: 'Failed to fetch report filter options.' };
+    logSafeAuthError('fetch_report_filter_options', error, { targetUid: userUid });
+    return { success: false, error: mapLifecycleError(error, 'Failed to fetch report filter options.') };
   }
 }
 
@@ -303,8 +317,14 @@ export async function exportAdminReportCsvAction(
 ) {
   let adminUid: string | undefined;
   try {
-    const { uid, user: adminUser } = await getAuthenticatedAdmin();
-    adminUid = uid;
+    const authenticated = await getAuthenticatedUser();
+    adminUid = authenticated.uid;
+    assertReportScope(authenticated.user, 'admin');
+
+    if (!ADMIN_EXPORT_TYPES.includes(exportType as (typeof ADMIN_EXPORT_TYPES)[number])) {
+      throw new Error(`Invalid report export type specified: '${String(exportType)}'.`);
+    }
+
     const summaryRes = await fetchAdminReportSummaryAction(inputFilters);
 
     if (!summaryRes.success || !summaryRes.summary) {
@@ -335,7 +355,14 @@ export async function exportAdminReportCsvAction(
       if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
       if (filters.financialStatus) query = query.where('financialStatus', '==', filters.financialStatus);
 
-      const appSnap = await query.limit(MAX_REPORT_APPLICATIONS).get();
+      const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
+
+      if (appSnap.docs.length > MAX_REPORT_APPLICATIONS) {
+        throw new Error(
+          'The selected report export contains more than 5,000 submitted applications. Narrow the academic term or filters before exporting CSV.'
+        );
+      }
+
       const rows: ApplicationDetailRow[] = appSnap.docs.map((doc) => {
         const d = doc.data();
         return {
@@ -364,7 +391,7 @@ export async function exportAdminReportCsvAction(
     const logRef = firestore.collection('activityLogs').doc();
     await logRef.set({
       actorId: adminUid,
-      actorName: adminUser.fullName || 'Administrator',
+      actorName: authenticated.user.fullName || 'Administrator',
       actorRole: 'admin',
       action: 'export_admin_report_csv',
       entityType: 'report',
@@ -382,7 +409,7 @@ export async function exportAdminReportCsvAction(
 
     return { success: true, csvContent, filename };
   } catch (error: unknown) {
-    logSafeAuthError('export_admin_report_csv', error, adminUid);
+    logSafeAuthError('export_admin_report_csv', error, { targetUid: adminUid });
     return { success: false, error: mapLifecycleError(error, 'Failed to export Admin report CSV.') };
   }
 }
@@ -394,8 +421,14 @@ export async function exportDeanReportCsvAction(
 ) {
   let deanUid: string | undefined;
   try {
-    const { uid, user: deanUser } = await getAuthenticatedDean();
-    deanUid = uid;
+    const authenticated = await getAuthenticatedUser();
+    deanUid = authenticated.uid;
+    assertReportScope(authenticated.user, 'dean');
+
+    if (!DEAN_EXPORT_TYPES.includes(exportType as (typeof DEAN_EXPORT_TYPES)[number])) {
+      throw new Error(`Invalid report export type specified: '${String(exportType)}'.`);
+    }
+
     const summaryRes = await fetchDeanReportSummaryAction(inputFilters);
 
     if (!summaryRes.success || !summaryRes.summary) {
@@ -426,7 +459,14 @@ export async function exportDeanReportCsvAction(
       if (filters.section) query = query.where('section', '==', filters.section);
       if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
 
-      const appSnap = await query.limit(MAX_REPORT_APPLICATIONS).get();
+      const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
+
+      if (appSnap.docs.length > MAX_REPORT_APPLICATIONS) {
+        throw new Error(
+          'The selected report export contains more than 5,000 submitted applications. Narrow the academic term or filters before exporting CSV.'
+        );
+      }
+
       const rows: ApplicationDetailRow[] = appSnap.docs.map((doc) => {
         const d = doc.data();
         return {
@@ -455,7 +495,7 @@ export async function exportDeanReportCsvAction(
     const logRef = firestore.collection('activityLogs').doc();
     await logRef.set({
       actorId: deanUid,
-      actorName: deanUser.fullName || 'Academic Dean',
+      actorName: authenticated.user.fullName || 'Academic Dean',
       actorRole: 'dean',
       action: 'export_dean_report_csv',
       entityType: 'report',
@@ -473,7 +513,7 @@ export async function exportDeanReportCsvAction(
 
     return { success: true, csvContent, filename };
   } catch (error: unknown) {
-    logSafeAuthError('export_dean_report_csv', error, deanUid);
+    logSafeAuthError('export_dean_report_csv', error, { targetUid: deanUid });
     return { success: false, error: mapLifecycleError(error, 'Failed to export Dean report CSV.') };
   }
 }

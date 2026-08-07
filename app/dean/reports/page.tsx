@@ -41,7 +41,7 @@ export default function DeanReportsPage() {
 
   const loadFilterOptions = async () => {
     try {
-      const res = await fetchReportFilterOptionsAction();
+      const res = await fetchReportFilterOptionsAction('dean');
       if (res.success && res.filterOptions) {
         setFilterOptions(res.filterOptions);
       }
