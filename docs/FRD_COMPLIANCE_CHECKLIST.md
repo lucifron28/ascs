@@ -80,12 +80,7 @@
 ## 4. Evaluation & Next Steps for Non-Implemented Items
 
 ### Deferred Items:
-1. **Reports:**
-   - *Evidence:* All application and approval data is stored structured in Firestore.
-   - *Missing Behavior:* Aggregate department clearance completion rate reports and financial dues summaries.
-   - *Recommended Next Step:* Implement an admin/dean analytics dashboard route under `/admin/reports` in post-MVP phase.
-
-2. **Bulk CSV Account Import:**
+1. **Bulk CSV Account Import:**
    - *Evidence:* Single account creation actions (`createStudentAccountAction`, `createStaffAccountAction`) are fully functional.
    - *Missing Behavior:* Bulk CSV user account upload wizard.
    - *Recommended Next Step:* Add CSV upload parser in post-MVP administrative tooling.

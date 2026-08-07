@@ -40,8 +40,8 @@
 | Guidance Counselor | Review guidance clearance |
 | Area Chair | Review area/department clearance |
 | Adviser | Review adviser clearance and unlock Dean visibility after approval |
-| Dean | View adviser-approved applications for academic review |
-| Admin | Manage profiles, roles, requirement assignments, and audit visibility |
+| Dean | View adviser-approved applications for academic review and academic clearance reports |
+| Admin | Manage profiles, roles, requirement assignments, activity logs, and institution clearance reports |
 ## Workflow and status rules
 
 1. A student submits one application for an academic year/semester.
@@ -93,4 +93,8 @@ flows with in-app notifications, administrator account lifecycle management, and
 System administrators can create student and staff accounts, deactivate and reactivate accounts,
 issue temporary passwords, change system roles, assign requirement signatories, and inspect activity logs.
 Newly created and reset accounts must complete a mandatory password change at `/change-password` before
-accessing normal dashboards. Email notifications, electronic signatures, and production certificate issuance remain deferred.
+accessing normal dashboards.
+System Administrators and the Academic Dean have access to role-scoped clearance reports and CSV exports:
+- `/admin/reports`: Institution-wide clearance metrics, financial summaries, requirement bottlenecks (`Highest Unresolved Requirements`), program/year-level/section breakdowns, and safe CSV data exports.
+- `/dean/reports`: Academic clearance progress for adviser-approved applications, program breakdowns, requirement bottlenecks, and role-scoped Dean CSV exports.
+Email notifications, electronic signatures, and production certificate issuance remain deferred.
