@@ -81,7 +81,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
       </div>
 
       {/* Financial Status Summary (Admin / Dean Oversight) */}
-      {fin && (
+      {summary.scope === 'admin' && fin && (
         <div className="card bg-base-100 border border-base-content/10 p-5 rounded-2xl shadow-sm space-y-3">
           <div className="flex items-center justify-between border-b border-base-content/10 pb-3">
             <div className="flex items-center gap-2">
