@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { UserRole } from '@/lib/types/roles';
-import { assertReportScope, checkReportRoleAuthorization } from './authorization';
+import {
+  assertReportScope,
+  checkReportRoleAuthorization,
+  parseReportFilterScope,
+  assertReportDatasetWithinLimit,
+  MAX_REPORT_APPLICATIONS,
+} from './authorization';
 
 test('1. Admin role can access Admin reports and shared scope', () => {
   const resAdmin = checkReportRoleAuthorization({ role: 'admin', accountStatus: 'active', isActive: true }, 'admin');
@@ -58,4 +64,36 @@ test('6. Password-change-required user is blocked from all report scopes', () =>
   const pendingPasswordUser = { role: 'admin', accountStatus: 'active', isActive: true, mustChangePassword: true };
   assert.equal(checkReportRoleAuthorization(pendingPasswordUser, 'admin').authorized, false);
   assert.throws(() => assertReportScope(pendingPasswordUser, 'admin'), /Password change/);
+});
+
+test('7. Malformed or invalid report scopes are rejected at runtime', () => {
+  const adminUser = { role: 'admin', accountStatus: 'active', isActive: true };
+  assert.throws(() => assertReportScope(adminUser, 'malicious_scope'), /Invalid report scope/);
+  assert.throws(() => assertReportScope(adminUser, 12345), /Invalid report scope/);
+  assert.throws(() => assertReportScope(adminUser, null), /Invalid report scope/);
+  assert.throws(() => assertReportScope(adminUser, undefined), /Invalid report scope/);
+});
+
+test('8. parseReportFilterScope validates allowed filter scopes and rejects invalid or shared scope', () => {
+  assert.equal(parseReportFilterScope('admin'), 'admin');
+  assert.equal(parseReportFilterScope('dean'), 'dean');
+  assert.throws(() => parseReportFilterScope('shared'), /Invalid report filter scope/);
+  assert.throws(() => parseReportFilterScope('invalid'), /Invalid report filter scope/);
+  assert.throws(() => parseReportFilterScope(undefined), /Invalid report filter scope/);
+});
+
+test('9. assertReportDatasetWithinLimit allows up to 5,000 documents and throws on 5,001+', () => {
+  assert.doesNotThrow(() => assertReportDatasetWithinLimit(MAX_REPORT_APPLICATIONS, 'summary'));
+  assert.throws(
+    () => assertReportDatasetWithinLimit(MAX_REPORT_APPLICATIONS + 1, 'summary'),
+    /more than 5,000 submitted applications/
+  );
+  assert.throws(
+    () => assertReportDatasetWithinLimit(MAX_REPORT_APPLICATIONS + 1, 'export'),
+    /more than 5,000 submitted applications/
+  );
+  assert.throws(
+    () => assertReportDatasetWithinLimit(MAX_REPORT_APPLICATIONS + 1, 'filter-options'),
+    /exceed the supported 5,000-application range/
+  );
 });

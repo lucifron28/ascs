@@ -57,30 +57,75 @@ test('3. calculateFinancialMetrics accurately counts paid, unpaid, and pending f
   assert.equal(fin.pending, 1);
 });
 
-test('4. deduplicateApplicationsById prevents double counting and throws on contradictory duplicates', () => {
+test('4. deduplicateApplicationsById prevents double counting and throws on contradictory duplicates across all fields', () => {
   const duplicates: RawApplicationData[] = [
-    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid' },
-    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid' },
-    { id: 'app-2', overallStatus: 'pending', financialStatus: 'pending' },
+    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSIT', yearLevel: '1', section: 'A', adviserApproved: true },
+    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSIT', yearLevel: '1', section: 'A', adviserApproved: true },
+    { id: 'app-2', overallStatus: 'pending', financialStatus: 'pending', program: 'BSBA', yearLevel: '2', section: 'B', adviserApproved: false },
   ];
 
   const deduplicated = deduplicateApplicationsById(duplicates);
   assert.equal(deduplicated.length, 2);
 
-  const contradictory: RawApplicationData[] = [
-    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid' },
-    { id: 'app-1', overallStatus: 'not_approved', financialStatus: 'paid' },
-  ];
-
+  // Status conflict
   assert.throws(
-    () => deduplicateApplicationsById(contradictory),
+    () => deduplicateApplicationsById([
+      { id: 'a1', overallStatus: 'approved' },
+      { id: 'a1', overallStatus: 'not_approved' },
+    ]),
+    /Contradictory records found for duplicate application ID/
+  );
+
+  // Financial status conflict
+  assert.throws(
+    () => deduplicateApplicationsById([
+      { id: 'a1', financialStatus: 'paid' },
+      { id: 'a1', financialStatus: 'unpaid' },
+    ]),
+    /Contradictory records found for duplicate application ID/
+  );
+
+  // Program conflict
+  assert.throws(
+    () => deduplicateApplicationsById([
+      { id: 'a1', program: 'BSIT' },
+      { id: 'a1', program: 'BSBA' },
+    ]),
+    /Contradictory records found for duplicate application ID/
+  );
+
+  // Year level conflict
+  assert.throws(
+    () => deduplicateApplicationsById([
+      { id: 'a1', yearLevel: '1' },
+      { id: 'a1', yearLevel: '2' },
+    ]),
+    /Contradictory records found for duplicate application ID/
+  );
+
+  // Section conflict
+  assert.throws(
+    () => deduplicateApplicationsById([
+      { id: 'a1', section: 'A' },
+      { id: 'a1', section: 'B' },
+    ]),
+    /Contradictory records found for duplicate application ID/
+  );
+
+  // Adviser approval conflict
+  assert.throws(
+    () => deduplicateApplicationsById([
+      { id: 'a1', adviserApproved: true },
+      { id: 'a1', adviserApproved: false },
+    ]),
     /Contradictory records found for duplicate application ID/
   );
 });
 
-test('5. Unknown status throws data integrity error in metrics calculation', () => {
+test('5. Unknown status throws data integrity error in application, financial, approval, and group metrics', () => {
   const invalidApp: RawApplicationData[] = [{ id: 'app-1', overallStatus: 'corrupted_status' }];
   assert.throws(() => calculateApplicationMetrics(invalidApp), /Unknown application overallStatus/);
+  assert.throws(() => calculateGroupMetrics(invalidApp, 'program'), /Unknown application overallStatus/);
 
   const invalidFin: RawApplicationData[] = [{ id: 'app-1', financialStatus: 'corrupted_fin' }];
   assert.throws(() => calculateFinancialMetrics(invalidFin), /Unknown application financialStatus/);
@@ -98,7 +143,6 @@ test('6. calculateRequirementMetrics handles 500+ applications and excludes acco
   ];
 
   const approvals: RawApprovalData[] = [];
-  // 600 approvals for librarian
   for (let i = 0; i < 600; i++) {
     approvals.push({
       requirementId: 'lib',
@@ -106,7 +150,6 @@ test('6. calculateRequirementMetrics handles 500+ applications and excludes acco
       label: 'Library Clearance',
       status: i < 400 ? 'approved' : 'pending',
     });
-    // accountant approval should be ignored
     approvals.push({
       requirementId: 'acc',
       signatoryRole: 'accountant',
