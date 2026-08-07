@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
-import { logSafeAuthError } from '@/lib/admin/lifecycle-validation';
+import { getSafeErrorCode, logSafeAuthError } from '@/lib/admin/lifecycle-validation';
 import { getSessionCookieName } from '@/lib/auth/session';
 
 export async function POST(request: NextRequest) {
@@ -58,8 +58,20 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: unknown) {
+    const code = getSafeErrorCode(error);
     logSafeAuthError('create_session_cookie', error);
-    const message = error instanceof Error ? error.message : 'Authentication failed';
-    return NextResponse.json({ error: message }, { status: 401 });
+
+    const publicMessage =
+      code === 'auth/id-token-expired' || code === 'auth/id-token-revoked'
+        ? 'Your sign-in session has expired. Please sign in again.'
+        : 'Authentication failed. Please check your credentials and try again.';
+
+    return NextResponse.json(
+      { error: publicMessage },
+      {
+        status: 401,
+        headers: { 'Cache-Control': 'no-store' },
+      }
+    );
   }
 }
