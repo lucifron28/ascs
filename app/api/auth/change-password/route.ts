@@ -121,46 +121,122 @@ export async function POST(request: NextRequest) {
     const auth = getAdminAuth();
     const firestore = getAdminFirestore();
 
-    // 6. Update Firebase Auth password
-    await auth.updateUser(uid, { password: newPassword });
-
-    // 7. Preserve existing custom claims while setting mustChangePassword: false
+    // Read & preserve existing custom claims before mutation
     const authRecord = await auth.getUser(uid);
     const previousClaims = authRecord.customClaims || {};
-    await auth.setCustomUserClaims(uid, {
-      ...previousClaims,
-      role: user.role,
-      mustChangePassword: false,
-    });
 
-    // 8. Update Firestore profile
+    // Step 1. Update Firebase Auth password
+    try {
+      await auth.updateUser(uid, { password: newPassword });
+    } catch (passErr: unknown) {
+      const msg = passErr instanceof Error ? passErr.message : 'Password update failed.';
+      console.error('Auth password update failed during change-password:', msg);
+      return NextResponse.json(
+        { error: 'Failed to update authentication password. Please try again.' },
+        { status: 400, headers }
+      );
+    }
+
+    // Step 2. Revoke refresh tokens
+    try {
+      await auth.revokeRefreshTokens(uid);
+    } catch (tokenErr: unknown) {
+      console.error('Session token revocation failed during change-password:', tokenErr);
+      return NextResponse.json(
+        {
+          error:
+            'The password changed, but session revocation did not complete. Sign in with the new password and retry the mandatory password-change process.',
+          passwordChanged: true,
+        },
+        { status: 400, headers }
+      );
+    }
+
+    // Step 3. Set custom claims to mustChangePassword: false preserving existing claims
+    try {
+      await auth.setCustomUserClaims(uid, {
+        ...previousClaims,
+        role: user.role,
+        mustChangePassword: false,
+      });
+    } catch (claimErr: unknown) {
+      console.error('Custom claim update failed during change-password:', claimErr);
+      return NextResponse.json(
+        {
+          error:
+            'The password changed, but mandatory-change completion remains pending. Sign in with your new password to retry mandatory password change.',
+          passwordChanged: true,
+        },
+        { status: 400, headers }
+      );
+    }
+
+    // Step 4. Write Firestore profile flag & Activity Log in ONE atomic batch
     const now = new Date().toISOString();
-    await firestore.collection('users').doc(uid).update({
-      mustChangePassword: false,
-      updatedAt: now,
-    });
+    try {
+      const batch = firestore.batch();
+      const userRef = firestore.collection('users').doc(uid);
+      batch.update(userRef, {
+        mustChangePassword: false,
+        updatedAt: now,
+      });
 
-    // 9. Write Activity Log
-    const logRef = firestore.collection('activityLogs').doc();
-    await logRef.set({
-      actorId: uid,
-      actorName: user.fullName || 'User',
-      actorRole: user.role || 'user',
-      action: 'complete_mandatory_password_change',
-      entityType: 'user',
-      entityId: uid,
-      metadata: {},
-      createdAt: now,
-    });
+      const logRef = firestore.collection('activityLogs').doc();
+      batch.set(logRef, {
+        actorId: uid,
+        actorName: user.fullName || 'User',
+        actorRole: user.role || 'user',
+        action: 'complete_mandatory_password_change',
+        entityType: 'user',
+        entityId: uid,
+        metadata: {},
+        createdAt: now,
+      });
 
-    // 10. Revoke refresh tokens
-    await auth.revokeRefreshTokens(uid);
+      await batch.commit();
+    } catch (dbErr: unknown) {
+      console.error('Firestore batch write failed during change-password:', dbErr);
 
-    // 11. Clear session cookie & require fresh login
+      // Attempt rollback of custom claim to mustChangePassword: true
+      let rollbackSucceeded = false;
+      try {
+        await auth.setCustomUserClaims(uid, {
+          ...previousClaims,
+          role: user.role,
+          mustChangePassword: true,
+        });
+        rollbackSucceeded = true;
+      } catch {}
+
+      if (rollbackSucceeded) {
+        return NextResponse.json(
+          {
+            error:
+              'Password changed and claims restored to mandatory-change-required state, but profile update failed. Sign in with your new password to retry.',
+            passwordChanged: true,
+          },
+          { status: 400, headers }
+        );
+      }
+
+      // Disable Auth account if state synchronization & claim rollback both fail
+      await auth.updateUser(uid, { disabled: true }).catch(() => {});
+      return NextResponse.json(
+        {
+          error:
+            'Password changed, but account state synchronization and claim rollback failed. Account has been disabled for security. Contact administrator.',
+          passwordChanged: true,
+          accountDisabled: true,
+        },
+        { status: 500, headers }
+      );
+    }
+
+    // Step 5. Clear session cookie & return success response
     const response = NextResponse.json(
       {
         success: true,
-        message: 'Password updated successfully. Please sign in again using your new password.',
+        message: 'Password updated successfully. Redirecting to sign in...',
       },
       { status: 200, headers }
     );
