@@ -164,6 +164,19 @@ export const DEMO_STUDENT_FIXTURES: DemoUserFixture[] = [
     section: 'B',
     accountStatus: 'inactive',
   },
+  {
+    uid: 'demo-student-g-uid',
+    email: 'student.g@example.test',
+    password: 'password123',
+    role: 'student',
+    fullName: 'Student G (Live Journey)',
+    studentNumber: 'STUD-2026-0007',
+    program: 'BSIT',
+    yearLevel: '3rd Year',
+    section: 'A',
+    accountStatus: 'active',
+    mustChangePassword: false,
+  },
 ];
 
 export interface DemoApplicationFixture {

@@ -70,10 +70,11 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
         <form.Field name="academicYear">
           {(field) => (
             <div className="form-control w-full">
-              <label className="label py-1">
+              <label htmlFor="academicYear" className="label py-1">
                 <span className="label-text text-slate-300 font-medium text-xs">Academic Year</span>
               </label>
               <select
+                id="academicYear"
                 name={field.name}
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -92,10 +93,11 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
         <form.Field name="semester">
           {(field) => (
             <div className="form-control w-full">
-              <label className="label py-1">
+              <label htmlFor="semester" className="label py-1">
                 <span className="label-text text-slate-300 font-medium text-xs">Semester</span>
               </label>
               <select
+                id="semester"
                 name={field.name}
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -114,10 +116,11 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
         <form.Field name="purpose">
           {(field) => (
             <div className="form-control w-full">
-              <label className="label py-1">
+              <label htmlFor="purpose" className="label py-1">
                 <span className="label-text text-slate-300 font-medium text-xs">Purpose</span>
               </label>
               <select
+                id="purpose"
                 name={field.name}
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
