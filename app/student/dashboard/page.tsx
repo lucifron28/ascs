@@ -36,6 +36,10 @@ export default function StudentDashboardPage() {
           remarks: Array<Record<string, unknown>>;
         });
       } else {
+        if (res.error?.includes('Password change required')) {
+          window.location.replace('/change-password');
+          return;
+        }
         setError(res.error || 'Failed to load dashboard data.');
       }
     } catch (err: unknown) {

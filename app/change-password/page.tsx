@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { firebaseAuth } from '@/lib/firebase/client';
@@ -17,26 +17,10 @@ export default function ChangePasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    // Confirm Firebase Auth client user is signed in
-    const unsubscribe = firebaseAuth.onAuthStateChanged((user) => {
-      if (!user) {
-        router.push('/login');
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
+  // Validation and Submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    const user = firebaseAuth.currentUser;
-    if (!user || !user.email) {
-      setError('No active session found. Please log in again.');
-      router.push('/login');
-      return;
-    }
 
     if (!currentPassword) {
       setError('Please enter your current temporary password.');
@@ -160,12 +144,13 @@ export default function ChangePasswordPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Current Temporary Password */}
             <div className="form-control space-y-1">
-              <label className="label py-0">
+              <label htmlFor="currentPassword" className="label py-0">
                 <span className="label-text text-slate-300 text-xs font-semibold">
                   Current Temporary Password
                 </span>
               </label>
               <input
+                id="currentPassword"
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
@@ -177,12 +162,13 @@ export default function ChangePasswordPage() {
 
             {/* New Password */}
             <div className="form-control space-y-1">
-              <label className="label py-0">
+              <label htmlFor="newPassword" className="label py-0">
                 <span className="label-text text-slate-300 text-xs font-semibold">
                   New Password (min. 8 chars)
                 </span>
               </label>
               <input
+                id="newPassword"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -194,12 +180,13 @@ export default function ChangePasswordPage() {
 
             {/* Confirm New Password */}
             <div className="form-control space-y-1">
-              <label className="label py-0">
+              <label htmlFor="confirmPassword" className="label py-0">
                 <span className="label-text text-slate-300 text-xs font-semibold">
                   Confirm New Password
                 </span>
               </label>
               <input
+                id="confirmPassword"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

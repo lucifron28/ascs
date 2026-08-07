@@ -15,7 +15,6 @@ import {
   reactivateUserAccountAction,
   resetUserTemporaryPasswordAction,
 } from '@/app/actions/admin-accounts';
-import { seedDatabaseAction } from '@/app/actions/seed';
 import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
 import {
@@ -155,10 +154,6 @@ export default function AdminDashboard() {
   const [reqModalLoading, setReqModalLoading] = useState(false);
   const [reqModalError, setReqModalError] = useState<string | null>(null);
   const [reqModalSuccess, setReqModalSuccess] = useState(false);
-
-  // Seeding State
-  const [seedLoading, setSeedLoading] = useState(false);
-  const [seedResult, setSeedResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const isMounted = useRef(true);
 
@@ -433,26 +428,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Handle Trigger Database Seeding
-  const handleRunSeed = async () => {
-    setSeedLoading(true);
-    setSeedResult(null);
-    try {
-      const res = await seedDatabaseAction();
-      if (res?.success) {
-        setSeedResult({ success: true, message: res.message || 'Database seeded successfully!' });
-        loadData();
-      } else {
-        setSeedResult({ success: false, message: res?.error || 'Seeding failed.' });
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to execute seeding action.';
-      setSeedResult({ success: false, message });
-    } finally {
-      setSeedLoading(false);
-    }
-  };
-
   // Filtered Users
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
@@ -594,30 +569,10 @@ export default function AdminDashboard() {
               <Database className="w-5 h-5 text-primary" /> Database Operations
             </h2>
             <p className="text-sm text-base-content/70">
-              Run environment database seeding to populate initial requirements and demo accounts in development/emulator mode.
+              Deterministic demo data is managed outside the application: run{' '}
+              <code className="font-mono text-xs bg-base-200 px-1.5 py-0.5 rounded">npm run demo:reset</code>{' '}
+              against the Firebase Emulator Suite to reset and reseed the fictional fixture dataset.
             </p>
-
-            <div className="flex flex-wrap items-center gap-4">
-              <button
-                onClick={handleRunSeed}
-                disabled={seedLoading}
-                className="btn btn-primary rounded-xl gap-2 font-semibold"
-              >
-                {seedLoading ? <span className="loading loading-spinner loading-sm" /> : <Database className="w-4 h-4" />}
-                Trigger Database Seeding
-              </button>
-            </div>
-
-            {seedResult && (
-              <div
-                className={`alert ${
-                  seedResult.success ? 'alert-success' : 'alert-error'
-                } rounded-xl border border-base-content/10 mt-3 flex items-center gap-2 text-sm`}
-              >
-                {seedResult.success ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                <span>{seedResult.message}</span>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -1128,7 +1083,7 @@ export default function AdminDashboard() {
                 <input
                   type="email"
                   required
-                  placeholder="student@pkm.edu.ph"
+                  placeholder="student.a@example.test"
                   value={studentForm.email}
                   onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })}
                   className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"
@@ -1258,7 +1213,7 @@ export default function AdminDashboard() {
                 <input
                   type="email"
                   required
-                  placeholder="librarian@pkm.edu.ph"
+                  placeholder="librarian@example.test"
                   value={staffForm.email}
                   onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
                   className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"

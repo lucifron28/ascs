@@ -5,33 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useForm } from '@tanstack/react-form';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseAuth as auth } from '@/lib/firebase/client';
-import { seedDatabaseAction } from '@/app/actions/seed';
 import { LogIn, Mail, Lock, ShieldAlert, Check } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
-
-let demoSeedPromise: Promise<void> | null = null;
-
-async function ensureDemoAccounts() {
-  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR !== 'true') {
-    return;
-  }
-
-  if (!demoSeedPromise) {
-    demoSeedPromise = seedDatabaseAction()
-      .then((result) => {
-        if (!result.success) {
-          throw new Error(result.error || 'Unable to prepare demo accounts.');
-        }
-      })
-      .catch((error) => {
-        // Allow a retry after the emulator is started or recovers.
-        demoSeedPromise = null;
-        throw error;
-      });
-  }
-
-  await demoSeedPromise;
-}
 
 async function readJsonResponse(response: Response) {
   const body = await response.text();
@@ -63,9 +38,8 @@ export default function LoginPage() {
       setSuccess(false);
 
       try {
-        // A fresh Auth emulator has no users until the seed action runs. Bootstrap
-        // the idempotent demo data before attempting the first sign-in.
-        await ensureDemoAccounts();
+        // Seeding is an explicit prerequisite (npm run demo:reset). The emulator
+        // dataset is deterministic; the login flow never mutates demo accounts.
 
         // 1. Authenticate with Firebase Auth Client SDK
         const userCredential = await signInWithEmailAndPassword(
@@ -210,7 +184,7 @@ export default function LoginPage() {
             >
               {(field) => (
                 <div className="form-control w-full">
-                  <label className="label py-1">
+                  <label htmlFor="email" className="label py-1">
                     <span className="label-text text-slate-300 font-medium text-xs">Email Address</span>
                   </label>
                   <div className="relative">
@@ -218,12 +192,13 @@ export default function LoginPage() {
                       <Mail className="w-4 h-4" />
                     </div>
                     <input
+                      id="email"
                       type="email"
                       name={field.name}
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       disabled={loading || success}
-                      placeholder="student@pkm.edu.ph"
+                      placeholder="student.a@example.test"
                       className="input input-bordered w-full pl-10 bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-600 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
                     />
                   </div>
@@ -251,7 +226,7 @@ export default function LoginPage() {
             >
               {(field) => (
                 <div className="form-control w-full">
-                  <label className="label py-1">
+                  <label htmlFor="password" className="label py-1">
                     <span className="label-text text-slate-300 font-medium text-xs">Password</span>
                   </label>
                   <div className="relative">
@@ -259,6 +234,7 @@ export default function LoginPage() {
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
+                      id="password"
                       type="password"
                       name={field.name}
                       value={field.state.value}
@@ -304,35 +280,35 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               type="button"
-              onClick={() => quickFill('student@pkm.edu.ph')}
+              onClick={() => quickFill('student.a@example.test')}
               disabled={loading || success}
               className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
             >
-              student@pkm.edu.ph
+              student.a@example.test
             </button>
             <button
               type="button"
-              onClick={() => quickFill('admin@pkm.edu.ph')}
+              onClick={() => quickFill('admin@example.test')}
               disabled={loading || success}
               className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
             >
-              admin@pkm.edu.ph
+              admin@example.test
             </button>
             <button
               type="button"
-              onClick={() => quickFill('librarian@pkm.edu.ph')}
+              onClick={() => quickFill('librarian@example.test')}
               disabled={loading || success}
               className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
             >
-              librarian@pkm.edu.ph
+              librarian@example.test
             </button>
             <button
               type="button"
-              onClick={() => quickFill('dean@pkm.edu.ph')}
+              onClick={() => quickFill('dean@example.test')}
               disabled={loading || success}
               className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
             >
-              dean@pkm.edu.ph
+              dean@example.test
             </button>
           </div>
         </div>}
