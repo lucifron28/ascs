@@ -144,6 +144,7 @@ export default function AdminDashboard() {
     fullName: string;
     role: string;
     temporaryPassword: string;
+    warning?: string;
   } | null>(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
   // Requirement Assignment Modal State
@@ -326,7 +327,7 @@ export default function AdminDashboard() {
     setModalError(null);
     try {
       const res = await resetUserTemporaryPasswordAction({ userId: targetActionUser.uid });
-      if (res.success && res.temporaryPassword) {
+      if (res.success && 'temporaryPassword' in res) {
         const u = targetActionUser;
         setTargetActionUser(null);
         setActionType(null);
@@ -335,6 +336,7 @@ export default function AdminDashboard() {
           fullName: u.fullName,
           role: u.role,
           temporaryPassword: res.temporaryPassword,
+          warning: res.warning,
         });
         loadData();
       } else {
@@ -1461,6 +1463,13 @@ export default function AdminDashboard() {
                 Store this temporary password securely. It is <strong>NOT</strong> saved in Firestore or logs and will <strong>NOT</strong> be displayed again.
               </p>
             </div>
+
+            {oneTimePasswordResult.warning && (
+              <div className="alert alert-warning text-xs rounded-xl p-3 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-warning" />
+                <span>{oneTimePasswordResult.warning}</span>
+              </div>
+            )}
 
             <div className="bg-base-200 p-4 rounded-xl space-y-2 text-xs">
               <div>
