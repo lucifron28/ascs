@@ -54,7 +54,9 @@ export async function fetchFirebasePublicCertificates(
 export async function verifyFirebaseSessionCookie(
   sessionCookie: string,
   projectId: string,
-  fetchFn: typeof fetch = fetch
+  fetchFn: typeof fetch = fetch,
+  importX509Fn = importX509,
+  jwtVerifyFn = jwtVerify
 ): Promise<VerifiedSessionPayload> {
   // 1. Decode header only
   const header = decodeProtectedHeader(sessionCookie);
@@ -81,10 +83,10 @@ export async function verifyFirebaseSessionCookie(
   }
 
   // 3. Import X.509 certificate & verify signature + claims
-  const publicKey = await importX509(cert, 'RS256');
+  const publicKey = await importX509Fn(cert, 'RS256');
 
   const expectedIssuer = `https://session.firebase.google.com/${projectId}`;
-  const { payload } = await jwtVerify(sessionCookie, publicKey, {
+  const { payload } = await jwtVerifyFn(sessionCookie, publicKey, {
     issuer: expectedIssuer,
     audience: projectId,
   });

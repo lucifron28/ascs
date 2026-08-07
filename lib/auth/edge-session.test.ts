@@ -45,7 +45,6 @@ test('2. fetchFirebasePublicCertificates retrieves and caches certificates', asy
 });
 
 test('3. verifyFirebaseSessionCookie rejects non-RS256 algorithm', async () => {
-  // HS256 token
   const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.secret';
   await assert.rejects(
     () => verifyFirebaseSessionCookie(token, 'ascs11'),
@@ -54,7 +53,6 @@ test('3. verifyFirebaseSessionCookie rejects non-RS256 algorithm', async () => {
 });
 
 test('4. verifyFirebaseSessionCookie rejects missing kid in header', async () => {
-  // RS256 token without kid in header
   const token = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.e30.sig';
   await assert.rejects(
     () => verifyFirebaseSessionCookie(token, 'ascs11'),
@@ -71,7 +69,6 @@ test('5. verifyFirebaseSessionCookie handles unknown kid by re-fetching and reje
     return new Response(JSON.stringify({ 'kid-known': 'cert-known' }), { status: 200 });
   };
 
-  // Header with unknown kid
   const header = Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'kid-unknown' })).toString('base64url');
   const token = `${header}.e30.sig`;
 
@@ -80,6 +77,104 @@ test('5. verifyFirebaseSessionCookie handles unknown kid by re-fetching and reje
     /Unknown certificate key ID: kid-unknown/
   );
 
-  // Initial attempt + re-fetch on miss = 2 fetches
   assert.equal(fetchCount, 2);
+});
+
+test('6. verifyFirebaseSessionCookie validates issuer, audience, sub, and claims using test verifier seam', async () => {
+  clearCertificateCache();
+
+  const mockFetch: typeof fetch = async () => {
+    return new Response(JSON.stringify({ 'kid-test': 'cert-test-pem' }), { status: 200 });
+  };
+
+  const mockImportX509 = async (certPem: string) => {
+    assert.equal(certPem, 'cert-test-pem');
+    return { type: 'public-key' };
+  };
+
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'kid-test' })).toString('base64url');
+  const payload = Buffer.from(
+    JSON.stringify({
+      sub: 'uid-12345',
+      role: 'admin',
+      mustChangePassword: true,
+      auth_time: Math.floor(Date.now() / 1000) - 10,
+    })
+  ).toString('base64url');
+  const token = `${header}.${payload}.sig`;
+
+  // Mock jwtVerifyFn that verifies issuer and audience
+  const mockJwtVerify = async (
+    jwt: string,
+    key: unknown,
+    options?: { issuer?: string; audience?: string }
+  ) => {
+    assert.equal(jwt, token);
+    assert.equal(options?.issuer, 'https://session.firebase.google.com/ascs11');
+    assert.equal(options?.audience, 'ascs11');
+    return {
+      payload: {
+        sub: 'uid-12345',
+        role: 'admin',
+        mustChangePassword: true,
+        auth_time: Math.floor(Date.now() / 1000) - 10,
+      },
+      protectedHeader: { alg: 'RS256', kid: 'kid-test' },
+    };
+  };
+
+  const verified = await verifyFirebaseSessionCookie(
+    token,
+    'ascs11',
+    mockFetch,
+    mockImportX509,
+    mockJwtVerify
+  );
+
+  assert.equal(verified.uid, 'uid-12345');
+  assert.equal(verified.role, 'admin');
+  assert.equal(verified.mustChangePassword, true);
+});
+
+test('7. verifyFirebaseSessionCookie rejects missing or empty subject', async () => {
+  clearCertificateCache();
+  const mockFetch: typeof fetch = async () =>
+    new Response(JSON.stringify({ 'kid-test': 'cert-test-pem' }), { status: 200 });
+  const mockImportX509 = async () => ({ type: 'public-key' });
+
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'kid-test' })).toString('base64url');
+  const token = `${header}.e30.sig`;
+
+  const mockJwtVerifyEmptySub = async () => ({
+    payload: { sub: '' },
+    protectedHeader: { alg: 'RS256', kid: 'kid-test' },
+  });
+
+  await assert.rejects(
+    () => verifyFirebaseSessionCookie(token, 'ascs11', mockFetch, mockImportX509, mockJwtVerifyEmptySub),
+    /missing subject \(sub\)/
+  );
+});
+
+test('8. verifyFirebaseSessionCookie rejects future auth_time', async () => {
+  clearCertificateCache();
+  const mockFetch: typeof fetch = async () =>
+    new Response(JSON.stringify({ 'kid-test': 'cert-test-pem' }), { status: 200 });
+  const mockImportX509 = async () => ({ type: 'public-key' });
+
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'kid-test' })).toString('base64url');
+  const token = `${header}.e30.sig`;
+
+  const mockJwtVerifyFutureAuth = async () => ({
+    payload: {
+      sub: 'uid-123',
+      auth_time: Math.floor(Date.now() / 1000) + 3600, // 1 hour in future
+    },
+    protectedHeader: { alg: 'RS256', kid: 'kid-test' },
+  });
+
+  await assert.rejects(
+    () => verifyFirebaseSessionCookie(token, 'ascs11', mockFetch, mockImportX509, mockJwtVerifyFutureAuth),
+    /auth_time is in the future/
+  );
 });
