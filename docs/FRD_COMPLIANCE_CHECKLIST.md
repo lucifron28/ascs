@@ -2,8 +2,7 @@
 
 **Institution:** Pambayang Kolehiyo ng Mauban (PKM)  
 **Project:** Automated Student Clearance System (ASCS)  
-**Evaluation Date:** August 6, 2026  
-
+**Evaluation Date:** August 7, 2026  
 ---
 
 ## Executive Summary
@@ -57,7 +56,7 @@
 
 | Requirement | Status | Description & Evidence |
 | --- | --- | --- |
-| **Admin-created accounts** | `Implemented` | `createStudentAccountAction` and `createStaffAccountAction` provision Auth accounts, set custom claims, write Firestore profiles (`users`, `publicUsers`, `students`), and issue temporary passwords in Admin UI. |
+| **Admin-created accounts** | `Implemented` | `createStudentAccountAction` and `createStaffAccountAction` execute atomic Firestore batches (`users`, `publicUsers`, `students`, `activityLogs`), feature full Auth deletion compensation on custom claim or Firestore write failure, use cryptographically secure passwords (`crypto.randomInt`), and require explicit server-side confirmation (`confirmElevatedAdminCreation`) for elevated admin creation. |
 | **No student self-registration** | `Implemented` | Public registration is disabled; users authenticate against pre-created Firestore profiles. |
 | **Student application submission** | `Implemented` | `submitApplicationAction` creates application and approval subdocuments in a Firestore transaction. |
 | **Duplicate-term prevention** | `Implemented` | Enforces deterministic doc ID `{studentUid}_{academicYear}_{semester}`; duplicate submissions throw transactional error. |
@@ -71,10 +70,10 @@
 | **Dean is not a required signatory** | `Implemented` | Dean review is an oversight layer and is not included as a required approval row in the clearance matrix. |
 | **Printable clearance after full approval** | `Implemented` | `fetchClearanceCertificateAction` blocks certificate generation unless `printableAvailable === true`. |
 | **Notifications** | `Implemented` | Submissions, signatory actions, and financial updates write to `notifications` collection and appear in UI dropdown. |
-| **Activity logging** | `Implemented` | Server actions write audit events directly to `activityLogs` collection. |
-| **User management** | `Implemented` | Admin dashboard supports creating student and staff accounts, updating user roles with Auth rollback, assigning requirement signatories, and filtering user records. |
-| **Account deactivation** | `Implemented` | `deactivateUserAccountAction` and `reactivateUserAccountAction` toggle Auth disabled status, revoke active refresh tokens, update Firestore flags, and block inactive users from session creation and actions. |
-| **Password reset** | `Implemented` | `resetUserTemporaryPasswordAction` issues a secure temporary password, revokes refresh tokens, and sets `mustChangePassword: true` which enforces mandatory password change at `/change-password`. |
+| **Activity logging** | `Implemented` | Server actions write audit events in atomic Firestore batches and sanitize sensitive credential metadata via `sanitizeAuditMetadata`. |
+| **User management** | `Implemented` | Admin user table displays accurate lifecycle data (`accountStatus`, `isActive`, `mustChangePassword`, `studentNumber`). `updateUserRoleAction` enforces `checkRoleConversion` (blocking student/staff conversion), protects the final active administrator, and preserves custom claims. |
+| **Account deactivation** | `Implemented` | `deactivateUserAccountAction` and `reactivateUserAccountAction` synchronize Auth disabled status, revoke active refresh tokens, execute atomic Firestore updates and audit logging, protect the final active administrator from deactivation, and compensate step-by-step failures. |
+| **Password reset & mandatory change** | `Implemented` | `resetUserTemporaryPasswordAction` issues cryptographically secure temporary passwords, revokes refresh tokens, preserves custom claims, and sets `mustChangePassword: true`. Mandatory password change is non-bypassable: enforced at `/login`, in `proxy.ts`, and in `getAuthenticatedUser()`. Completion requires server-verified credentials via `/api/auth/change-password`. |
 
 ---
 
