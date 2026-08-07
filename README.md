@@ -52,6 +52,7 @@ ASCS operates on nine core collections and subcollections:
 7. **Adviser:** Reviews section/class adviser clearance requirements. Approval unlocks application visibility for the Dean.
 8. **Dean:** Conducts final academic review on adviser-approved clearance applications.
 9. **System Administrator:** Provisions student and staff accounts, manages user roles, deactivates/reactivates accounts, issues temporary passwords, assigns requirement signatories, and inspects activity logs.
+
 ---
 
 ## Local Development & Setup
@@ -60,7 +61,7 @@ ASCS operates on nine core collections and subcollections:
 
 - Node.js 20+ installed
 - npm 10+ installed
-- Java Runtime Environment (JRE 11+) for running Firebase Emulators (optional for local testing)
+- Java JDK / JRE 21+ installed (required by `firebase-tools ^15.26.0` for Firestore emulator execution)
 
 ### Installation
 
@@ -89,27 +90,23 @@ ASCS operates on nine core collections and subcollections:
 
 ---
 
-## Firebase Emulator Setup
+## Firebase Emulator Setup & Acceptance Testing
 
 To run fully offline with local Firebase Auth and Firestore emulators:
 
-1. Install Firebase CLI globally (if not already installed):
+1. Start the emulators:
    ```bash
-   npm install -g firebase-tools
+   npm run emulators
    ```
 
-2. Start the emulators:
+2. Reset and seed the deterministic fictional dataset (in a separate terminal):
    ```bash
-   firebase emulators:start
+   npm run demo:reset
    ```
 
-3. Enable emulator mode in `.env.local`:
-   ```env
-   NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true
-   NEXT_PUBLIC_DEMO_MODE=true
-   FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
-   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-   FIREBASE_PROJECT_ID=ascs11
+3. Run full automated acceptance verification (unit, lint, build, emulator integration, Firestore Rules, Playwright browser acceptance):
+   ```bash
+   npm run test:acceptance
    ```
 
 ---
@@ -148,7 +145,13 @@ NEXT_PUBLIC_DEMO_MODE=false
 - `npm run build` — Compiles and builds the production App Router bundle
 - `npm run start` — Starts Next.js production server
 - `npm run lint` — Runs ESLint checks across project files
-- `npm test` — Executes automated unit tests for clearance status rules and account lifecycle validation (`tsx --test lib/clearance/status.test.ts lib/admin/lifecycle.test.ts`)
+- `npm test` — Executes automated unit tests for status derivation, lifecycle rules, session edge helpers, and reports
+- `npm run test:integration` — Executes server-action integration tests & Firestore Rules tests against Firebase Emulator Suite
+- `npm run test:e2e` — Runs Playwright Chromium browser acceptance tests
+- `npm run test:acceptance` — Orchestrates all verification layers and writes `artifacts/acceptance-summary.json`
+- `npm run demo:reset` — Resets emulator data, seeds deterministic fixtures, and verifies seed invariants
+- `npm run demo:prepare` — Resets emulator, seeds fixtures, and prints the EMULATOR / DEMO ONLY demo account directory
+
 ---
 
 ## Security Notes
@@ -157,6 +160,7 @@ NEXT_PUBLIC_DEMO_MODE=false
 - Firestore Security Rules enforce zero direct client writes for workflow collections.
 - Deactivated accounts (`accountStatus: 'inactive'` or `isActive: false`) are denied access to server actions and API routes.
 - Custom claims and Firestore roles are kept in sync during administrator role updates.
+- Test session overrides (`ASCS_ACCEPTANCE_TEST_MODE`) are strictly guarded and cannot activate in production.
 
 ---
 

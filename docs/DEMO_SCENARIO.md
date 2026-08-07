@@ -17,7 +17,7 @@ Requirements:
 
 - Node.js 20+ (Node 20 is used in CI; Node 24 works locally)
 - npm 10+
-- Java 11+ (required by the Firestore emulator)
+- Java 21+ (required by firebase-tools ^15.26.0 for Firestore emulator execution)
 - Chromium via Playwright (for browser acceptance tests)
 
 Install and prepare:

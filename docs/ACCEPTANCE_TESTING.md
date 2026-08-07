@@ -11,10 +11,10 @@ integration, Firestore Rules, and browser tests.
 
 | Layer | Scope | Runner | Requires emulators |
 | --- | --- | --- | --- |
-| **Unit** | Pure logic and security helpers (status derivation, lifecycle validation, session edge helpers, password transition recovery, report metrics/filters/CSV/authorization) | `node:test` via tsx | No |
+| **Unit** | Pure logic and security helpers (status derivation, lifecycle validation, session edge helpers, password transition recovery, report metrics/filters/CSV/authorization, manifest verification, test-session override guard) | `node:test` via tsx | No |
 | **Emulator integration** | Real persisted state against Auth + Firestore emulators via server actions / service functions; authorization, transactions, workflow transitions | `node:test` via tsx | Yes |
 | **Firestore Rules** | Authenticated **client SDK** operations against the emulator to prove Rules enforce boundaries (Admin SDK bypasses Rules, so these are separate) | `node:test` via tsx + `@firebase/rules-unit-testing` | Yes |
-| **Browser acceptance** | High-value user journeys in Chromium (login, mandatory password change, clearance status views, reports) | Playwright | Yes (+ Next.js web server) |
+| **Browser acceptance** | High-value user journeys in Chromium (login, mandatory password change, live 9-step multi-role clearance journey, status views, reports) | Playwright | Yes (+ Next.js web server) |
 
 The existing `npm test` unit suite is preserved unchanged. Acceptance layers
 are additive.
@@ -47,7 +47,7 @@ accounts; no real student or institutional data). Seeded state:
 
 - 8 staff accounts: Admin, Dean, Librarian, Accountant, OSA Coordinator,
   Guidance Counselor, Area Chair, Adviser
-- 6 students A–F:
+- 7 students A–G:
   - **A** — all 5 signatory approvals approved, `paid`, `approved`,
     `printableAvailable = true`
   - **B** — 2 approved / 3 pending, `paid`, `pending`
@@ -55,6 +55,7 @@ accounts; no real student or institutional data). Seeded state:
   - **D** — all signatories approved but `unpaid`, `not_approved`
   - **E** — `mustChangePassword = true` (Auth claim + Firestore flag)
   - **F** — `inactive`, `isActive = false`, Auth user disabled
+  - **G** — `mustChangePassword = false`, active student for live E2E submission
 - 5 clearance requirements (Librarian, OSA Coordinator, Guidance Counselor,
   Area Chair, Adviser) with deterministic IDs and assigned signatories; no
   Accountant approval row
@@ -93,12 +94,12 @@ npm run test:acceptance        # unit + lint + build + integration + rules + e2e
 `firebase emulators:exec` (deterministic lifecycle; no manual start/stop).
 Playwright additionally starts the Next.js production server
 (`playwright.config.ts` → `webServer`) with emulator environment variables and
-runs a global setup that resets and seeds before the suite.
+runs a global setup (`scripts/prepare-e2e.ts`) that resets and seeds before the suite.
 
 ## Expected runtime environment
 
 - Node 20+ (CI pins 20; local 24 verified)
-- Java 11+ (Firestore emulator)
+- Java 21+ (required by `firebase-tools ^15.26.0` for Firestore emulator execution)
 - Ports 9099 (Auth), 8080 (Firestore), 3000 (Next.js) free
 - Chrome/Chromium installed for Playwright (`npx playwright install chromium`)
 
@@ -108,8 +109,9 @@ runs a global setup that resets and seeds before the suite.
 
 - `account-lifecycle.test.ts` — admin account creation (student + staff),
   Auth/Firestore synchronization, duplicate rejection, temporary-password
-  flag, deactivate/reactivate, final-admin protection, role conversion
-  rejection, password reset, inactive-user blocking
+  flag, deactivate/reactivate, final-admin protection, final-admin demotion rejection,
+  student-to-staff and staff-to-student role conversion rejection via `updateUserRoleAction()`,
+  password reset, inactive-user blocking
 - `password-change.test.ts` — full temporary-password workflow: authenticate,
   session reachable for change, normal actions rejected while
   `mustChangePassword`, wrong current password fails, correct change succeeds,
@@ -140,12 +142,14 @@ Authenticated client-SDK tests against the emulator:
 
 - Student reads own profile/application; **cannot** read another student's
   private data
-- Student **cannot** write user/student/application/approval records
+- Student **cannot** write user/student/application/approval records or financialStatus
+- Staff client SDK writes (Librarian, Accountant, Dean, Admin) are denied (Server-Only architecture)
 - Unauthenticated access denied
-- Even Admin client writes to server-only collections are denied
 
 ### Browser acceptance (`tests/e2e/`)
 
+- `live-clearance-journey.spec.ts` — full 9-step multi-role browser clearance journey
+  (Student G submission → 5 signatories -> Accountant -> Adviser -> Dean oversight -> Student approved status & print control enabled)
 - `password-change.spec.ts` — mandatory password journey (login → forced
   change → direct dashboard nav rejected → wrong password error → change →
   re-login with new password → dashboard)
@@ -165,10 +169,11 @@ to login and change-password forms for stable accessible queries.
 | --- | --- | --- | --- | --- |
 | Account lifecycle | Yes | Yes | Where applicable | Critical smoke |
 | Mandatory password | Yes | Yes | N/A | Yes |
-| Submission | Status helpers | Yes | Yes | Yes |
-| Signatory | Helpers | Yes | Yes | Yes |
-| Financial gate | Status helpers | Yes | Yes | Yes |
-| Dean visibility | Metrics/report tests | Yes | Yes | Yes |
+| Submission | Status helpers | Yes | Yes | Full Workflow |
+| Signatory | Helpers | Yes | Yes | Full Workflow |
+| Financial gate | Status helpers | Yes | Yes | Full Workflow |
+| Dean visibility | Metrics/report tests | Yes | Yes | Full Workflow |
+| Clearance completion | Status helpers | Yes | Yes | Full Workflow |
 | Reports | Yes | Yes | Authorization | Yes |
 | CSV | Yes | Yes | N/A | Smoke |
 
@@ -193,17 +198,15 @@ written only from actual execution results:
     "signatoryWorkflow": "passed",
     "financialGate": "passed",
     "deanVisibility": "passed",
-    "reports": "passed"
+    "clearanceCompletion": "passed",
+    "reports": "passed",
+    "firestoreRules": "passed"
   }
 }
 ```
 
 ## Known unautomated scenarios
 
-- Full multi-role browser walkthrough (submit → every signatory → accountant →
-  adviser → dean) is exercised across layers but not as one single Playwright
-  test; integration tests cover the state transitions, browser tests cover
-  representative end states.
 - Email notifications (deferred product feature) — not tested.
 - Electronic signatures and official certificate issuance (deferred) — the
   print view is a prototype record and asserts no official claim.
@@ -227,11 +230,10 @@ written only from actual execution results:
 ## Distinction summary
 
 - **Unit tests** never touch Firebase; they verify pure logic (status
-  derivation, CSV generation, filter validation, session edge helpers).
+  derivation, CSV generation, filter validation, session edge helpers, manifest verification, override guards).
 - **Integration tests** use the Admin SDK + server actions against the
   emulators and assert persisted state — they prove business logic, not Rules.
 - **Rules tests** use the Firebase **client** SDK with authenticated emulator
   users — they prove the security boundary as seen by the browser.
 - **Browser tests** prove the end-to-end UX with the real Next.js server and
-  emulators; they deliberately avoid duplicating every unit/integration
-  assertion.
+  emulators; they include a complete 9-step multi-role live journey.
