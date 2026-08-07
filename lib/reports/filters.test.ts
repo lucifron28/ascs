@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseReportFilters,
+  validateAcademicYear,
   getDefaultAcademicYear,
   getDefaultSemester,
 } from './filters';
@@ -16,35 +17,51 @@ test('1. parseReportFilters accepts valid academic year and semester', () => {
   assert.equal(filters.semester, '2nd Semester');
 });
 
-test('2. parseReportFilters applies defaults when academic year or semester is missing or invalid', () => {
-  const filters = parseReportFilters({
-    academicYear: 'invalid-year-format-long-string-beyond-limit',
-    semester: 'InvalidSemesterName',
-  });
-
+test('2. parseReportFilters applies defaults when academic year or semester is omitted', () => {
+  const filters = parseReportFilters({});
   assert.equal(filters.academicYear, getDefaultAcademicYear());
   assert.equal(filters.semester, getDefaultSemester());
 });
 
-test('3. parseReportFilters validates overallStatus and financialStatus allowlists', () => {
-  const validFilters = parseReportFilters({
-    overallStatus: 'approved',
-    financialStatus: 'paid',
-  });
-
-  assert.equal(validFilters.overallStatus, 'approved');
-  assert.equal(validFilters.financialStatus, 'paid');
-
-  const invalidFilters = parseReportFilters({
-    overallStatus: 'malicious_status_injection',
-    financialStatus: 'invalid_financial_status',
-  });
-
-  assert.equal(invalidFilters.overallStatus, undefined);
-  assert.equal(invalidFilters.financialStatus, undefined);
+test('3. validateAcademicYear enforces YYYY-YYYY format and consecutive year sequence', () => {
+  assert.equal(validateAcademicYear('2026-2027'), '2026-2027');
+  assert.throws(() => validateAcademicYear('2026-2028'), /Second year .* must be exactly consecutive/);
+  assert.throws(() => validateAcademicYear('abcd-2027'), /Invalid academic year format/);
+  assert.throws(() => validateAcademicYear('2026'), /Invalid academic year format/);
 });
 
-test('4. parseReportFilters trims strings, caps length at 50, and ignores "all"', () => {
+test('4. parseReportFilters throws validation errors for invalid supplied values', () => {
+  assert.throws(
+    () => parseReportFilters({ semester: 'InvalidSemesterName' }),
+    /Invalid semester specified/
+  );
+  assert.throws(
+    () => parseReportFilters({ overallStatus: 'malicious_status_injection' }),
+    /Invalid clearance status specified/
+  );
+  assert.throws(
+    () => parseReportFilters({ financialStatus: 'invalid_financial_status' }),
+    /Invalid financial status specified/
+  );
+  assert.throws(
+    () => parseReportFilters({ program: 'a'.repeat(60) }),
+    /exceeds maximum length/
+  );
+  assert.throws(
+    () => parseReportFilters({ section: 'A<script>' }),
+    /forbidden characters/
+  );
+});
+
+test('5. Dean report scope rejects financialStatus filter', () => {
+  assert.throws(
+    () => parseReportFilters({ financialStatus: 'paid' }, 'dean'),
+    /Financial status filter is not permitted for Dean reports/
+  );
+  assert.doesNotThrow(() => parseReportFilters({ financialStatus: 'paid' }, 'admin'));
+});
+
+test('6. parseReportFilters trims strings and handles "all" values', () => {
   const filters = parseReportFilters({
     program: ' BSIT ',
     yearLevel: ' 1 ',
@@ -53,12 +70,5 @@ test('4. parseReportFilters trims strings, caps length at 50, and ignores "all"'
 
   assert.equal(filters.program, 'BSIT');
   assert.equal(filters.yearLevel, '1');
-  assert.equal(filters.section, undefined); // 'all' is converted to undefined
-
-  const longString = 'a'.repeat(60);
-  const overflowFilters = parseReportFilters({
-    program: longString,
-  });
-
-  assert.equal(overflowFilters.program, undefined);
+  assert.equal(filters.section, undefined);
 });
