@@ -1,13 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { getSessionCookieName } from './lib/auth/session-name';
+import { verifyFirebaseSessionCookie } from './lib/auth/edge-session';
 
-// Firebase session cookie public keys
-const JWKS = createRemoteJWKSet(
-  new URL('https://www.googleapis.com/identitytoolkit/v3/relyingparty/publicKeys')
-);
-
-function decodeJwt(token: string) {
+function decodeDevelopmentJwt(token: string) {
+  /* DEVELOPMENT ONLY: Unverified JWT decode for local Firebase Auth emulator */
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -36,33 +32,39 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Decode JWT payload to extract user metadata/role/mustChangePassword
-  let payload = decodeJwt(session);
+  let role = 'student';
+  let mustChangePassword = false;
 
-  // Cryptographically verify session cookie signature in production
-  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR !== 'true') {
+  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+    /* DEVELOPMENT ONLY: Unverified JWT decode for local Firebase Auth emulator */
+    const devPayload = decodeDevelopmentJwt(session);
+    role = (devPayload?.role as string) || 'student';
+    mustChangePassword = devPayload?.mustChangePassword === true;
+  } else {
     try {
       const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'ascs11';
-      const verified = await jwtVerify(session, JWKS, {
-        issuer: `https://session.firebase.google.com/${projectId}`,
-        audience: projectId,
-      });
-      payload = verified.payload;
+      const verifiedPayload = await verifyFirebaseSessionCookie(session, projectId);
+      role = verifiedPayload.role || 'student';
+      mustChangePassword = verifiedPayload.mustChangePassword === true;
     } catch (verifyError: unknown) {
-      const message = verifyError instanceof Error ? verifyError.message : 'JWKS Verification error';
-      console.error('Middleware JWT signature verification failed:', message);
-      if (!isPublicRoute) {
-        url.pathname = '/login';
-        const redirectRes = NextResponse.redirect(url);
-        redirectRes.cookies.delete(sessionCookieName);
-        return redirectRes;
+      const message = verifyError instanceof Error ? verifyError.message : 'Session verification error';
+      console.error('Middleware session verification failed:', message);
+
+      if (isApiRoute) {
+        const apiRes = NextResponse.json(
+          { error: 'Unauthorized: Session verification failed.' },
+          { status: 401 }
+        );
+        apiRes.cookies.delete(sessionCookieName);
+        return apiRes;
       }
+
+      url.pathname = '/login';
+      const redirectRes = NextResponse.redirect(url);
+      redirectRes.cookies.delete(sessionCookieName);
+      return redirectRes;
     }
   }
-
-  const role = (payload?.role as string) || 'student';
-  const mustChangePassword = payload?.mustChangePassword === true;
-
   // 1. Mandatory password change routing enforcement
   if (mustChangePassword) {
     const isAllowedPasswordChangePath =
