@@ -14,6 +14,7 @@ import {
   generateRandomTemporaryPassword,
   sanitizeAuditMetadata,
   mapLifecycleError,
+  logSafeAuthError,
 } from '@/lib/admin/lifecycle-validation';
 // Helper to verify caller is active Admin
 async function getAuthenticatedAdmin() {
@@ -175,8 +176,7 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
       },
     };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Create student account error';
-    console.error('Create student account error:', message);
+    logSafeAuthError('create_student_account', error);
     return { success: false, error: mapLifecycleError(error, 'Failed to create student account.') };
   }
 }
@@ -312,8 +312,7 @@ export async function createStaffAccountAction(
       },
     };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Create staff account error';
-    console.error('Create staff account error:', message);
+    logSafeAuthError('create_staff_account', error);
     return { success: false, error: mapLifecycleError(error, 'Failed to create staff account.') };
   }
 }
@@ -416,8 +415,7 @@ export async function deactivateUserAccountAction(data: { userId: string }) {
 
     return { success: true };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Deactivate user account error';
-    console.error('Deactivate user account error:', message);
+    logSafeAuthError('deactivate_user_account', error, data.userId);
     return { success: false, error: mapLifecycleError(error, 'Failed to deactivate user account.') };
   }
 }
@@ -491,8 +489,7 @@ export async function reactivateUserAccountAction(data: { userId: string }) {
 
     return { success: true };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Reactivate user account error';
-    console.error('Reactivate user account error:', message);
+    logSafeAuthError('reactivate_user_account', error, data.userId);
     return { success: false, error: mapLifecycleError(error, 'Failed to reactivate user account.') };
   }
 }
@@ -600,9 +597,10 @@ export async function resetUserTemporaryPasswordAction(data: {
       await batch.commit();
     } catch (dbErr: unknown) {
       firestoreBatchFailed = true;
-      console.error('Firestore batch write failed during password reset:', dbErr);
+      logSafeAuthError('reset_password_batch_write', dbErr, data.userId);
     }
 
+    let fallbackAuditLogged = false;
     if (firestoreBatchFailed) {
       // Attempt fallback direct profile synchronization of mustChangePassword: true
       let fallbackSynced = false;
@@ -612,14 +610,47 @@ export async function resetUserTemporaryPasswordAction(data: {
           updatedAt: new Date().toISOString(),
         });
         fallbackSynced = true;
-      } catch {}
+      } catch (fallbackErr: unknown) {
+        logSafeAuthError('reset_password_profile_fallback', fallbackErr, data.userId);
+      }
 
       if (!fallbackSynced) {
-        // Fallback sync failed: disable Auth account for safety and reject action
-        await auth.updateUser(data.userId, { disabled: true }).catch(() => {});
-        throw new Error(
-          'Password reset failed during database update and fallback synchronization also failed. Auth account has been disabled for safety. Manual administrator intervention is required.'
-        );
+        // Fallback profile sync failed: track disable fallback explicitly
+        let accountDisabled = false;
+        try {
+          await auth.updateUser(data.userId, { disabled: true });
+          accountDisabled = true;
+        } catch (disableErr: unknown) {
+          logSafeAuthError('reset_password_disable_fallback', disableErr, data.userId);
+        }
+
+        const msg = accountDisabled
+          ? 'Password reset failed during database update and fallback synchronization also failed. Auth account has been disabled for security. Contact an administrator.'
+          : 'Password reset failed during database update, fallback synchronization failed, and the account could not be disabled automatically. Immediate administrator intervention is required.';
+
+        throw new Error(msg);
+      }
+
+      // Attempt separate safe fallback activity log write
+      try {
+        const fallbackLogRef = firestore.collection('activityLogs').doc();
+        await fallbackLogRef.set({
+          actorId: adminUid,
+          actorName: adminUser.fullName || 'Administrator',
+          actorRole: 'admin',
+          action: 'reset_temporary_password_fallback',
+          entityType: 'user',
+          entityId: data.userId,
+          metadata: sanitizeAuditMetadata({
+            targetUid: data.userId,
+            targetRole: targetUser.role,
+            fallbackSynchronizationUsed: true,
+          }),
+          createdAt: new Date().toISOString(),
+        });
+        fallbackAuditLogged = true;
+      } catch (logErr: unknown) {
+        logSafeAuthError('reset_password_audit_fallback', logErr, data.userId);
       }
     }
 
@@ -629,25 +660,25 @@ export async function resetUserTemporaryPasswordAction(data: {
       await auth.revokeRefreshTokens(data.userId);
     } catch (tokenErr: unknown) {
       tokenRevocationFailed = true;
-      console.error('Refresh token revocation failed during password reset:', tokenErr);
+      logSafeAuthError('reset_password_token_revocation', tokenErr, data.userId);
     }
 
     // Construct warning notice if partial state recovery occurred
     let warning: string | undefined = undefined;
     if (firestoreBatchFailed) {
-      warning = 'Password reset completed, but activity logging required fallback synchronization. Password change remains enforced.';
+      warning = fallbackAuditLogged
+        ? 'Password reset completed, but activity logging required fallback synchronization. Password change remains enforced.'
+        : 'Password reset completed and mandatory password change is enforced, but audit logging did not complete. Review the account manually.';
     } else if (tokenRevocationFailed) {
       warning = 'Password reset completed, but existing Firebase sessions could not be revoked. Normal ASCS actions remain blocked until password change.';
     }
-
     return {
       success: true,
       temporaryPassword: tempPassword,
       ...(warning ? { warning } : {}),
     };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Reset temporary password error';
-    console.error('Reset temporary password error:', message);
+    logSafeAuthError('reset_temporary_password', error, data.userId);
     return { success: false, error: mapLifecycleError(error, 'Failed to reset temporary password.') };
   }
 }
