@@ -7,7 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/clearance/status.test.ts lib/admin/lifecycle.test.ts lib/auth/edge-session.test.ts lib/auth/password-transition.test.ts lib/reports/metrics.test.ts lib/reports/filters.test.ts lib/reports/csv.test.ts lib/reports/authorization.test.ts"
+    "test": "tsx --test lib/clearance/status.test.ts lib/admin/lifecycle.test.ts lib/auth/edge-session.test.ts lib/auth/password-transition.test.ts lib/reports/metrics.test.ts lib/reports/filters.test.ts lib/reports/csv.test.ts lib/reports/authorization.test.ts",
+    "test:integration": "tsx -r ./tests/helpers/mock-server-only.cjs --test --test-concurrency=1 tests/integration/**/*.test.ts tests/rules/**/*.test.ts",
+    "test:rules": "tsx --test tests/rules/**/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:acceptance": "tsx scripts/run-acceptance.ts",
+    "emulators": "firebase emulators:start --only auth,firestore",
+    "emulators:exec": "firebase emulators:exec --only auth,firestore",
+    "seed:emulator": "tsx -r ./tests/helpers/mock-server-only.cjs scripts/seed-emulator.ts",
+    "reset:emulator": "tsx -r ./tests/helpers/mock-server-only.cjs scripts/reset-emulator.ts",
+    "demo:reset": "tsx -r ./tests/helpers/mock-server-only.cjs scripts/reset-emulator.ts",
+    "demo:prepare": "tsx scripts/demo-prepare.ts"
   },
   "dependencies": {
     "@tanstack/react-form": "^1.33.0",
@@ -19,15 +29,19 @@
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "firebase-tools": "^15.26.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.9",
     "typescript": "^5"
