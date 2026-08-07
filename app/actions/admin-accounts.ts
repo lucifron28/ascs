@@ -8,12 +8,12 @@ import {
   StaffAccountInput,
   validateStudentInput,
   validateStaffInput,
+  validateTemporaryPassword,
   checkSelfOperation,
   checkFinalActiveAdmin,
   generateRandomTemporaryPassword,
   sanitizeAuditMetadata,
 } from '@/lib/admin/lifecycle-validation';
-
 // Helper to verify caller is active Admin
 async function getAuthenticatedAdmin() {
   const authenticated = await getAuthenticatedUser();

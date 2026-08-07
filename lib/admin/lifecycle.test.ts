@@ -13,7 +13,9 @@ import {
   getAccountStatusFlags,
   shouldRedirectToChangePassword,
   generateRandomTemporaryPassword,
+  mapLifecycleError,
 } from './lifecycle-validation';
+import type { UserRole } from '@/lib/types/roles';
 
 test('1. Student account input validation sanitizes inputs', () => {
   const input = validateStudentInput({
@@ -48,12 +50,23 @@ test('3. Invalid email format is rejected', () => {
   assert.throws(() => validateEmail(''), /Email address is required/);
 });
 
-test('4. Weak temporary password is rejected', () => {
+test('4. Cryptographically generated temporary password satisfies security shape', () => {
   assert.throws(() => validateTemporaryPassword('short'), /at least 8 characters/);
   assert.equal(validateTemporaryPassword('validPassword123'), 'validPassword123');
 
-  const randomPass = generateRandomTemporaryPassword();
-  assert.ok(randomPass.length >= 8);
+  const set = new Set<string>();
+  for (let i = 0; i < 100; i++) {
+    const pass = generateRandomTemporaryPassword();
+    assert.ok(pass.length >= 12, `Password length ${pass.length} should be at least 12`);
+    assert.match(pass, /[A-Z]/, 'Password must contain uppercase letters');
+    assert.match(pass, /[a-z]/, 'Password must contain lowercase letters');
+    assert.match(pass, /[0-9]/, 'Password must contain digits');
+    assert.match(pass, /[!@#$%^&*]/, 'Password must contain symbols');
+    set.add(pass);
+  }
+
+  // 100 iterations of random password generation must produce 100 distinct passwords
+  assert.equal(set.size, 100, 'Cryptographic generator should produce unique values');
 });
 
 test('5. Student-required fields must be non-empty', () => {
@@ -139,30 +152,26 @@ test('12. mustChangePassword redirect decision logic works correctly', () => {
   assert.equal(shouldRedirectToChangePassword(null), false);
 });
 
-test('13. Successful Auth/Firestore lifecycle result contracts are formatted', () => {
-  const successContract = {
-    success: true,
-    temporaryPassword: 'TempPassword123!',
-    user: { uid: 'u-1', email: 'user@pkm.edu.ph', fullName: 'User Name', role: 'student' as UserRole },
-  };
-
-  assert.equal(successContract.success, true);
-  assert.ok(successContract.temporaryPassword);
-  assert.equal(successContract.user.role, 'student');
+test('13. Sensitive error mapping helper sanitizes internal errors', () => {
+  assert.equal(
+    mapLifecycleError(new Error('Firebase: The email address is already registered in Auth.')),
+    'The specified email address is already registered.'
+  );
+  assert.equal(
+    mapLifecycleError({ code: 'auth/user-not-found', message: 'User record missing' }),
+    'Target user or authentication account not found.'
+  );
+  assert.equal(
+    mapLifecycleError(new Error('Firebase auth error: weak-password')),
+    'Password does not meet required security standards.'
+  );
+  assert.equal(
+    mapLifecycleError(new Error('Action blocked: Cannot deactivate or demote the final active system administrator.')),
+    'Action blocked: Cannot deactivate or demote the final active system administrator.'
+  );
+  assert.equal(
+    mapLifecycleError(new Error('Firestore transaction partial failure during sync')),
+    'Operation encountered a synchronization issue. Check system audit logs.'
+  );
 });
 
-test('14. Compensation error result contract formatted when Firestore fails', () => {
-  const compensationErrorMessage = 'Account creation failed during Firestore profile creation. Compensation deleted the un-configured Auth account.';
-  const failedResult = { success: false, error: compensationErrorMessage };
-
-  assert.equal(failedResult.success, false);
-  assert.match(failedResult.error, /Compensation deleted/);
-});
-
-test('15. Compensation result contract formatted when custom claim sync fails', () => {
-  const rollbackErrorMessage = 'Role update failed while synchronizing Firebase Auth claims. Firestore rollback completed.';
-  const rollbackResult = { success: false, error: rollbackErrorMessage };
-
-  assert.equal(rollbackResult.success, false);
-  assert.match(rollbackResult.error, /Firestore rollback completed/);
-});
