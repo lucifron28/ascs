@@ -25,18 +25,45 @@ export async function fetchAdminUsersAction() {
     await getAuthenticatedAdmin();
     const firestore = getAdminFirestore();
 
-    const usersSnap = await firestore.collection('users').orderBy('createdAt', 'desc').get();
+    const [usersSnap, studentsSnap] = await Promise.all([
+      firestore.collection('users').orderBy('createdAt', 'desc').get(),
+      firestore.collection('students').get().catch(() => null),
+    ]);
+
+    const studentMap = new Map<string, string>();
+    if (studentsSnap) {
+      studentsSnap.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.studentNumber) {
+          studentMap.set(doc.id, data.studentNumber);
+        }
+      });
+    }
+
     const users = usersSnap.docs.map((doc) => {
       const data = doc.data();
+      const role = (data.role || 'student') as UserRole;
+      const studentNumber =
+        data.studentNumber || (role === 'student' ? studentMap.get(doc.id) : undefined);
+      const accountStatus = data.accountStatus || (data.isActive === false ? 'inactive' : 'active');
+      const isActive = data.isActive !== undefined ? Boolean(data.isActive) : accountStatus === 'active';
+
       return {
         uid: doc.id,
         email: data.email || '',
         username: data.username || '',
         fullName: data.fullName || '',
-        role: (data.role || 'student') as UserRole,
-        accountStatus: data.accountStatus || 'active',
+        role,
+        accountStatus,
+        isActive,
+        mustChangePassword: data.mustChangePassword ?? false,
+        studentNumber: studentNumber || '',
         contactNumber: data.contactNumber || '',
-        createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? data.createdAt : data.createdAt.toDate?.()?.toISOString?.() || new Date().toISOString()) : new Date().toISOString(),
+        createdAt: data.createdAt
+          ? typeof data.createdAt === 'string'
+            ? data.createdAt
+            : data.createdAt.toDate?.()?.toISOString?.() || new Date().toISOString()
+          : new Date().toISOString(),
       };
     });
 

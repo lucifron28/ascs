@@ -248,3 +248,57 @@ export function generateRandomTemporaryPassword(): string {
 
   return chars.join('');
 }
+/** Map internal or raw Firebase error objects to safe, sanitized user-facing messages. */
+export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Operation failed'): string {
+  if (!error) return fallbackMessage;
+
+  const errObj = typeof error === 'object' && error !== null ? (error as { code?: string; message?: string }) : {};
+  const message = error instanceof Error ? error.message : String(errObj.message || error);
+  const code = errObj.code || '';
+
+  const lowerMsg = message.toLowerCase();
+  const lowerCode = code.toLowerCase();
+
+  if (
+    lowerMsg.includes('already registered') ||
+    lowerMsg.includes('email-already-exists') ||
+    lowerCode.includes('email-already-exists')
+  ) {
+    return 'The specified email address is already registered.';
+  }
+  if (
+    lowerMsg.includes('user not found') ||
+    lowerMsg.includes('user-not-found') ||
+    lowerCode.includes('user-not-found')
+  ) {
+    return 'Target user or authentication account not found.';
+  }
+  if (
+    lowerMsg.includes('weak-password') ||
+    lowerCode.includes('weak-password') ||
+    lowerMsg.includes('at least 8 characters') ||
+    lowerMsg.includes('temporary password must be')
+  ) {
+    return 'Password does not meet required security standards.';
+  }
+  if (lowerMsg.includes('user-disabled') || lowerCode.includes('user-disabled')) {
+    return 'The target user account is disabled.';
+  }
+  if (lowerMsg.includes('invalid role') || lowerMsg.includes('role conversion') || lowerMsg.includes('changing between student')) {
+    return message;
+  }
+  if (
+    lowerMsg.includes('action blocked') ||
+    lowerMsg.includes('unauthorized') ||
+    lowerMsg.includes('cannot deactivate') ||
+    lowerMsg.includes('final active') ||
+    lowerMsg.includes('requires explicit confirmation')
+  ) {
+    return message;
+  }
+  if (lowerMsg.includes('partial') || lowerMsg.includes('compensation') || lowerMsg.includes('sync')) {
+    return 'Operation encountered a synchronization issue. Check system audit logs.';
+  }
+
+  return fallbackMessage;
+}

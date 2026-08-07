@@ -131,6 +131,7 @@ export default function AdminDashboard() {
     role: 'librarian' as UserRole,
     contactNumber: '',
     temporaryPassword: '',
+    confirmElevatedAdminCreation: false,
   });
 
   // Action Confirmation Modals (Deactivate / Reactivate / Password Reset)
@@ -257,6 +258,7 @@ export default function AdminDashboard() {
           role: 'librarian',
           contactNumber: '',
           temporaryPassword: '',
+          confirmElevatedAdminCreation: false,
         });
         setOneTimePasswordResult({
           email: res.user.email,
@@ -1291,6 +1293,28 @@ export default function AdminDashboard() {
                 />
               </div>
 
+              {staffForm.role === 'admin' && (
+                <div className="alert alert-warning text-xs rounded-xl py-2 my-2 flex flex-col items-start gap-2">
+                  <div className="flex items-center gap-2 font-bold text-amber-200">
+                    <Shield className="w-4 h-4 shrink-0 text-amber-400" />
+                    <span>Elevated Privilege Warning</span>
+                  </div>
+                  <p className="text-[11px] text-amber-300">
+                    Creating a System Administrator account grants full access to user management and system settings.
+                  </p>
+                  <label className="label cursor-pointer p-0 flex items-center gap-2 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={staffForm.confirmElevatedAdminCreation}
+                      onChange={(e) => setStaffForm({ ...staffForm, confirmElevatedAdminCreation: e.target.checked })}
+                      className="checkbox checkbox-xs checkbox-warning"
+                    />
+                    <span className="label-text text-xs text-amber-200 font-semibold">
+                      I confirm granting full system administrator access.
+                    </span>
+                  </label>
+                </div>
+              )}
               {modalError && (
                 <div className="alert alert-error text-xs rounded-xl py-2 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
