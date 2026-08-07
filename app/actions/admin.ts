@@ -8,6 +8,7 @@ import {
   checkFinalActiveAdmin,
   checkSelfOperation,
   sanitizeAuditMetadata,
+  mapLifecycleError,
 } from '@/lib/admin/lifecycle-validation';
 
 // Helper to authenticate Admin user
@@ -181,8 +182,8 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
     return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Update user role error';
-    console.error('Update user role error:', error);
-    return { success: false, error: message };
+    console.error('Update user role error:', message);
+    return { success: false, error: mapLifecycleError(error, 'Failed to update user role.') };
   }
 }
 

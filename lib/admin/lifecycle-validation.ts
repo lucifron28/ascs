@@ -292,11 +292,18 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
     lowerMsg.includes('unauthorized') ||
     lowerMsg.includes('cannot deactivate') ||
     lowerMsg.includes('final active') ||
-    lowerMsg.includes('requires explicit confirmation')
+    lowerMsg.includes('requires explicit confirmation') ||
+    lowerMsg.includes('manual intervention') ||
+    lowerMsg.includes('compensation') ||
+    lowerMsg.includes('cleanup completed') ||
+    lowerMsg.includes('restored') ||
+    lowerMsg.includes('disabled for safety') ||
+    lowerMsg.includes('fallback') ||
+    lowerMsg.includes('already registered to another student')
   ) {
     return message;
   }
-  if (lowerMsg.includes('partial') || lowerMsg.includes('compensation') || lowerMsg.includes('sync')) {
+  if (lowerMsg.includes('partial') || lowerMsg.includes('sync')) {
     return 'Operation encountered a synchronization issue. Check system audit logs.';
   }
 
