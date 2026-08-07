@@ -322,21 +322,34 @@ export function getSafeErrorCode(error: unknown): string {
   return 'unknown';
 }
 
-/** Log safe operation summaries server-side without exposing credentials or internal payloads. */
+export interface SafeLogContext {
+  targetUid?: string;
+  compensationSucceeded?: boolean;
+  accountDisabled?: boolean;
+  manualInterventionRequired?: boolean;
+}
+
+/** Log safe operation metadata server-side without exposing credentials or internal messages. */
 export function logSafeAuthError(
   operation: string,
   error: unknown,
-  targetUid?: string,
-  extra?: Record<string, unknown>
+  context?: string | SafeLogContext
 ): void {
-  const code = getSafeErrorCode(error);
-  const message = error instanceof Error ? error.message : 'Operation error';
+  const ctx: SafeLogContext =
+    typeof context === 'string' ? { targetUid: context } : context || {};
 
-  console.error(`[Auth Safeguard] ${operation} failed:`, {
+  console.error('[Auth Safeguard]', {
     operation,
-    code,
-    ...(targetUid ? { targetUid } : {}),
-    ...(extra || {}),
-    summary: message.substring(0, 150),
+    code: getSafeErrorCode(error),
+    ...(ctx.targetUid ? { targetUid: ctx.targetUid } : {}),
+    ...(ctx.compensationSucceeded !== undefined
+      ? { compensationSucceeded: ctx.compensationSucceeded }
+      : {}),
+    ...(ctx.accountDisabled !== undefined
+      ? { accountDisabled: ctx.accountDisabled }
+      : {}),
+    ...(ctx.manualInterventionRequired !== undefined
+      ? { manualInterventionRequired: ctx.manualInterventionRequired }
+      : {}),
   });
 }
