@@ -1,76 +1,61 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { UserRole } from '@/lib/types/roles';
+import { assertReportScope, checkReportRoleAuthorization } from './authorization';
 
-export function checkReportRoleAuthorization(
-  user: { role?: string; accountStatus?: string; isActive?: boolean; mustChangePassword?: boolean } | null,
-  requiredScope: 'admin' | 'dean'
-): { authorized: boolean; reason?: string } {
-  if (!user) {
-    return { authorized: false, reason: 'No active session' };
-  }
+test('1. Admin role can access Admin reports and shared scope', () => {
+  const resAdmin = checkReportRoleAuthorization({ role: 'admin', accountStatus: 'active', isActive: true }, 'admin');
+  assert.equal(resAdmin.authorized, true);
+  assert.doesNotThrow(() => assertReportScope({ role: 'admin', accountStatus: 'active', isActive: true }, 'admin'));
 
-  if (user.accountStatus === 'inactive' || user.isActive === false) {
-    return { authorized: false, reason: 'Account is inactive' };
-  }
-
-  if (user.mustChangePassword === true) {
-    return { authorized: false, reason: 'Password change required' };
-  }
-
-  if (requiredScope === 'admin') {
-    if (user.role !== 'admin') {
-      return { authorized: false, reason: 'Unauthorized role for Admin reports' };
-    }
-  } else if (requiredScope === 'dean') {
-    if (user.role !== 'dean') {
-      return { authorized: false, reason: 'Unauthorized role for Dean reports' };
-    }
-  }
-
-  return { authorized: true };
-}
-
-test('1. Admin role can access Admin reports', () => {
-  const res = checkReportRoleAuthorization({ role: 'admin', accountStatus: 'active', isActive: true }, 'admin');
-  assert.equal(res.authorized, true);
+  const resShared = checkReportRoleAuthorization({ role: 'admin', accountStatus: 'active', isActive: true }, 'shared');
+  assert.equal(resShared.authorized, true);
 });
 
-test('2. Dean role cannot access Admin reports', () => {
-  const res = checkReportRoleAuthorization({ role: 'dean', accountStatus: 'active', isActive: true }, 'admin');
-  assert.equal(res.authorized, false);
-  assert.match(res.reason!, /Unauthorized role/);
+test('2. Dean role cannot access Admin reports but can access Dean reports and shared scope', () => {
+  const resAdmin = checkReportRoleAuthorization({ role: 'dean', accountStatus: 'active', isActive: true }, 'admin');
+  assert.equal(resAdmin.authorized, false);
+  assert.throws(
+    () => assertReportScope({ role: 'dean', accountStatus: 'active', isActive: true }, 'admin'),
+    /Only system administrators/
+  );
+
+  const resDean = checkReportRoleAuthorization({ role: 'dean', accountStatus: 'active', isActive: true }, 'dean');
+  assert.equal(resDean.authorized, true);
+
+  const resShared = checkReportRoleAuthorization({ role: 'dean', accountStatus: 'active', isActive: true }, 'shared');
+  assert.equal(resShared.authorized, true);
 });
 
-test('3. Dean role can access Dean reports', () => {
-  const res = checkReportRoleAuthorization({ role: 'dean', accountStatus: 'active', isActive: true }, 'dean');
-  assert.equal(res.authorized, true);
+test('3. Student role cannot access Admin, Dean, or shared filter option scopes', () => {
+  const student = { role: 'student', accountStatus: 'active', isActive: true };
+  assert.equal(checkReportRoleAuthorization(student, 'admin').authorized, false);
+  assert.equal(checkReportRoleAuthorization(student, 'dean').authorized, false);
+  assert.equal(checkReportRoleAuthorization(student, 'shared').authorized, false);
+  assert.throws(() => assertReportScope(student, 'shared'), /Only administrators or the Academic Dean/);
 });
 
-test('4. Student role cannot access Admin or Dean reports', () => {
-  assert.equal(checkReportRoleAuthorization({ role: 'student', accountStatus: 'active', isActive: true }, 'admin').authorized, false);
-  assert.equal(checkReportRoleAuthorization({ role: 'student', accountStatus: 'active', isActive: true }, 'dean').authorized, false);
-});
-
-test('5. Signatory roles (librarian, accountant, adviser) cannot access Admin or Dean reports', () => {
+test('4. Signatory roles (librarian, accountant, adviser, etc.) cannot access any report scopes', () => {
   const roles: UserRole[] = ['librarian', 'accountant', 'adviser', 'osa_coordinator', 'guidance_counselor', 'area_chair'];
   for (const role of roles) {
-    assert.equal(checkReportRoleAuthorization({ role, accountStatus: 'active', isActive: true }, 'admin').authorized, false);
-    assert.equal(checkReportRoleAuthorization({ role, accountStatus: 'active', isActive: true }, 'dean').authorized, false);
+    const user = { role, accountStatus: 'active', isActive: true };
+    assert.equal(checkReportRoleAuthorization(user, 'admin').authorized, false);
+    assert.equal(checkReportRoleAuthorization(user, 'dean').authorized, false);
+    assert.equal(checkReportRoleAuthorization(user, 'shared').authorized, false);
   }
 });
 
-test('6. Inactive Admin or Dean is blocked', () => {
-  const resAdmin = checkReportRoleAuthorization({ role: 'admin', accountStatus: 'inactive', isActive: false }, 'admin');
-  assert.equal(resAdmin.authorized, false);
-  assert.match(resAdmin.reason!, /inactive/);
+test('5. Inactive Admin or Dean is blocked', () => {
+  const inactiveAdmin = { role: 'admin', accountStatus: 'inactive', isActive: false };
+  assert.equal(checkReportRoleAuthorization(inactiveAdmin, 'admin').authorized, false);
+  assert.throws(() => assertReportScope(inactiveAdmin, 'admin'), /inactive/);
 
-  const resDean = checkReportRoleAuthorization({ role: 'dean', accountStatus: 'inactive', isActive: false }, 'dean');
-  assert.equal(resDean.authorized, false);
+  const inactiveDean = { role: 'dean', accountStatus: 'inactive', isActive: false };
+  assert.equal(checkReportRoleAuthorization(inactiveDean, 'dean').authorized, false);
 });
 
-test('7. Password-change-required user is blocked from reports', () => {
-  const res = checkReportRoleAuthorization({ role: 'admin', accountStatus: 'active', isActive: true, mustChangePassword: true }, 'admin');
-  assert.equal(res.authorized, false);
-  assert.match(res.reason!, /Password change/);
+test('6. Password-change-required user is blocked from all report scopes', () => {
+  const pendingPasswordUser = { role: 'admin', accountStatus: 'active', isActive: true, mustChangePassword: true };
+  assert.equal(checkReportRoleAuthorization(pendingPasswordUser, 'admin').authorized, false);
+  assert.throws(() => assertReportScope(pendingPasswordUser, 'admin'), /Password change/);
 });
