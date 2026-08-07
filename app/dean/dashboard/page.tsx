@@ -3,7 +3,8 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import DeanDashboard from '@/components/dean/DeanDashboard';
-import { LogOut, Shield } from 'lucide-react';
+import { LogOut, Shield, Eye, BarChart3 } from 'lucide-react';
+import Link from 'next/link';
 import ThemeSelector from '@/components/ui/ThemeSelector';
 import NotificationDropdown from '@/components/ui/NotificationDropdown';
 
@@ -26,10 +27,25 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-base-300 text-base-content font-sans flex flex-col transition-colors duration-200">
       {/* Navbar */}
       <div className="navbar bg-base-100 border-b border-base-content/10 px-6 shrink-0 z-30 sticky top-0">
-        <div className="flex-1">
+        <div className="flex-1 flex items-center gap-6">
           <span className="font-extrabold text-lg tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary flex items-center gap-1.5">
             <Shield className="w-5 h-5 text-primary shrink-0" /> ASCS PKM
           </span>
+
+          <nav className="flex items-center gap-2">
+            <Link
+              href="/dean/dashboard"
+              className="btn btn-xs btn-primary rounded-lg gap-1 font-semibold"
+            >
+              <Eye className="w-3.5 h-3.5" /> Oversight
+            </Link>
+            <Link
+              href="/dean/reports"
+              className="btn btn-xs btn-ghost text-base-content/70 hover:text-base-content rounded-lg gap-1 font-medium"
+            >
+              <BarChart3 className="w-3.5 h-3.5" /> Reports
+            </Link>
+          </nav>
         </div>
         <div className="flex-none flex items-center gap-3">
           <NotificationDropdown />
