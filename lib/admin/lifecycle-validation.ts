@@ -309,3 +309,34 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
 
   return fallbackMessage;
 }
+/** Extract safe error code string without logging raw credential payloads. */
+export function getSafeErrorCode(error: unknown): string {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as { code?: unknown }).code === 'string'
+  ) {
+    return (error as { code: string }).code;
+  }
+  return 'unknown';
+}
+
+/** Log safe operation summaries server-side without exposing credentials or internal payloads. */
+export function logSafeAuthError(
+  operation: string,
+  error: unknown,
+  targetUid?: string,
+  extra?: Record<string, unknown>
+): void {
+  const code = getSafeErrorCode(error);
+  const message = error instanceof Error ? error.message : 'Operation error';
+
+  console.error(`[Auth Safeguard] ${operation} failed:`, {
+    operation,
+    code,
+    ...(targetUid ? { targetUid } : {}),
+    ...(extra || {}),
+    summary: message.substring(0, 150),
+  });
+}

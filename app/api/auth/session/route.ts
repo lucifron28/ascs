@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
+import { logSafeAuthError } from '@/lib/admin/lifecycle-validation';
 import { getSessionCookieName } from '@/lib/auth/session';
 
 export async function POST(request: NextRequest) {
@@ -57,8 +58,8 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: unknown) {
+    logSafeAuthError('create_session_cookie', error);
     const message = error instanceof Error ? error.message : 'Authentication failed';
-    console.error('Session creation error:', error);
     return NextResponse.json({ error: message }, { status: 401 });
   }
 }

@@ -9,6 +9,7 @@ import {
   checkSelfOperation,
   sanitizeAuditMetadata,
   mapLifecycleError,
+  logSafeAuthError,
 } from '@/lib/admin/lifecycle-validation';
 
 // Helper to authenticate Admin user
@@ -70,9 +71,8 @@ export async function fetchAdminUsersAction() {
 
     return { success: true, users };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Fetch admin users error';
-    console.error('Fetch admin users error:', error);
-    return { success: false, error: message };
+    logSafeAuthError('fetch_admin_users', error);
+    return { success: false, error: mapLifecycleError(error, 'Fetch admin users error.') };
   }
 }
 
@@ -181,8 +181,7 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
 
     return { success: true };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Update user role error';
-    console.error('Update user role error:', message);
+    logSafeAuthError('update_user_role', error, data.userId);
     return { success: false, error: mapLifecycleError(error, 'Failed to update user role.') };
   }
 }
@@ -209,9 +208,8 @@ export async function fetchClearanceRequirementsAction() {
 
     return { success: true, requirements };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Fetch clearance requirements error';
-    console.error('Fetch clearance requirements error:', error);
-    return { success: false, error: message };
+    logSafeAuthError('fetch_clearance_requirements', error);
+    return { success: false, error: mapLifecycleError(error, 'Fetch clearance requirements error.') };
   }
 }
 
@@ -273,9 +271,8 @@ export async function updateRequirementAssignmentAction(data: {
 
     return { success: true };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Update requirement assignment error';
-    console.error('Update requirement assignment error:', error);
-    return { success: false, error: message };
+    logSafeAuthError('update_requirement_assignment', error, data.requirementId);
+    return { success: false, error: mapLifecycleError(error, 'Update requirement assignment error.') };
   }
 }
 
@@ -303,8 +300,7 @@ export async function fetchActivityLogsAction() {
 
     return { success: true, logs };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Fetch activity logs error';
-    console.error('Fetch activity logs error:', error);
-    return { success: false, error: message };
+    logSafeAuthError('fetch_activity_logs', error);
+    return { success: false, error: mapLifecycleError(error, 'Fetch activity logs error.') };
   }
 }
