@@ -198,28 +198,28 @@ export default function DeanDashboard() {
           <div className="overflow-x-auto w-full">
             <table className="table w-full text-left text-sm border-separate border-spacing-y-2">
               <thead>
-                <tr className="text-slate-400 text-xs uppercase tracking-wider border-none">
-                  <th className="bg-transparent pb-4 pl-4">Student</th>
-                  <th className="bg-transparent pb-4">ID Number</th>
-                  <th className="bg-transparent pb-4">Program / Term</th>
-                  <th className="bg-transparent pb-4">Purpose</th>
-                  <th className="bg-transparent pb-4">Clearance Status</th>
-                  <th className="bg-transparent pb-4 pr-4 text-right">Oversight</th>
+                <tr className="text-base-content/70 text-xs uppercase tracking-wider border-b border-base-content/10">
+                  <th scope="col" className="bg-transparent pb-4 pl-4 font-bold">Student</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">ID Number</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Program / Term</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Purpose</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Clearance Status</th>
+                  <th scope="col" className="bg-transparent pb-4 pr-4 text-right font-bold">Oversight</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecords.map((rec) => (
-                  <tr key={rec.id} className="bg-slate-950/40 hover:bg-slate-950/70 border border-slate-855 rounded-xl transition-all">
-                    <td className="font-semibold text-white py-4 rounded-l-xl pl-4 flex flex-col justify-center min-w-[150px]">
+                  <tr key={rec.id} className="bg-base-200/50 hover:bg-base-200 border border-base-content/10 rounded-xl transition-all">
+                    <td className="font-semibold text-base-content py-4 rounded-l-xl pl-4 flex flex-col justify-center min-w-[150px]">
                       <span>{rec.studentName}</span>
-                      <span className="text-[10px] text-slate-500 font-normal mt-0.5">Ref: {rec.applicationNumber}</span>
+                      <span className="text-[10px] text-base-content/60 font-normal mt-0.5">Ref: {rec.applicationNumber}</span>
                     </td>
-                    <td className="text-slate-300 py-4 font-mono text-xs">{rec.studentNumber}</td>
-                    <td className="text-slate-300 py-4">
+                    <td className="text-base-content/80 py-4 font-mono text-xs">{rec.studentNumber}</td>
+                    <td className="text-base-content/80 py-4">
                       {rec.program} • {rec.academicYear} ({normalizeSemester(rec.semester)})
                     </td>
-                    <td className="text-slate-300 py-4">
-                      <span className="badge badge-sm border border-slate-700 bg-slate-800 text-slate-300 rounded-md font-medium px-2 py-0.5">
+                    <td className="text-base-content/80 py-4">
+                      <span className="badge badge-sm border border-base-content/10 bg-base-300 text-base-content rounded-md font-medium px-2 py-0.5">
                         {rec.purpose}
                       </span>
                     </td>
@@ -241,7 +241,8 @@ export default function DeanDashboard() {
                     <td className="py-4 rounded-r-xl pr-4 text-right">
                       <button
                         onClick={() => setSelectedRecord(rec)}
-                        className="btn btn-xs btn-outline border-indigo-500/40 text-indigo-400 hover:bg-indigo-600 hover:text-white rounded-lg font-semibold shadow-md active:scale-95 ml-auto"
+                        aria-label={`View oversight details for ${rec.studentName}`}
+                        className="btn btn-xs btn-primary rounded-lg font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         Details
                       </button>

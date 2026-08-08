@@ -7,9 +7,9 @@ import { normalizeSemester } from '@/lib/academic-term';
 import ApplicationForm from '@/components/student/ApplicationForm';
 import TrackingTable from '@/components/student/TrackingTable';
 import StatusSummary from '@/components/student/StatusSummary';
-import { LogOut, Shield, Printer, RefreshCw, CheckCircle2, X } from 'lucide-react';
-import ThemeSelector from '@/components/ui/ThemeSelector';
-import NotificationDropdown from '@/components/ui/NotificationDropdown';
+import { Printer, CheckCircle2 } from 'lucide-react';
+import RoleHeader from '@/components/layout/RoleHeader';
+import AccessibleDialog from '@/components/ui/AccessibleDialog';
 
 export default function StudentDashboardPage() {
   const router = useRouter();
@@ -56,18 +56,6 @@ export default function StudentDashboardPage() {
     loadDashboard();
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      const res = await fetch('/api/auth/logout', { method: 'POST' });
-      if (res.ok) {
-        router.push('/login');
-        router.refresh();
-      }
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
-
   const handlePrint = () => {
     const appObj = dashboardData?.application as { id?: string } | undefined;
     if (appObj?.id) {
@@ -76,46 +64,21 @@ export default function StudentDashboardPage() {
       setShowPrintModal(true);
     }
   };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-        <span className="loading loading-spinner loading-lg text-indigo-500 mb-2" />
-        <p className="text-slate-400 text-sm animate-pulse">Loading clearance status...</p>
+      <div className="min-h-screen bg-base-300 flex flex-col items-center justify-center text-base-content">
+        <span className="loading loading-spinner loading-lg text-primary mb-2" aria-hidden="true" />
+        <p className="text-base-content/70 text-sm font-medium animate-pulse">Loading clearance status...</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-base-300 text-base-content font-sans flex flex-col transition-colors duration-200">
-      {/* Top Navigation Navbar */}
-      <div className="navbar bg-base-100/80 backdrop-blur border-b border-base-content/10 px-6 shrink-0 z-30 sticky top-0">
-        <div className="flex-1">
-          <span className="font-extrabold text-lg tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary flex items-center gap-1.5">
-            <Shield className="w-5 h-5 text-primary shrink-0" /> ASCS PKM
-          </span>
-        </div>
-        <div className="flex-none flex items-center gap-3">
-          <NotificationDropdown />
-          <ThemeSelector />
-          <button
-            onClick={loadDashboard}
-            className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg p-1.5"
-            title="Refresh status"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleLogout}
-            className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg flex items-center gap-1.5"
-          >
-            <LogOut className="w-4 h-4" /> Logout
-          </button>
-        </div>
-      </div>
+      <RoleHeader roleTitle="Student Clearance" />
 
       {/* Main Container */}
-      <div className="flex-1 overflow-y-auto p-6 md:p-8 max-w-5xl w-full mx-auto space-y-8">
+      <main id="main-content" className="flex-1 overflow-y-auto p-6 md:p-8 max-w-5xl w-full mx-auto space-y-8">
         {/* Error Alert panel */}
         {error && (
           <div className="alert alert-error bg-rose-950/80 border-rose-800 text-rose-300 rounded-xl flex items-center gap-2 p-3 text-sm">
@@ -128,10 +91,10 @@ export default function StudentDashboardPage() {
 
         {/* Welcome Header */}
         <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-base-content">
             Welcome Back!
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-base-content/70 text-sm mt-1 font-medium">
             Check your clearance requirements checklist and accountability monitoring status.
           </p>
         </div>
@@ -140,8 +103,8 @@ export default function StudentDashboardPage() {
         {dashboardData?.application === null ? (
           /* Application submission screen */
           <div className="space-y-6">
-            <div className="card bg-slate-900 border border-slate-800/40 p-6 rounded-2xl max-w-xl mx-auto text-center space-y-3">
-              <p className="text-sm text-slate-400">
+            <div className="card bg-base-100 border border-base-content/10 p-6 rounded-2xl max-w-xl mx-auto text-center space-y-3 shadow-sm">
+              <p className="text-sm text-base-content/70 font-medium">
                 You do not have an active clearance application for the current semester. Complete the form below to initiate your checklist.
               </p>
             </div>
@@ -180,30 +143,27 @@ export default function StudentDashboardPage() {
           </div>
         )}
 
-        {/* Print Modal Dialog */}
-        {showPrintModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white text-slate-950 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 rounded-t-2xl">
-              <span className="font-bold text-slate-800">ASCS Clearance Record Preview (Prototype)</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => window.print()}
-                  className="btn btn-sm btn-primary bg-indigo-600 hover:bg-indigo-500 border-none text-white rounded-lg flex items-center gap-1"
-                >
-                  <Printer className="w-4 h-4" /> Print Record
-                </button>
-                <button
-                  onClick={() => setShowPrintModal(false)}
-                  className="btn btn-sm btn-ghost hover:bg-slate-200 text-slate-500 rounded-lg p-1.5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {/* Accessible Print Modal Dialog */}
+        <AccessibleDialog
+          isOpen={showPrintModal}
+          onClose={() => setShowPrintModal(false)}
+          title="ASCS Clearance Record Preview (Prototype)"
+          description="A4 prototype record preview of clearance approvals and financial status."
+          maxWidthClass="max-w-3xl"
+        >
+          <div className="space-y-6">
+            <div className="flex justify-end gap-2 no-print">
+              <button
+                onClick={() => window.print()}
+                className="btn btn-sm btn-primary rounded-xl flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <Printer className="w-4 h-4" aria-hidden="true" />
+                <span>Print Record</span>
+              </button>
             </div>
 
-            {/* Printable Area */}
-            <div id="printable-clearance-area" className="flex-1 overflow-y-auto p-8 font-serif leading-relaxed text-sm">
+            {/* Printable Content */}
+            <div id="printable-clearance-area" className="bg-white text-slate-900 p-8 font-serif leading-relaxed text-sm rounded-xl border border-slate-200 shadow-sm">
               <div className="text-center space-y-1 mb-8">
                 <h2 className="text-xl font-bold uppercase tracking-wide">Pambayang Kolehiyo ng Mauban</h2>
                 <p className="text-xs italic text-slate-600">Mauban, Quezon</p>
@@ -242,7 +202,7 @@ export default function StudentDashboardPage() {
                 {((dashboardData?.approvals as Array<{ id: string; assignee_name?: string; label?: string; acted_at?: string; signatory_role?: string }>) || [])
                   .filter((appr) => appr.signatory_role !== 'accountant')
                   .map((appr) => (
-                  <div key={appr.id} className="border-b border-slate-200 pb-3 flex flex-col justify-end min-h-[60px]">
+                  <div key={appr.id} className="border-b border-slate-200 pb-3 flex flex-col justify-end min-h-[60px] break-inside-avoid">
                     <div className="font-bold text-slate-800 text-xs">{appr.assignee_name || 'APPROVED'}</div>
                     <div className="text-[10px] text-slate-500 italic uppercase">{appr.label}</div>
                     <div className="text-[9px] text-emerald-600 font-semibold mt-1">Status: SIGNED ON {appr.acted_at ? new Date(appr.acted_at).toLocaleDateString() : new Date().toLocaleDateString()}</div>
@@ -255,9 +215,8 @@ export default function StudentDashboardPage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
-      </div>
+        </AccessibleDialog>
+      </main>
     </div>
   );
 }

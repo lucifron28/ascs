@@ -31,14 +31,14 @@ export default function BottleneckTable({
         <table className="table table-sm w-full text-xs">
           <thead>
             <tr className="text-base-content/60 border-b border-base-content/10">
-              <th className="font-semibold">Requirement Office</th>
-              <th className="font-semibold">Role</th>
-              <th className="font-semibold text-right">Total Assigned</th>
-              <th className="font-semibold text-right">Approved</th>
-              <th className="font-semibold text-right">Pending</th>
-              <th className="font-semibold text-right">Not Approved</th>
-              <th className="font-semibold text-right">Unresolved Count</th>
-              <th className="font-semibold text-right">Completion Rate</th>
+              <th scope="col" className="font-semibold">Requirement Office</th>
+              <th scope="col" className="font-semibold">Role</th>
+              <th scope="col" className="font-semibold text-right">Total Assigned</th>
+              <th scope="col" className="font-semibold text-right">Approved</th>
+              <th scope="col" className="font-semibold text-right">Pending</th>
+              <th scope="col" className="font-semibold text-right">Not Approved</th>
+              <th scope="col" className="font-semibold text-right">Unresolved Count</th>
+              <th scope="col" className="font-semibold text-right">Completion Rate</th>
             </tr>
           </thead>
           <tbody>
