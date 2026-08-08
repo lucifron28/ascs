@@ -11,6 +11,7 @@
     "test:integration": "tsx -r ./tests/helpers/mock-server-only.cjs --test --test-concurrency=1 tests/integration/account-lifecycle.test.ts tests/integration/password-change.test.ts tests/integration/clearance-submission.test.ts tests/integration/signatory-workflow.test.ts tests/integration/financial-workflow.test.ts tests/integration/dean-visibility.test.ts tests/integration/clearance-completion.test.ts tests/integration/reports.test.ts tests/rules/security-boundaries.test.ts",
     "test:rules": "tsx --test tests/rules/security-boundaries.test.ts",
     "test:e2e": "playwright test",
+    "test:ux": "playwright test tests/e2e/accessibility.spec.ts tests/e2e/responsive-layout.spec.ts tests/e2e/keyboard-navigation.spec.ts tests/e2e/print-clearance.spec.ts",
     "test:acceptance": "tsx scripts/run-acceptance.ts",
     "emulators": "firebase emulators:start --only auth,firestore",
     "emulators:exec": "firebase emulators:exec --only auth,firestore",
@@ -33,6 +34,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@firebase/rules-unit-testing": "^5.0.1",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
