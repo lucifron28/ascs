@@ -463,8 +463,7 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={loadData}
-            disabled={loading}
-            className="btn btn-outline btn-sm rounded-xl gap-2 hover:bg-base-content/10"
+            className="btn btn-sm btn-ghost border border-base-content/20 text-base-content hover:bg-base-content/10 font-semibold"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
@@ -476,7 +475,7 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('overview')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'overview' ? 'tab-active bg-primary text-primary-content shadow-md' : 'text-base-content/70'
+            activeTab === 'overview' ? 'tab-active bg-primary text-white shadow-md' : 'text-base-content/70'
           }`}
         >
           <Activity className="w-4 h-4" /> Overview
@@ -484,7 +483,7 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('users')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'users' ? 'tab-active bg-primary text-primary-content shadow-md' : 'text-base-content/70'
+            activeTab === 'users' ? 'tab-active bg-primary text-white shadow-md' : 'text-base-content/70'
           }`}
         >
           <Users className="w-4 h-4" /> Users ({users.length})
@@ -492,7 +491,7 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('requirements')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'requirements' ? 'tab-active bg-primary text-primary-content shadow-md' : 'text-base-content/70'
+            activeTab === 'requirements' ? 'tab-active bg-primary text-white shadow-md' : 'text-base-content/70'
           }`}
         >
           <ListOrdered className="w-4 h-4" /> Requirements ({requirements.length})
@@ -500,7 +499,7 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('logs')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'logs' ? 'tab-active bg-primary text-primary-content shadow-md' : 'text-base-content/70'
+            activeTab === 'logs' ? 'tab-active bg-primary text-white shadow-md' : 'text-base-content/70'
           }`}
         >
           <FileCheck className="w-4 h-4" /> Audit Logs ({logs.length})
@@ -595,9 +594,11 @@ export default function AdminDashboard() {
             </div>
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
               <select
+                id="admin-user-role-filter"
+                aria-label="Filter Users by Role"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-sm"
+                className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="all">All Roles</option>
                 {ROLES_LIST.map((r) => (
@@ -687,7 +688,7 @@ export default function AdminDashboard() {
                           <button
                             onClick={() => handleOpenRoleModal(u)}
                             disabled={u.uid === currentAdminUid}
-                            className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 rounded-lg flex items-center gap-1"
+                            className="btn btn-xs btn-primary text-primary-content font-bold rounded-lg flex items-center gap-1"
                             title="Change User Role"
                           >
                             <Edit className="w-3.5 h-3.5" />
@@ -701,7 +702,7 @@ export default function AdminDashboard() {
                                 setActionType('reactivate');
                                 setModalError(null);
                               }}
-                              className="btn btn-ghost btn-xs text-success hover:bg-success/10 rounded-lg flex items-center gap-1"
+                              className="btn btn-xs btn-success text-success-content font-bold rounded-lg flex items-center gap-1"
                               title="Reactivate Account"
                             >
                               <UserCheck2 className="w-3.5 h-3.5" />
@@ -715,7 +716,7 @@ export default function AdminDashboard() {
                                 setModalError(null);
                               }}
                               disabled={u.uid === currentAdminUid}
-                              className="btn btn-ghost btn-xs text-error hover:bg-error/10 rounded-lg flex items-center gap-1"
+                              className="btn btn-xs btn-error text-error-content font-bold rounded-lg flex items-center gap-1"
                               title="Deactivate Account"
                             >
                               <UserX className="w-3.5 h-3.5" />
@@ -730,7 +731,7 @@ export default function AdminDashboard() {
                               setModalError(null);
                             }}
                             disabled={u.uid === currentAdminUid}
-                            className="btn btn-ghost btn-xs text-warning hover:bg-warning/10 rounded-lg flex items-center gap-1"
+                            className="btn btn-xs btn-warning text-warning-content font-bold rounded-lg flex items-center gap-1"
                             title="Reset Temporary Password"
                           >
                             <KeyRound className="w-3.5 h-3.5" />

@@ -22,7 +22,7 @@ export default function BottleneckTable({
           <AlertTriangle className="w-4 h-4 text-warning" />
           <h3 className="font-bold text-xs uppercase tracking-wider text-base-content">{title}</h3>
         </div>
-        <span className="text-[10px] text-base-content/50 font-medium">
+        <span className="text-[10px] text-base-content/80 font-bold">
           Sorted by Total Unresolved (Pending + Not Approved)
         </span>
       </div>

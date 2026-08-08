@@ -234,11 +234,11 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
 
         <div className="pt-8 grid grid-cols-2 gap-8 items-end font-sans">
           <div className="space-y-2">
-            <div className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-full flex items-center justify-center text-[10px] text-slate-400 font-bold uppercase text-center p-2">
+            <div className="w-24 h-24 border-2 border-dashed border-slate-400 rounded-full flex items-center justify-center text-[10px] text-slate-700 font-bold uppercase text-center p-2">
               Institution Seal Placeholder
             </div>
-            <p className="text-[10px] text-slate-500">
-              Date Issued: <span className="font-mono font-semibold text-slate-700">{new Date(issuedAt).toLocaleDateString()}</span>
+            <p className="text-[10px] text-slate-700 font-semibold">
+              Date Issued: <span className="font-mono font-bold text-slate-900">{new Date(issuedAt).toLocaleDateString()}</span>
             </p>
           </div>
 
@@ -252,7 +252,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
             </p>
           </div>
         </div>
-        <p className="text-center text-[10px] font-sans font-semibold uppercase tracking-wider text-slate-500 border-t border-slate-200 pt-4">
+        <p className="text-center text-[10px] font-sans font-bold uppercase tracking-wider text-slate-700 border-t border-slate-200 pt-4">
           Prototype / MVP output for internal testing only — not an official school certificate.
         </p>
       </div>

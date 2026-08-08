@@ -47,7 +47,7 @@ export default function ReportFiltersComponent({
             Report Parameters & Scope Filters
           </h3>
         </div>
-        <span className="text-[10px] uppercase font-bold text-base-content/50 px-2 py-0.5 bg-base-200 rounded-md">
+        <span className="text-[10px] uppercase font-bold text-base-content/80 px-2 py-0.5 bg-base-200 rounded-md">
           {scope === 'admin' ? 'Institution Scope' : 'Academic Dean Oversight Scope'}
         </span>
       </div>

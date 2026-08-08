@@ -293,7 +293,7 @@ export default function SignatoryDashboard() {
             </div>
 
             {/* Modal Actions */}
-            <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-base-content/10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 pt-3 border-t border-base-content/10">
               <button
                 onClick={() => handleAction('not_approved')}
                 disabled={modalLoading || modalSuccess}

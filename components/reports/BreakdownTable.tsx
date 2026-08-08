@@ -22,7 +22,7 @@ export default function BreakdownTable({
     <div className="card bg-base-100 border border-base-content/10 p-5 rounded-2xl shadow-sm space-y-4">
       <div className="border-b border-base-content/10 pb-3">
         <h3 className="font-bold text-xs uppercase tracking-wider text-base-content">{title}</h3>
-        {description && <p className="text-[11px] text-base-content/60 mt-0.5">{description}</p>}
+        {description && <p className="text-[11px] text-base-content/80 font-medium mt-0.5">{description}</p>}
       </div>
 
       <div className="overflow-x-auto">
