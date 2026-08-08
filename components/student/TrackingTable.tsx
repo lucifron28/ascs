@@ -74,19 +74,20 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
   return (
     <div className="space-y-6">
       {/* Approvals Checklist Card */}
-      <div className="card bg-slate-900 border border-slate-800 shadow-2xl p-6 rounded-2xl">
-        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-indigo-400" /> Signatory Checklist
+      <div className="card bg-base-100 border border-base-content/10 shadow-xl p-6 rounded-2xl">
+        <h3 className="text-lg font-bold text-base-content mb-4 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
+          <span>Signatory Checklist</span>
         </h3>
 
         <div className="overflow-x-auto w-full">
           <table className="table w-full text-left text-sm border-separate border-spacing-y-2">
             <thead>
-              <tr className="text-slate-400 text-xs uppercase tracking-wider border-none">
-                <th className="bg-transparent pb-4">Signatory Department</th>
-                <th className="bg-transparent pb-4">Assigned Signatory</th>
-                <th className="bg-transparent pb-4">Clearance Status</th>
-                <th className="bg-transparent pb-4">Last Actioned</th>
+              <tr className="text-base-content/70 text-xs uppercase tracking-wider border-b border-base-content/10">
+                <th scope="col" className="bg-transparent pb-4 pl-4 font-bold">Signatory Department</th>
+                <th scope="col" className="bg-transparent pb-4 font-bold">Assigned Signatory</th>
+                <th scope="col" className="bg-transparent pb-4 font-bold">Clearance Status</th>
+                <th scope="col" className="bg-transparent pb-4 pr-4 font-bold">Last Actioned</th>
               </tr>
             </thead>
             <tbody>
@@ -96,20 +97,20 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
                 );
                 return (
                   <React.Fragment key={appr.id}>
-                    <tr className="bg-slate-950/40 hover:bg-slate-950/70 border border-slate-850 rounded-xl transition-all">
-                      <td className="font-semibold text-white py-4 rounded-l-xl pl-4">
+                    <tr className="bg-base-200/50 hover:bg-base-200 border border-base-content/10 rounded-xl transition-all">
+                      <td className="font-semibold text-base-content py-4 rounded-l-xl pl-4">
                         {appr.label}
                       </td>
-                      <td className="text-slate-300 py-4">
+                      <td className="text-base-content/80 py-4">
                         <div className="flex items-center gap-1.5">
-                          <UserCheck className="w-3.5 h-3.5 text-slate-500" />
+                          <UserCheck className="w-3.5 h-3.5 text-base-content/50" aria-hidden="true" />
                           <span>{appr.assignee_name || 'Department Desk'}</span>
                         </div>
                       </td>
                       <td className="py-4">{getStatusBadge(appr.status)}</td>
-                      <td className="text-slate-400 py-4 rounded-r-xl pr-4">
+                      <td className="text-base-content/70 py-4 rounded-r-xl pr-4">
                         <div className="flex items-center gap-1.5 text-xs">
-                          <Calendar className="w-3.5 h-3.5 text-slate-600" />
+                          <Calendar className="w-3.5 h-3.5 text-base-content/50" aria-hidden="true" />
                           <span>{formatTime(appr.acted_at)}</span>
                         </div>
                       </td>
@@ -119,14 +120,14 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
                     {approvalRemarks.length > 0 && (
                       <tr className="border-none">
                         <td colSpan={4} className="p-0 border-none">
-                          <div className="bg-slate-950/20 border border-slate-850/50 rounded-xl mx-4 my-2 p-4 text-xs space-y-3">
-                            <h4 className="font-semibold text-slate-400 flex items-center gap-1">
-                              <MessageSquare className="w-3.5 h-3.5 text-indigo-400" /> Remarks Log
+                          <div className="bg-base-200 border border-base-content/10 rounded-xl mx-4 my-2 p-4 text-xs space-y-3">
+                            <h4 className="font-semibold text-base-content/80 flex items-center gap-1">
+                              <MessageSquare className="w-3.5 h-3.5 text-primary" aria-hidden="true" /> Remarks Log
                             </h4>
                             {approvalRemarks.map((remark) => (
-                              <div key={remark.id} className="border-l border-indigo-500/30 pl-3 py-1 space-y-1">
-                                <p className="text-slate-300 italic">&ldquo;{remark.content}&rdquo;</p>
-                                <div className="text-[10px] text-slate-500 flex gap-2">
+                              <div key={remark.id} className="border-l border-primary/30 pl-3 py-1 space-y-1">
+                                <p className="text-base-content italic">&ldquo;{remark.content}&rdquo;</p>
+                                <div className="text-[10px] text-base-content/60 flex gap-2">
                                   <span>By: {remark.author_name || remark.authorName || 'Signatory'}</span>
                                   <span>•</span>
                                   <span>{formatTime(remark.created_at || remark.createdAt || null)}</span>

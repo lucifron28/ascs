@@ -101,51 +101,50 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-base-300 text-base-content flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans transition-colors duration-200">
       {/* Background Decor */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Theme Switcher Header */}
       <div className="absolute top-4 right-4 z-10">
         <ThemeSelector />
       </div>
 
-      <div className="w-full max-w-md space-y-6 z-10">
+      <main id="main-content" className="w-full max-w-md space-y-6 z-10">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 bg-indigo-950/60 border border-indigo-800/40 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-950/40">
-            <Lock className="w-7 h-7 text-indigo-400" />
+          <div className="w-14 h-14 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center mx-auto shadow-md">
+            <Lock className="w-7 h-7 text-primary" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
+          <h1 className="text-2xl font-black tracking-tight text-base-content">
             Mandatory Password Change
           </h1>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-base-content/70 font-medium">
             Your account is set to require a password change before accessing the system.
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="card bg-slate-900/60 border border-slate-800/60 backdrop-blur-xl p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6">
+        <div className="card bg-base-100 border border-base-content/10 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6">
           {error && (
-            <div className="alert alert-error bg-rose-950/80 border-rose-800 text-rose-300 text-xs rounded-xl flex items-start gap-2.5 p-3">
-              <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+            <div role="alert" className="alert alert-error text-error-content text-xs rounded-xl flex items-start gap-2.5 p-3 font-medium">
+              <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="alert alert-success bg-emerald-950/80 border-emerald-800 text-emerald-300 text-xs rounded-xl flex items-center gap-2.5 p-3">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <div role="status" aria-live="polite" className="alert alert-success text-success-content text-xs rounded-xl flex items-center gap-2.5 p-3 font-medium">
+              <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span>Password updated successfully. Redirecting to sign in…</span>
             </div>
           )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Current Temporary Password */}
             <div className="form-control space-y-1">
               <label htmlFor="currentPassword" className="label py-0">
-                <span className="label-text text-slate-300 text-xs font-semibold">
+                <span className="label-text text-base-content/80 text-xs font-semibold">
                   Current Temporary Password
                 </span>
               </label>
@@ -155,15 +154,16 @@ export default function ChangePasswordPage() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 disabled={loading || success}
+                autoComplete="current-password"
                 placeholder="••••••••"
-                className="input input-bordered w-full bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-700 text-sm"
+                className="input input-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
 
             {/* New Password */}
             <div className="form-control space-y-1">
               <label htmlFor="newPassword" className="label py-0">
-                <span className="label-text text-slate-300 text-xs font-semibold">
+                <span className="label-text text-base-content/80 text-xs font-semibold">
                   New Password (min. 8 chars)
                 </span>
               </label>
@@ -173,15 +173,16 @@ export default function ChangePasswordPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={loading || success}
+                autoComplete="new-password"
                 placeholder="••••••••"
-                className="input input-bordered w-full bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-700 text-sm"
+                className="input input-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
 
             {/* Confirm New Password */}
             <div className="form-control space-y-1">
               <label htmlFor="confirmPassword" className="label py-0">
-                <span className="label-text text-slate-300 text-xs font-semibold">
+                <span className="label-text text-base-content/80 text-xs font-semibold">
                   Confirm New Password
                 </span>
               </label>
@@ -191,28 +192,33 @@ export default function ChangePasswordPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading || success}
+                autoComplete="new-password"
                 placeholder="••••••••"
-                className="input input-bordered w-full bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-700 text-sm"
+                className="input input-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading || success}
-              className="btn btn-primary w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 border-none text-white rounded-xl font-semibold tracking-wide shadow-lg shadow-indigo-950/40 h-11 text-xs uppercase mt-4 flex items-center justify-center gap-2"
+              aria-busy={loading}
+              className="btn btn-primary w-full rounded-xl font-semibold tracking-wide shadow-lg h-11 text-xs uppercase mt-4 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               {loading ? (
-                <span className="loading loading-spinner loading-sm" />
+                <>
+                  <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+                  <span>Updating Password...</span>
+                </>
               ) : (
                 <>
                   <span>Update Password</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </>
               )}
             </button>
           </form>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -118,7 +118,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-base-300 text-base-content overflow-hidden font-sans transition-colors duration-200">
+    <div className="relative min-h-screen w-full max-w-full overflow-x-hidden flex items-center justify-center bg-base-300 text-base-content font-sans transition-colors duration-200">
       {/* Theme Selector Floating Menu */}
       <div className="absolute top-4 right-4 z-50">
         <ThemeSelector />
@@ -128,8 +128,8 @@ export default function LoginPage() {
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Main Container */}
-      <div className="relative w-full max-w-md p-4 z-10">
+      {/* Main Content Area */}
+      <main id="main-content" className="relative w-full max-w-md p-4 z-10">
         {/* Title / Logo Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
@@ -140,24 +140,24 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Login Glassmorphism Card */}
-        <div className="card w-full bg-base-200/60 backdrop-blur-xl border border-base-content/10 shadow-2xl p-8 rounded-2xl">
+        {/* Login Card */}
+        <div className="card w-full bg-base-100 border border-base-content/10 shadow-2xl p-8 rounded-2xl">
           <h2 className="text-xl font-bold text-base-content mb-6 flex items-center gap-2">
             <LogIn className="w-5 h-5 text-primary" /> Sign In
           </h2>
 
           {/* Success Notification Alert */}
           {success && (
-            <div className="alert alert-success bg-emerald-950/80 border-emerald-800 text-emerald-300 rounded-xl mb-6 flex items-center gap-2 p-3 text-sm">
-              <Check className="w-4 h-4 shrink-0" />
+            <div role="status" aria-live="polite" className="alert alert-success text-success-content rounded-xl mb-6 flex items-center gap-2 p-3 text-sm font-medium">
+              <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span>Login successful! Redirecting to dashboard...</span>
             </div>
           )}
 
           {/* Error Alert */}
           {error && (
-            <div className="alert alert-error bg-rose-950/80 border-rose-800 text-rose-300 rounded-xl mb-6 flex items-center gap-2 p-3 text-sm">
-              <ShieldAlert className="w-4 h-4 shrink-0" />
+            <div role="alert" className="alert alert-error text-error-content rounded-xl mb-6 flex items-center gap-2 p-3 text-sm font-medium">
+              <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span>{error}</span>
             </div>
           )}
@@ -185,11 +185,11 @@ export default function LoginPage() {
               {(field) => (
                 <div className="form-control w-full">
                   <label htmlFor="email" className="label py-1">
-                    <span className="label-text text-slate-300 font-medium text-xs">Email Address</span>
+                    <span className="label-text text-base-content/80 font-medium text-xs">Email Address</span>
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Mail className="w-4 h-4" />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/50">
+                      <Mail className="w-4 h-4" aria-hidden="true" />
                     </div>
                     <input
                       id="email"
@@ -198,16 +198,17 @@ export default function LoginPage() {
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       disabled={loading || success}
-                      placeholder="student.a@example.test"
-                      className="input input-bordered w-full pl-10 bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-600 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                      autoComplete="username"
+                      aria-invalid={field.state.meta.isTouched && field.state.meta.errors.length > 0}
+                      aria-describedby={field.state.meta.isTouched && field.state.meta.errors.length > 0 ? 'email-error' : undefined}
+                      placeholder="name@example.com"
+                      className="input input-bordered w-full pl-10 bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     />
                   </div>
                   {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
-                    <label className="label py-1">
-                      <span className="label-text-alt text-rose-400 text-xs">
-                        {field.state.meta.errors.join(', ')}
-                      </span>
-                    </label>
+                    <p id="email-error" className="text-error text-xs mt-1.5 font-medium">
+                      {field.state.meta.errors.join(', ')}
+                    </p>
                   )}
                 </div>
               )}
@@ -227,11 +228,11 @@ export default function LoginPage() {
               {(field) => (
                 <div className="form-control w-full">
                   <label htmlFor="password" className="label py-1">
-                    <span className="label-text text-slate-300 font-medium text-xs">Password</span>
+                    <span className="label-text text-base-content/80 font-medium text-xs">Password</span>
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Lock className="w-4 h-4" />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/50">
+                      <Lock className="w-4 h-4" aria-hidden="true" />
                     </div>
                     <input
                       id="password"
@@ -240,16 +241,17 @@ export default function LoginPage() {
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       disabled={loading || success}
+                      autoComplete="current-password"
+                      aria-invalid={field.state.meta.isTouched && field.state.meta.errors.length > 0}
+                      aria-describedby={field.state.meta.isTouched && field.state.meta.errors.length > 0 ? 'password-error' : undefined}
                       placeholder="••••••••"
-                      className="input input-bordered w-full pl-10 bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-600 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                      className="input input-bordered w-full pl-10 bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     />
                   </div>
                   {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
-                    <label className="label py-1">
-                      <span className="label-text-alt text-rose-400 text-xs">
-                        {field.state.meta.errors.join(', ')}
-                      </span>
-                    </label>
+                    <p id="password-error" className="text-error text-xs mt-1.5 font-medium">
+                      {field.state.meta.errors.join(', ')}
+                    </p>
                   )}
                 </div>
               )}
@@ -259,13 +261,18 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || success}
-              className="btn btn-primary w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-none rounded-xl transition-all shadow-lg shadow-indigo-950/20 active:scale-[0.98] mt-6 flex items-center justify-center gap-2 h-11 text-sm font-semibold"
+              aria-busy={loading}
+              className="btn btn-primary w-full rounded-xl shadow-lg mt-6 flex items-center justify-center gap-2 h-11 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               {loading ? (
-                <span className="loading loading-spinner loading-sm" />
+                <>
+                  <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+                  <span>Signing in...</span>
+                </>
               ) : (
                 <>
-                  <LogIn className="w-4 h-4" /> Log In
+                  <LogIn className="w-4 h-4" aria-hidden="true" />
+                  <span>Log In</span>
                 </>
               )}
             </button>
@@ -273,11 +280,11 @@ export default function LoginPage() {
         </div>
 
         {/* Demo Credentials Quick Fill Panel (explicitly opt-in) */}
-        {demoMode && <div className="card w-full mt-6 bg-slate-900/30 border border-slate-800/40 p-5 rounded-2xl">
-          <h3 className="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">
-            Demo Credentials (Quick-Fill)
+        {demoMode && (
+          <div className="card w-full mt-6 bg-base-100 border border-base-content/10 p-5 rounded-2xl shadow-md">
+          <h3 className="text-xs font-bold text-base-content/60 mb-3 uppercase tracking-wider">
+            DEMO / EMULATOR ONLY (FICTIONAL DATA)
           </h3>
-          <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               type="button"
               onClick={() => quickFill('student.a@example.test')}
@@ -311,8 +318,8 @@ export default function LoginPage() {
               dean@example.test
             </button>
           </div>
-        </div>}
-      </div>
+        )}
+      </main>
     </div>
   );
 }

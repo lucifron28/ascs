@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchFinancialQueueAction, updateFinancialStatusAction } from '@/app/actions/clearance';
-import { CreditCard, CheckCircle2, ShieldAlert, X, AlertCircle, CircleEllipsis, Search, FileText } from 'lucide-react';
+import { CreditCard, CheckCircle2, ShieldAlert, AlertCircle, CircleEllipsis, Search, FileText } from 'lucide-react';
+import AccessibleDialog from '@/components/ui/AccessibleDialog';
 
 interface FinancialRecord {
   id: string;
@@ -259,60 +260,61 @@ export default function AccountantDashboard() {
 
       {/* 3. Accounts Queue List */}
       {filteredRecords.length === 0 ? (
-        <div className="card bg-slate-900 border border-slate-800/40 p-12 rounded-2xl text-center space-y-2">
-          <CircleEllipsis className="w-8 h-8 text-slate-600 mx-auto" />
-          <h3 className="text-slate-400 font-bold text-sm">No Accounts Found</h3>
-          <p className="text-slate-600 text-xs">Try adjusting your filters or search query.</p>
+        <div className="card bg-base-100 border border-base-content/10 p-12 rounded-2xl text-center space-y-2 shadow-sm">
+          <CircleEllipsis className="w-8 h-8 text-base-content/50 mx-auto" aria-hidden="true" />
+          <h3 className="text-base-content font-bold text-sm">No Accounts Found</h3>
+          <p className="text-base-content/70 text-xs font-medium">Try adjusting your filters or search query.</p>
         </div>
       ) : (
-        <div className="card bg-slate-900 border border-slate-800 shadow-2xl p-6 rounded-2xl">
+        <div className="card bg-base-100 border border-base-content/10 shadow-xl p-6 rounded-2xl">
           <div className="overflow-x-auto w-full">
             <table className="table w-full text-left text-sm border-separate border-spacing-y-2">
               <thead>
-                <tr className="text-slate-400 text-xs uppercase tracking-wider border-none">
-                  <th className="bg-transparent pb-4 pl-4">Student</th>
-                  <th className="bg-transparent pb-4">ID Number</th>
-                  <th className="bg-transparent pb-4">Account Status</th>
-                  <th className="bg-transparent pb-4">Pending Dues Notes</th>
-                  <th className="bg-transparent pb-4">Last Verified</th>
-                  <th className="bg-transparent pb-4 pr-4 text-right">Action</th>
+                <tr className="text-base-content/70 text-xs uppercase tracking-wider border-b border-base-content/10">
+                  <th scope="col" className="bg-transparent pb-4 pl-4 font-bold">Student</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">ID Number</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Account Status</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Pending Dues Notes</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Last Verified</th>
+                  <th scope="col" className="bg-transparent pb-4 pr-4 text-right font-bold">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecords.map((rec) => (
-                  <tr key={rec.id} className="bg-slate-950/40 hover:bg-slate-950/70 border border-slate-855 rounded-xl transition-all">
-                    <td className="font-semibold text-white py-4 rounded-l-xl pl-4 flex flex-col justify-center min-w-[150px]">
+                  <tr key={rec.id} className="bg-base-200/50 hover:bg-base-200 border border-base-content/10 rounded-xl transition-all">
+                    <td className="font-semibold text-base-content py-4 rounded-l-xl pl-4 flex flex-col justify-center min-w-[150px]">
                       <span>{rec.student_name}</span>
-                      <span className="text-[10px] text-slate-500 font-normal mt-0.5">Ref: {rec.application_number}</span>
+                      <span className="text-[10px] text-base-content/60 font-normal mt-0.5">Ref: {rec.application_number}</span>
                     </td>
-                    <td className="text-slate-300 py-4 font-mono text-xs">{rec.student_id_number}</td>
+                    <td className="text-base-content/80 py-4 font-mono text-xs">{rec.student_id_number}</td>
                     <td className="py-4">
                       {rec.status === 'paid' ? (
-                        <span className="badge badge-sm border border-emerald-800/60 bg-emerald-950/40 text-emerald-400 rounded-md font-medium px-2 py-0.5">
+                        <span className="badge badge-sm border border-success/30 bg-success/10 text-success rounded-md font-semibold px-2 py-0.5">
                           Paid / Settled
                         </span>
                       ) : rec.status === 'unpaid' ? (
-                        <span className="badge badge-sm border border-rose-800/60 bg-rose-950/40 text-rose-400 rounded-md font-medium px-2 py-0.5">
+                        <span className="badge badge-sm border border-error/30 bg-error/10 text-error rounded-md font-semibold px-2 py-0.5">
                           Unpaid Dues
                         </span>
                       ) : (
-                        <span className="badge badge-sm border border-amber-800/60 bg-amber-950/40 text-amber-400 rounded-md font-medium px-2 py-0.5">
+                        <span className="badge badge-sm border border-warning/30 bg-warning/10 text-warning rounded-md font-semibold px-2 py-0.5">
                           Pending Audit
                         </span>
                       )}
                     </td>
-                    <td className="text-slate-300 py-4 text-xs italic max-w-xs truncate">
+                    <td className="text-base-content/80 py-4 text-xs italic max-w-xs truncate">
                       {rec.notes && rec.notes.trim() !== '' ? `"${rec.notes}"` : 'No outstanding balances.'}
                     </td>
-                    <td className="text-slate-400 py-4 text-xs">
+                    <td className="text-base-content/70 py-4 text-xs">
                       {rec.verified_at ? new Date(rec.verified_at).toLocaleDateString() : '--'}
                     </td>
                     <td className="py-4 rounded-r-xl pr-4 text-right">
                       <button
                         onClick={() => handleOpenUpdate(rec)}
-                        className="btn btn-xs btn-primary bg-indigo-600 hover:bg-indigo-500 border-none text-white rounded-lg font-semibold shadow-md active:scale-95 flex items-center gap-1 ml-auto"
+                        aria-label={`Update financial status for ${rec.student_name}`}
+                        className="btn btn-xs btn-primary rounded-lg font-semibold shadow-sm flex items-center gap-1 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
-                        <FileText className="w-3 h-3" /> Update
+                        <FileText className="w-3 h-3" aria-hidden="true" /> Update
                       </button>
                     </td>
                   </tr>
@@ -323,119 +325,132 @@ export default function AccountantDashboard() {
         </div>
       )}
 
-      {/* 4. Update Balance Modal Dialog */}
-      {selectedRecord && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 text-white w-full max-w-md rounded-2xl shadow-2xl p-6 relative flex flex-col gap-4">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-bold text-lg text-white">Update Financial Account</h3>
-              <button
-                onClick={() => setSelectedRecord(null)}
-                disabled={modalLoading}
-                aria-label="Close modal"
-                className="btn btn-sm btn-ghost hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg p-1.5"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
+      {/* 4. Update Balance Accessible Dialog */}
+      <AccessibleDialog
+        isOpen={!!selectedRecord}
+        onClose={() => setSelectedRecord(null)}
+        title="Update Financial Account"
+        description="Verify or update student financial accountability status."
+        preventClose={modalLoading}
+        maxWidthClass="max-w-md"
+      >
+        {selectedRecord && (
+          <form onSubmit={handleUpdate} className="space-y-4">
             {/* Modal Alerts */}
             {modalSuccess && (
-              <div className="alert alert-success bg-emerald-950/80 border-emerald-800 text-emerald-300 rounded-xl flex items-center gap-2 p-3 text-xs">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <div role="status" aria-live="polite" className="alert alert-success text-success-content rounded-xl flex items-center gap-2 p-3 text-xs font-medium">
+                <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span>Account status updated successfully!</span>
               </div>
             )}
 
             {modalError && (
-              <div className="alert alert-error bg-rose-950/80 border-rose-800 text-rose-300 rounded-xl flex items-center gap-2 p-3 text-xs">
-                <ShieldAlert className="w-4 h-4 shrink-0" />
+              <div role="alert" className="alert alert-error text-error-content rounded-xl flex items-center gap-2 p-3 text-xs font-medium">
+                <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span>{modalError}</span>
               </div>
             )}
 
-            {/* Form */}
-            <form onSubmit={handleUpdate} className="space-y-4">
-              {/* Student Overview */}
-              <div className="bg-slate-950/40 border border-slate-850/50 p-4 rounded-xl space-y-2 text-xs">
-                <div>
-                  <span className="text-slate-500 font-medium">Student Name:</span>{' '}
-                  <span className="font-semibold text-white">{selectedRecord.student_name}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 font-medium">ID Number:</span>{' '}
-                  <span className="font-mono text-white">{selectedRecord.student_id_number}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 font-medium">Clearance Ref:</span>{' '}
-                  <span className="font-mono text-white">{selectedRecord.application_number}</span>
-                </div>
+            {/* Account Info Details */}
+            <div className="bg-base-200 border border-base-content/10 p-4 rounded-xl space-y-2 text-xs">
+              <div>
+                <span className="text-base-content/60 font-medium">Student Name:</span>{' '}
+                <span className="font-semibold text-base-content">{selectedRecord.student_name}</span>
               </div>
+              <div>
+                <span className="text-base-content/60 font-medium">ID Number:</span>{' '}
+                <span className="font-mono text-base-content">{selectedRecord.student_id_number}</span>
+              </div>
+              <div>
+                <span className="text-base-content/60 font-medium">Academic Term:</span>{' '}
+                <span className="text-base-content">
+                  {selectedRecord.academic_year} • {selectedRecord.semester}
+                </span>
+              </div>
+              <div>
+                <span className="text-base-content/60 font-medium">Purpose:</span>{' '}
+                <span className="text-base-content">{selectedRecord.purpose}</span>
+              </div>
+            </div>
 
-              {/* Status Toggles */}
-              <div className="form-control">
-                <label className="label py-1">
-                  <span className="label-text text-slate-300 font-medium text-xs">Financial Status</span>
+            {/* Radio Select for Financial Status */}
+            <fieldset className="form-control space-y-2">
+              <legend className="text-xs font-bold text-base-content/80">Select Account Status</legend>
+              <div className="grid grid-cols-2 gap-2">
+                <label className={`label cursor-pointer border rounded-xl p-3 flex items-center justify-between transition-all ${
+                  statusInput === 'paid'
+                    ? 'border-success bg-success/10 text-success font-semibold'
+                    : 'border-base-content/10 bg-base-200 text-base-content/70'
+                }`}>
+                  <span className="text-xs">Mark Financially Paid</span>
+                  <input
+                    type="radio"
+                    name="financialStatus"
+                    value="paid"
+                    checked={statusInput === 'paid'}
+                    onChange={() => setStatusInput('paid')}
+                    disabled={modalLoading || modalSuccess}
+                    className="radio radio-xs radio-success"
+                  />
                 </label>
-                <div className="flex gap-4 bg-slate-950/50 p-2 border border-slate-800 rounded-xl justify-around">
-                  <label className="label cursor-pointer flex gap-2 justify-start py-1">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="unpaid"
-                      checked={statusInput === 'unpaid'}
-                      onChange={() => setStatusInput('unpaid')}
-                      disabled={modalLoading || modalSuccess}
-                      className="radio radio-error"
-                    />
-                    <span className="label-text text-slate-300 text-xs">Mark Financially Unpaid</span>
-                  </label>
-                  <label className="label cursor-pointer flex gap-2 justify-start py-1">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="paid"
-                      checked={statusInput === 'paid'}
-                      onChange={() => setStatusInput('paid')}
-                      disabled={modalLoading || modalSuccess}
-                      className="radio radio-success"
-                    />
-                    <span className="label-text text-slate-300 text-xs">Mark Financially Paid</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Dues description Notes */}
-              <div className="form-control space-y-1.5">
-                <label className="label py-0">
-                  <span className="label-text text-slate-300 font-medium text-xs">Account Dues details / Notes</span>
+                <label className={`label cursor-pointer border rounded-xl p-3 flex items-center justify-between transition-all ${
+                  statusInput === 'unpaid'
+                    ? 'border-error bg-error/10 text-error font-semibold'
+                    : 'border-base-content/10 bg-base-200 text-base-content/70'
+                }`}>
+                  <span className="text-xs">Mark Unpaid Dues</span>
+                  <input
+                    type="radio"
+                    name="financialStatus"
+                    value="unpaid"
+                    checked={statusInput === 'unpaid'}
+                    onChange={() => setStatusInput('unpaid')}
+                    disabled={modalLoading || modalSuccess}
+                    className="radio radio-xs radio-error"
+                  />
                 </label>
-                <textarea
-                  value={notesInput}
-                  onChange={(e) => setNotesInput(e.target.value)}
-                  disabled={modalLoading || modalSuccess}
-                  placeholder="Enter balance breakdown or payment references here... (e.g. Missing library book fine - PHP 250)"
-                  className="textarea textarea-bordered w-full h-24 bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-700 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs"
-                />
               </div>
+            </fieldset>
 
-              {/* Confirm */}
+            {/* Remarks Input */}
+            <div className="form-control space-y-1.5">
+              <label htmlFor="financial-remarks" className="label py-0">
+                <span className="label-text text-base-content/80 font-medium text-xs">
+                  Account Notes / Remarks
+                </span>
+              </label>
+              <textarea
+                id="financial-remarks"
+                value={notesInput}
+                onChange={(e) => setNotesInput(e.target.value)}
+                disabled={modalLoading || modalSuccess}
+                placeholder="Enter financial audit notes or details on outstanding obligations..."
+                className="textarea textarea-bordered w-full h-20 bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+            </div>
+
+            {/* Submit Action */}
+            <div className="pt-2 flex justify-end gap-2 border-t border-base-content/10">
+              <button
+                type="button"
+                onClick={() => setSelectedRecord(null)}
+                disabled={modalLoading}
+                className="btn btn-sm btn-ghost rounded-xl text-xs"
+              >
+                Cancel
+              </button>
               <button
                 type="submit"
                 disabled={modalLoading || modalSuccess}
-                className="btn btn-primary w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 border-none text-white rounded-xl font-semibold tracking-wide shadow-lg shadow-indigo-950/30 active:scale-95 h-11 text-xs uppercase mt-6"
+                aria-busy={modalLoading}
+                className="btn btn-sm btn-primary rounded-xl text-xs font-semibold px-5"
               >
-                {modalLoading ? (
-                  <span className="loading loading-spinner loading-sm" />
-                ) : (
-                  'Save Financial Status'
-                )}
+                {modalLoading ? 'Saving Account Status...' : 'Save Financial Status'}
               </button>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+          </form>
+        )}
+      </AccessibleDialog>
     </div>
   );
 }

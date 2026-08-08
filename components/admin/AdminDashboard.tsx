@@ -38,6 +38,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
+import AccessibleDialog from '@/components/ui/AccessibleDialog';
 interface UserRecord {
   uid: string;
   email: string;
@@ -843,86 +844,79 @@ export default function AdminDashboard() {
       )}
 
       {/* EDIT ROLE MODAL */}
-      {selectedUser && (
-        <div className="modal modal-open bg-black/60 backdrop-blur-sm z-50">
-          <div className="modal-box bg-base-100 border border-base-content/10 rounded-2xl p-6 max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <Edit className="w-5 h-5 text-primary" /> Change User Role
-              </h3>
-              <button
-                onClick={() => setSelectedUser(null)}
-                aria-label="Close modal"
-                className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <AccessibleDialog
+        isOpen={!!selectedUser}
+        onClose={() => setSelectedUser(null)}
+        title="Change User Role"
+        description="Update role privileges and permissions for the selected user account."
+        preventClose={modalLoading}
+        maxWidthClass="max-w-md"
+      >
+        {selectedUser && (
+          <form onSubmit={handleUpdateRole} className="space-y-4">
+            <div className="bg-base-200/50 p-3 rounded-xl border border-base-content/10 space-y-1 text-xs">
+              <div>
+                <span className="text-base-content/60">User: </span>
+                <span className="font-bold text-base-content">{selectedUser.fullName}</span>
+              </div>
+              <div>
+                <span className="text-base-content/60">Email: </span>
+                <span className="font-mono text-base-content/80">{selectedUser.email}</span>
+              </div>
             </div>
 
-            <form onSubmit={handleUpdateRole} className="space-y-4">
-              <div className="bg-base-200/50 p-3 rounded-xl border border-base-content/10 space-y-1 text-xs">
-                <div>
-                  <span className="text-base-content/60">User: </span>
-                  <span className="font-bold text-base-content">{selectedUser.fullName}</span>
-                </div>
-                <div>
-                  <span className="text-base-content/60">Email: </span>
-                  <span className="font-mono text-base-content/80">{selectedUser.email}</span>
-                </div>
+            <div className="form-control w-full">
+              <label htmlFor="select-new-role" className="label py-1">
+                <span className="label-text text-xs font-semibold">Select New System Role</span>
+              </label>
+              <select
+                id="select-new-role"
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                className="select select-bordered w-full bg-base-200 border-base-content/10 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                {ROLES_LIST.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {modalError && (
+              <div role="alert" className="alert alert-error text-error-content text-xs rounded-xl py-2 flex items-center gap-2 font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>{modalError}</span>
               </div>
+            )}
 
-              <div className="form-control w-full">
-                <label className="label py-1">
-                  <span className="label-text text-xs font-semibold">Select New System Role</span>
-                </label>
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                  className="select select-bordered w-full bg-base-200 border-base-content/10 rounded-xl text-sm"
-                >
-                  {ROLES_LIST.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+            {modalSuccess && (
+              <div role="status" aria-live="polite" className="alert alert-success text-success-content text-xs rounded-xl py-2 flex items-center gap-2 font-medium">
+                <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>User role updated successfully!</span>
               </div>
+            )}
 
-              {modalError && (
-                <div className="alert alert-error text-xs rounded-xl py-2 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{modalError}</span>
-                </div>
-              )}
-
-              {modalSuccess && (
-                <div className="alert alert-success text-xs rounded-xl py-2 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>User role updated successfully!</span>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedUser(null)}
-                  className="btn btn-sm btn-ghost rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={modalLoading || modalSuccess}
-                  className="btn btn-sm btn-primary rounded-xl font-semibold gap-1.5"
-                >
-                  {modalLoading && <span className="loading loading-spinner loading-xs" />}
-                  Change User Role
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="flex justify-end gap-2 pt-2 border-t border-base-content/10">
+              <button
+                type="button"
+                onClick={() => setSelectedUser(null)}
+                className="btn btn-sm btn-ghost rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={modalLoading || modalSuccess}
+                aria-busy={modalLoading}
+                className="btn btn-sm btn-primary rounded-xl font-semibold gap-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                {modalLoading ? 'Changing Role...' : 'Change User Role'}
+              </button>
+            </div>
+          </form>
+        )}
+      </AccessibleDialog>
 
       {/* ASSIGN SIGNATORY MODAL */}
       {selectedReq && (
@@ -1030,389 +1024,363 @@ export default function AdminDashboard() {
         </div>
       )}
       {/* CREATE STUDENT ACCOUNT MODAL */}
-      {showCreateStudentModal && (
-        <div className="modal modal-open bg-black/60 backdrop-blur-sm z-50">
-          <div className="modal-box bg-base-100 border border-base-content/10 rounded-2xl p-6 max-w-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-primary" /> Create Student Account
-              </h3>
-              <button
-                onClick={() => setShowCreateStudentModal(false)}
-                aria-label="Close modal"
-                className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <AccessibleDialog
+        isOpen={showCreateStudentModal}
+        onClose={() => setShowCreateStudentModal(false)}
+        title="Create Student Account"
+        description="Register a new student account in Auth and Firestore with synchronized profile attributes."
+        preventClose={modalLoading}
+        maxWidthClass="max-w-lg"
+      >
+        <form onSubmit={handleCreateStudent} className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="form-control">
+              <label htmlFor="create-student-number" className="label py-0.5">
+                <span className="label-text text-xs font-semibold">Student Number</span>
+              </label>
+              <input
+                id="create-student-number"
+                type="text"
+                required
+                placeholder="STUD-2026-0001"
+                value={studentForm.studentNumber}
+                onChange={(e) => setStudentForm({ ...studentForm, studentNumber: e.target.value })}
+                className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
             </div>
-
-            <form onSubmit={handleCreateStudent} className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="form-control">
-                  <label className="label py-0.5">
-                    <span className="label-text text-xs font-semibold">Student Number</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="STUD-2026-0001"
-                    value={studentForm.studentNumber}
-                    onChange={(e) => setStudentForm({ ...studentForm, studentNumber: e.target.value })}
-                    className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs font-mono"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label py-0.5">
-                    <span className="label-text text-xs font-semibold">Full Name</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Juan Dela Cruz"
-                    value={studentForm.fullName}
-                    onChange={(e) => setStudentForm({ ...studentForm, fullName: e.target.value })}
-                    className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="form-control">
-                <label className="label py-0.5">
-                  <span className="label-text text-xs font-semibold">Email Address</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="student.a@example.test"
-                  value={studentForm.email}
-                  onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })}
-                  className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div className="form-control">
-                  <label className="label py-0.5">
-                    <span className="label-text text-xs font-semibold">Program</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="BSIT"
-                    value={studentForm.program}
-                    onChange={(e) => setStudentForm({ ...studentForm, program: e.target.value })}
-                    className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label py-0.5">
-                    <span className="label-text text-xs font-semibold">Year Level</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="4"
-                    value={studentForm.yearLevel}
-                    onChange={(e) => setStudentForm({ ...studentForm, yearLevel: e.target.value })}
-                    className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label py-0.5">
-                    <span className="label-text text-xs font-semibold">Section</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="A"
-                    value={studentForm.section}
-                    onChange={(e) => setStudentForm({ ...studentForm, section: e.target.value })}
-                    className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="form-control">
-                <label className="label py-0.5">
-                  <span className="label-text text-xs font-semibold">Custom Temp Password (Optional)</span>
-                </label>
-                <input
-                  type="password"
-                  placeholder="Leave empty to auto-generate"
-                  value={studentForm.temporaryPassword}
-                  onChange={(e) => setStudentForm({ ...studentForm, temporaryPassword: e.target.value })}
-                  className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs font-mono"
-                />
-              </div>
-
-              {modalError && (
-                <div className="alert alert-error text-xs rounded-xl py-2 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{modalError}</span>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateStudentModal(false)}
-                  className="btn btn-sm btn-ghost rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={modalLoading}
-                  className="btn btn-sm btn-primary rounded-xl font-semibold gap-1.5"
-                >
-                  {modalLoading && <span className="loading loading-spinner loading-xs" />}
-                  Create Student Account
-                </button>
-              </div>
-            </form>
+            <div className="form-control">
+              <label htmlFor="create-student-fullname" className="label py-0.5">
+                <span className="label-text text-xs font-semibold">Full Name</span>
+              </label>
+              <input
+                id="create-student-fullname"
+                type="text"
+                required
+                placeholder="Juan Dela Cruz"
+                value={studentForm.fullName}
+                onChange={(e) => setStudentForm({ ...studentForm, fullName: e.target.value })}
+                className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="form-control">
+            <label htmlFor="create-student-email" className="label py-0.5">
+              <span className="label-text text-xs font-semibold">Email Address</span>
+            </label>
+            <input
+              id="create-student-email"
+              type="email"
+              required
+              placeholder="name@example.com"
+              value={studentForm.email}
+              onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })}
+              className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="form-control">
+              <label htmlFor="create-student-program" className="label py-0.5">
+                <span className="label-text text-xs font-semibold">Program</span>
+              </label>
+              <input
+                id="create-student-program"
+                type="text"
+                required
+                placeholder="BSIT"
+                value={studentForm.program}
+                onChange={(e) => setStudentForm({ ...studentForm, program: e.target.value })}
+                className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+            </div>
+            <div className="form-control">
+              <label htmlFor="create-student-year" className="label py-0.5">
+                <span className="label-text text-xs font-semibold">Year Level</span>
+              </label>
+              <input
+                id="create-student-year"
+                type="text"
+                required
+                placeholder="4"
+                value={studentForm.yearLevel}
+                onChange={(e) => setStudentForm({ ...studentForm, yearLevel: e.target.value })}
+                className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+            </div>
+            <div className="form-control">
+              <label htmlFor="create-student-section" className="label py-0.5">
+                <span className="label-text text-xs font-semibold">Section</span>
+              </label>
+              <input
+                id="create-student-section"
+                type="text"
+                required
+                placeholder="A"
+                value={studentForm.section}
+                onChange={(e) => setStudentForm({ ...studentForm, section: e.target.value })}
+                className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+            </div>
+          </div>
+
+          <div className="form-control">
+            <label htmlFor="create-student-temppass" className="label py-0.5">
+              <span className="label-text text-xs font-semibold">Custom Temp Password (Optional)</span>
+            </label>
+            <input
+              id="create-student-temppass"
+              type="password"
+              placeholder="Leave empty to auto-generate"
+              value={studentForm.temporaryPassword}
+              onChange={(e) => setStudentForm({ ...studentForm, temporaryPassword: e.target.value })}
+              className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            />
+          </div>
+
+          {modalError && (
+            <div role="alert" className="alert alert-error text-error-content text-xs rounded-xl py-2 flex items-center gap-2 font-medium">
+              <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{modalError}</span>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-base-content/10">
+            <button
+              type="button"
+              onClick={() => setShowCreateStudentModal(false)}
+              className="btn btn-sm btn-ghost rounded-xl text-xs"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={modalLoading}
+              aria-busy={modalLoading}
+              className="btn btn-sm btn-primary text-primary-content rounded-xl font-semibold gap-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              {modalLoading ? 'Creating Student Account...' : 'Create Student Account'}
+            </button>
+          </div>
+        </form>
+      </AccessibleDialog>
 
       {/* CREATE STAFF ACCOUNT MODAL */}
-      {showCreateStaffModal && (
-        <div className="modal modal-open bg-black/60 backdrop-blur-sm z-50">
-          <div className="modal-box bg-base-100 border border-base-content/10 rounded-2xl p-6 max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-secondary" /> Create Staff Account
-              </h3>
-              <button
-                onClick={() => setShowCreateStaffModal(false)}
-                aria-label="Close modal"
-                className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateStaff} className="space-y-3">
-              <div className="form-control">
-                <label className="label py-0.5">
-                  <span className="label-text text-xs font-semibold">Full Name</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Maria Clara"
-                  value={staffForm.fullName}
-                  onChange={(e) => setStaffForm({ ...staffForm, fullName: e.target.value })}
-                  className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label py-0.5">
-                  <span className="label-text text-xs font-semibold">Email Address</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="librarian@example.test"
-                  value={staffForm.email}
-                  onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                  className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label py-0.5">
-                  <span className="label-text text-xs font-semibold">Staff System Role</span>
-                </label>
-                <select
-                  value={staffForm.role}
-                  onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value as UserRole })}
-                  className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs"
-                >
-                  {VALID_STAFF_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r.replace('_', ' ').toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-control">
-                <label className="label py-0.5">
-                  <span className="label-text text-xs font-semibold">Custom Temp Password (Optional)</span>
-                </label>
-                <input
-                  type="password"
-                  placeholder="Leave empty to auto-generate"
-                  value={staffForm.temporaryPassword}
-                  onChange={(e) => setStaffForm({ ...staffForm, temporaryPassword: e.target.value })}
-                  className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs font-mono"
-                />
-              </div>
-
-              {staffForm.role === 'admin' && (
-                <div className="alert alert-warning text-xs rounded-xl py-2 my-2 flex flex-col items-start gap-2">
-                  <div className="flex items-center gap-2 font-bold text-amber-200">
-                    <Shield className="w-4 h-4 shrink-0 text-amber-400" />
-                    <span>Elevated Privilege Warning</span>
-                  </div>
-                  <p className="text-[11px] text-amber-300">
-                    Creating a System Administrator account grants full access to user management and system settings.
-                  </p>
-                  <label className="label cursor-pointer p-0 flex items-center gap-2 mt-1">
-                    <input
-                      type="checkbox"
-                      checked={staffForm.confirmElevatedAdminCreation}
-                      onChange={(e) => setStaffForm({ ...staffForm, confirmElevatedAdminCreation: e.target.checked })}
-                      className="checkbox checkbox-xs checkbox-warning"
-                    />
-                    <span className="label-text text-xs text-amber-200 font-semibold">
-                      I confirm granting full system administrator access.
-                    </span>
-                  </label>
-                </div>
-              )}
-              {modalError && (
-                <div className="alert alert-error text-xs rounded-xl py-2 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{modalError}</span>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateStaffModal(false)}
-                  className="btn btn-sm btn-ghost rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={modalLoading}
-                  className="btn btn-sm btn-primary rounded-xl font-semibold gap-1.5"
-                >
-                  {modalLoading && <span className="loading loading-spinner loading-xs" />}
-                  Create Staff Account
-                </button>
-              </div>
-            </form>
+      <AccessibleDialog
+        isOpen={showCreateStaffModal}
+        onClose={() => setShowCreateStaffModal(false)}
+        title="Create Staff Account"
+        description="Register a department staff or administrator account in Auth."
+        preventClose={modalLoading}
+        maxWidthClass="max-w-md"
+      >
+        <form onSubmit={handleCreateStaff} className="space-y-3">
+          <div className="form-control">
+            <label htmlFor="create-staff-fullname" className="label py-0.5">
+              <span className="label-text text-xs font-semibold">Full Name</span>
+            </label>
+            <input
+              id="create-staff-fullname"
+              type="text"
+              required
+              placeholder="Maria Clara"
+              value={staffForm.fullName}
+              onChange={(e) => setStaffForm({ ...staffForm, fullName: e.target.value })}
+              className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="form-control">
+            <label htmlFor="create-staff-email" className="label py-0.5">
+              <span className="label-text text-xs font-semibold">Email Address</span>
+            </label>
+            <input
+              id="create-staff-email"
+              type="email"
+              required
+              placeholder="name@example.com"
+              value={staffForm.email}
+              onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+              className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            />
+          </div>
+
+          <div className="form-control">
+            <label htmlFor="create-staff-role" className="label py-0.5">
+              <span className="label-text text-xs font-semibold">Staff System Role</span>
+            </label>
+            <select
+              id="create-staff-role"
+              value={staffForm.role}
+              onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value as UserRole })}
+              className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              {VALID_STAFF_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r.replace('_', ' ').toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-control">
+            <label htmlFor="create-staff-temppass" className="label py-0.5">
+              <span className="label-text text-xs font-semibold">Custom Temp Password (Optional)</span>
+            </label>
+            <input
+              id="create-staff-temppass"
+              type="password"
+              placeholder="Leave empty to auto-generate"
+              value={staffForm.temporaryPassword}
+              onChange={(e) => setStaffForm({ ...staffForm, temporaryPassword: e.target.value })}
+              className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            />
+          </div>
+
+          {staffForm.role === 'admin' && (
+            <div role="alert" className="alert alert-warning text-warning-content text-xs rounded-xl py-2 my-2 flex flex-col items-start gap-2 font-medium">
+              <div className="flex items-center gap-2 font-bold">
+                <Shield className="w-4 h-4 shrink-0 text-warning" aria-hidden="true" />
+                <span>Elevated Privilege Warning</span>
+              </div>
+              <p className="text-[11px] opacity-90">
+                Creating a System Administrator account grants full access to user management and system settings.
+              </p>
+              <label className="label cursor-pointer p-0 flex items-center gap-2 mt-1">
+                <input
+                  type="checkbox"
+                  checked={staffForm.confirmElevatedAdminCreation}
+                  onChange={(e) => setStaffForm({ ...staffForm, confirmElevatedAdminCreation: e.target.checked })}
+                  className="checkbox checkbox-xs checkbox-warning"
+                />
+                <span className="label-text text-xs text-warning-content font-semibold">
+                  I confirm granting full system administrator access.
+                </span>
+              </label>
+            </div>
+          )}
+          {modalError && (
+            <div role="alert" className="alert alert-error text-error-content text-xs rounded-xl py-2 flex items-center gap-2 font-medium">
+              <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{modalError}</span>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-base-content/10">
+            <button
+              type="button"
+              onClick={() => setShowCreateStaffModal(false)}
+              className="btn btn-sm btn-ghost rounded-xl text-xs"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={modalLoading}
+              aria-busy={modalLoading}
+              className="btn btn-sm btn-primary text-primary-content rounded-xl font-semibold gap-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              {modalLoading ? 'Creating Staff Account...' : 'Create Staff Account'}
+            </button>
+          </div>
+        </form>
+      </AccessibleDialog>
 
       {/* CONFIRMATION ACTION MODAL (DEACTIVATE / REACTIVATE / RESET PASSWORD) */}
-      {targetActionUser && actionType && (
-        <div className="modal modal-open bg-black/60 backdrop-blur-sm z-50">
-          <div className="modal-box bg-base-100 border border-base-content/10 rounded-2xl p-6 max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg flex items-center gap-2 capitalize">
-                {actionType === 'deactivate' && <UserX className="w-5 h-5 text-error" />}
-                {actionType === 'reactivate' && <UserCheck2 className="w-5 h-5 text-success" />}
-                {actionType === 'reset_password' && <KeyRound className="w-5 h-5 text-warning" />}
-                <span>{actionType.replace('_', ' ')} Account</span>
-              </h3>
+      <AccessibleDialog
+        isOpen={!!targetActionUser && !!actionType}
+        onClose={() => {
+          setTargetActionUser(null);
+          setActionType(null);
+        }}
+        title={`${actionType ? actionType.replace('_', ' ') : ''} Account Confirmation`}
+        description="Please review and confirm this account management action."
+        preventClose={modalLoading}
+        maxWidthClass="max-w-md"
+      >
+        {targetActionUser && actionType && (
+          <div className="space-y-4">
+            <div className="bg-base-200/50 p-3 rounded-xl border border-base-content/10 text-xs space-y-1">
+              <div>
+                <span className="text-base-content/60">Target User: </span>
+                <span className="font-bold text-base-content">{targetActionUser.fullName}</span>
+              </div>
+              <div>
+                <span className="text-base-content/60">Email: </span>
+                <span className="font-mono text-base-content/80">{targetActionUser.email}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-base-content/70 font-medium">
+              {actionType === 'deactivate' &&
+                'Deactivating this account will disable authentication sign-in and revoke active sessions immediately.'}
+              {actionType === 'reactivate' &&
+                'Reactivating this account will enable authentication sign-in for the user again.'}
+              {actionType === 'reset_password' &&
+                'Resetting will generate a new temporary password, revoke existing active sessions, and mandate a password change on next sign-in.'}
+            </p>
+
+            {modalError && (
+              <div role="alert" className="alert alert-error text-error-content text-xs rounded-xl py-2 flex items-center gap-2 font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>{modalError}</span>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-base-content/10">
               <button
+                type="button"
                 onClick={() => {
                   setTargetActionUser(null);
                   setActionType(null);
                 }}
-                aria-label="Close modal"
-                className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
+                className="btn btn-sm btn-ghost rounded-xl text-xs"
               >
-                <X className="w-4 h-4" />
+                Cancel
               </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-base-200/50 p-3 rounded-xl border border-base-content/10 text-xs space-y-1">
-                <div>
-                  <span className="text-base-content/60">Target User: </span>
-                  <span className="font-bold text-base-content">{targetActionUser.fullName}</span>
-                </div>
-                <div>
-                  <span className="text-base-content/60">Email: </span>
-                  <span className="font-mono text-base-content/80">{targetActionUser.email}</span>
-                </div>
-              </div>
-
-              <p className="text-xs text-base-content/70">
-                {actionType === 'deactivate' &&
-                  'Deactivating this account will disable authentication sign-in and revoke active sessions immediately.'}
-                {actionType === 'reactivate' &&
-                  'Reactivating this account will enable authentication sign-in for the user again.'}
-                {actionType === 'reset_password' &&
-                  'Resetting will generate a new temporary password, revoke existing active sessions, and mandate a password change on next sign-in.'}
-              </p>
-
-              {modalError && (
-                <div className="alert alert-error text-xs rounded-xl py-2 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{modalError}</span>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTargetActionUser(null);
-                    setActionType(null);
-                  }}
-                  className="btn btn-sm btn-ghost rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={
-                    actionType === 'deactivate'
-                      ? handleDeactivate
-                      : actionType === 'reactivate'
-                      ? handleReactivate
-                      : handleResetPassword
-                  }
-                  disabled={modalLoading}
-                  className={`btn btn-sm rounded-xl font-semibold gap-1.5 ${
-                    actionType === 'deactivate'
-                      ? 'btn-error'
-                      : actionType === 'reactivate'
-                      ? 'btn-success'
-                      : 'btn-warning'
-                  }`}
-                >
-                  {modalLoading && <span className="loading loading-spinner loading-xs" />}
-                  Confirm {actionType.replace('_', ' ')}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={
+                  actionType === 'deactivate'
+                    ? handleDeactivate
+                    : actionType === 'reactivate'
+                    ? handleReactivate
+                    : handleResetPassword
+                }
+                disabled={modalLoading}
+                aria-busy={modalLoading}
+                className={`btn btn-sm rounded-xl font-semibold gap-1.5 text-xs ${
+                  actionType === 'deactivate'
+                    ? 'btn-error text-error-content'
+                    : actionType === 'reactivate'
+                    ? 'btn-success text-success-content'
+                    : 'btn-warning text-warning-content'
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
+              >
+                {modalLoading ? 'Processing...' : `Confirm ${actionType.replace('_', ' ')}`}
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AccessibleDialog>
 
       {/* ONE-TIME TEMPORARY PASSWORD DISPLAY MODAL */}
-      {oneTimePasswordResult && (
-        <div className="modal modal-open bg-black/60 backdrop-blur-sm z-50">
-          <div className="modal-box bg-base-100 border border-base-content/10 rounded-2xl p-6 max-w-md space-y-4">
-            <div className="flex items-center justify-between border-b border-base-content/10 pb-3">
-              <h3 className="font-bold text-lg text-success flex items-center gap-2">
-                <KeyRound className="w-5 h-5" /> Account Credentials Issued
-              </h3>
-              <button
-                onClick={() => {
-                  setOneTimePasswordResult(null);
-                  setCopiedPassword(false);
-                }}
-                aria-label="Close modal"
-                className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="bg-warning/10 border border-warning/30 p-3 rounded-xl text-xs text-warning-content space-y-1">
+      <AccessibleDialog
+        isOpen={!!oneTimePasswordResult}
+        onClose={() => {
+          setOneTimePasswordResult(null);
+          setCopiedPassword(false);
+        }}
+        title="Account Credentials Issued"
+        description="One-time temporary credentials generated for account sign-in."
+        maxWidthClass="max-w-md"
+      >
+        {oneTimePasswordResult && (
+          <div className="space-y-4">
+            <div role="status" aria-live="polite" className="bg-warning/10 border border-warning/30 p-3 rounded-xl text-xs text-warning-content space-y-1">
               <div className="font-bold flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 shrink-0 text-warning" /> One-Time Password Notice
+                <AlertCircle className="w-4 h-4 shrink-0 text-warning" aria-hidden="true" />
+                <span>One-Time Password Notice</span>
               </div>
               <p className="text-[11px] opacity-90">
                 Store this temporary password securely. It is <strong>NOT</strong> saved in Firestore or logs and will <strong>NOT</strong> be displayed again.
@@ -1420,8 +1388,8 @@ export default function AdminDashboard() {
             </div>
 
             {oneTimePasswordResult.warning && (
-              <div className="alert alert-warning text-xs rounded-xl p-3 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-warning" />
+              <div role="alert" className="alert alert-warning text-warning-content text-xs rounded-xl p-3 flex items-start gap-2 font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-warning" aria-hidden="true" />
                 <span>{oneTimePasswordResult.warning}</span>
               </div>
             )}
@@ -1451,10 +1419,10 @@ export default function AdminDashboard() {
                     setCopiedPassword(true);
                     setTimeout(() => setCopiedPassword(false), 2000);
                   }}
-                  className="btn btn-xs btn-outline rounded-lg gap-1"
+                  className="btn btn-xs btn-outline rounded-lg gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  {copiedPassword ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copiedPassword ? 'Copied' : 'Copy'}
+                  {copiedPassword ? <Check className="w-3.5 h-3.5 text-success" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
+                  <span>{copiedPassword ? 'Copied' : 'Copy'}</span>
                 </button>
               </div>
             </div>
@@ -1465,13 +1433,13 @@ export default function AdminDashboard() {
                 setOneTimePasswordResult(null);
                 setCopiedPassword(false);
               }}
-              className="btn btn-primary btn-sm w-full rounded-xl font-semibold"
+              className="btn btn-primary btn-sm w-full rounded-xl font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               Done & Close
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </AccessibleDialog>
     </div>
   );
 }
