@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Live Multi-Role Clearance Journey', () => {
-  test.setTimeout(90000);
+  test.setTimeout(180000);
 
   test('Complete 9-step multi-role clearance workflow (Student G -> Signatories -> Accountant -> Adviser -> Dean -> Approved Student)', async ({ page }) => {
     // Automatically accept native window.confirm dialogs used in Signatory and Accountant dashboards
@@ -18,7 +18,7 @@ test.describe('Live Multi-Role Clearance Journey', () => {
 
     // Select Academic Year 2026-2027, 1st Semester, Graduation
     await page.getByLabel(/academic year/i).selectOption('2026-2027');
-    await page.getByLabel(/semester/i).selectOption('1st');
+    await page.getByLabel(/semester/i).selectOption('1st Semester');
     await page.getByLabel(/purpose/i).selectOption('Graduation');
     await page.getByRole('checkbox').check();
     await page.getByRole('button', { name: /submit application/i }).click();
@@ -162,5 +162,37 @@ test.describe('Live Multi-Role Clearance Journey', () => {
     await expect(page.getByText(/approved/i).first()).toBeVisible();
     await expect(page.getByText(/paid /i).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /print|preview|certificate/i })).toBeEnabled();
+
+    // Step 10: Admin verifies Student G in institution reports for 2026-2027 1st Semester
+    await page.getByRole('button', { name: /logout/i }).click();
+    await page.waitForURL('**/login');
+
+    await page.getByLabel(/email address/i).fill('admin@example.test');
+    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+
+    await page.waitForURL('**/admin/dashboard');
+    await page.getByRole('link', { name: /reports/i }).click();
+    await page.waitForURL('**/admin/reports');
+    await expect(page.getByRole('heading', { name: /institution clearance/i })).toBeVisible();
+
+    const adminTotalCard = page.locator('.card', { hasText: 'Total Applications' });
+    await expect(adminTotalCard.getByText('5')).toBeVisible();
+
+    await page.getByRole('button', { name: /logout/i }).click();
+    await page.waitForURL('**/login');
+
+    // Step 11: Dean verifies Student G in Dean clearance reports for 2026-2027 1st Semester
+    await page.getByLabel(/email address/i).fill('dean@example.test');
+    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+
+    await page.waitForURL('**/dean/dashboard');
+    await page.getByRole('link', { name: /reports/i }).click();
+    await page.waitForURL('**/dean/reports');
+    await expect(page.getByRole('heading', { name: /academic clearance reports/i })).toBeVisible();
+
+    const deanTotalCard = page.locator('.card', { hasText: 'Total Applications' });
+    await expect(deanTotalCard.getByText('3')).toBeVisible();
   });
 });

@@ -6,6 +6,7 @@ import { getAdminFirestore } from '@/lib/firebase/admin';
 import {
   fetchAdminReportSummaryAction,
   fetchDeanReportSummaryAction,
+  fetchReportFilterOptionsAction,
   exportAdminReportCsvAction,
   exportDeanReportCsvAction,
 } from '@/app/actions/reports';
@@ -134,6 +135,107 @@ describe('Reports & CSV Export Integration Tests', () => {
     if (deanCsvRes.success) {
       assert.ok(deanCsvRes.csvContent);
       assert.equal(deanCsvRes.csvContent.includes('Financial Status'), false);
+    }
+  });
+  it('16. Report queries and exports handle legacy short-form semester records seamlessly without splitting terms', async () => {
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const firestore = getAdminFirestore();
+
+    // Insert Application X (legacy short-form semester)
+    await firestore.collection('clearanceApplications').doc('legacy-student-x_2029-2030_1st').set({
+      studentUid: 'legacy-student-x',
+      studentNumber: 'STUD-2029-0001',
+      studentName: 'Student Legacy X',
+      program: 'BSIT',
+      yearLevel: '1',
+      section: 'A',
+      academicYear: '2029-2030',
+      semester: '1st',
+      purpose: 'Enrollment',
+      overallStatus: 'approved',
+      financialStatus: 'paid',
+      adviserApproved: true,
+      submittedAt: new Date().toISOString(),
+    });
+
+    // Insert Application Y (canonical long-form semester)
+    await firestore.collection('clearanceApplications').doc('legacy-student-y_2029-2030_1st-Semester').set({
+      studentUid: 'legacy-student-y',
+      studentNumber: 'STUD-2029-0002',
+      studentName: 'Student Legacy Y',
+      program: 'BSIT',
+      yearLevel: '1',
+      section: 'A',
+      academicYear: '2029-2030',
+      semester: '1st Semester',
+      purpose: 'Enrollment',
+      overallStatus: 'pending',
+      financialStatus: 'pending',
+      adviserApproved: true,
+      submittedAt: new Date().toISOString(),
+    });
+
+    // 1. Query Admin summary with canonical semester filter
+    const adminCanonicalRes = await fetchAdminReportSummaryAction({
+      academicYear: '2029-2030',
+      semester: '1st Semester',
+    });
+    assert.equal(adminCanonicalRes.success, true);
+    if (!adminCanonicalRes.success) return;
+    assert.equal(adminCanonicalRes.summary.applicationSummary.total, 2);
+    assert.equal(adminCanonicalRes.summary.applicationSummary.approved, 1);
+    assert.equal(adminCanonicalRes.summary.applicationSummary.pending, 1);
+
+    // 2. Query Admin summary with legacy alias filter
+    const adminLegacyRes = await fetchAdminReportSummaryAction({
+      academicYear: '2029-2030',
+      semester: '1st',
+    });
+    assert.equal(adminLegacyRes.success, true);
+    if (!adminLegacyRes.success) return;
+    assert.equal(adminLegacyRes.summary.applicationSummary.total, 2);
+
+    // 3. Query Dean summary with canonical semester filter
+    process.env.TEST_SESSION_COOKIE = deanSession;
+    const deanCanonicalRes = await fetchDeanReportSummaryAction({
+      academicYear: '2029-2030',
+      semester: '1st Semester',
+    });
+    assert.equal(deanCanonicalRes.success, true);
+    if (!deanCanonicalRes.success) return;
+    assert.equal(deanCanonicalRes.summary.applicationSummary.total, 2);
+
+    // 4. Query Dean summary with legacy alias filter
+    const deanLegacyRes = await fetchDeanReportSummaryAction({
+      academicYear: '2029-2030',
+      semester: '1st',
+    });
+    assert.equal(deanLegacyRes.success, true);
+    if (!deanLegacyRes.success) return;
+    assert.equal(deanLegacyRes.summary.applicationSummary.total, 2);
+
+    // 5. CSV Detail Export produces canonical semester label for both rows
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const csvDetailRes = await exportAdminReportCsvAction(
+      { academicYear: '2029-2030', semester: '1st Semester' },
+      'application-detail'
+    );
+    assert.equal(csvDetailRes.success, true);
+    if (csvDetailRes.success) {
+      assert.ok(csvDetailRes.csvContent.includes('Student Legacy X'));
+      assert.ok(csvDetailRes.csvContent.includes('Student Legacy Y'));
+      // Ensure '1st Semester' is in the CSV lines and no raw un-normalized '1st' column
+      const lines = csvDetailRes.csvContent.split('\n');
+      const studentXLine = lines.find((l) => l.includes('Student Legacy X'));
+      assert.ok(studentXLine && studentXLine.includes('1st Semester'));
+    }
+
+    // 6. Report Filter Options returns canonical semesters without duplicate '1st' option
+    const optionsRes = await fetchReportFilterOptionsAction('admin');
+    assert.equal(optionsRes.success, true);
+    if (optionsRes.success) {
+      assert.equal(optionsRes.filterOptions.semesters.includes('1st'), false);
+      assert.equal(optionsRes.filterOptions.semesters.includes('1st Semester'), true);
     }
   });
 });

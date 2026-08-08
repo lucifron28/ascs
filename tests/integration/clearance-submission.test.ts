@@ -41,7 +41,7 @@ describe('Clearance Submission Integration Tests', () => {
     assert.equal(data?.studentNumber, 'STUD-2026-0005');
     assert.equal(data?.studentName, 'Student E (Temp Pass)');
     assert.equal(data?.academicYear, '2026-2027');
-    assert.equal(data?.semester, 'Summer');
+    assert.equal(data?.semester, 'Summer Semester');
     assert.equal(data?.purpose, 'Evaluation');
     assert.equal(data?.financialStatus, 'pending'); // Initial financial status
     assert.equal(data?.overallStatus, 'pending');
@@ -71,6 +71,7 @@ describe('Clearance Submission Integration Tests', () => {
       .get();
     assert.equal(logsSnap.size, 1);
     assert.equal(logsSnap.docs[0].data().action, 'submitted_application');
+    assert.equal(logsSnap.docs[0].data().metadata?.semester, 'Summer Semester');
   });
 
   it('2. Duplicate same-term application fails', async () => {
@@ -78,6 +79,71 @@ describe('Clearance Submission Integration Tests', () => {
       academicYear: '2026-2027',
       semester: 'Summer',
       purpose: 'Evaluation',
+    });
+    assert.equal(dupRes.success, false);
+    if (!dupRes.success) {
+      assert.match(dupRes.error, /already submitted/i);
+    }
+  });
+  it('11. Legacy semester alias submission is persisted as canonical and prevents alias duplicate', async () => {
+    process.env.TEST_SESSION_COOKIE = studentESession;
+
+    // Submit using legacy alias '1st'
+    const submitRes = await submitApplicationAction({
+      academicYear: '2027-2028',
+      semester: '1st',
+      purpose: 'Enrollment',
+    });
+
+    assert.equal(submitRes.success, true);
+    if (!submitRes.success) return;
+
+    const appId = submitRes.applicationId;
+    assert.equal(appId, 'demo-student-e-uid_2027-2028_1st-Semester');
+
+    const appDoc = await getAdminFirestore().collection('clearanceApplications').doc(appId).get();
+    assert.equal(appDoc.exists, true);
+    const data = appDoc.data();
+
+    assert.equal(data?.semester, '1st Semester');
+
+    const logsSnap = await getAdminFirestore()
+      .collection('activityLogs')
+      .where('entityId', '==', appId)
+      .get();
+    assert.equal(logsSnap.size, 1);
+    assert.equal(logsSnap.docs[0].data().metadata?.semester, '1st Semester');
+
+    // Duplicate submission using canonical '1st Semester' must fail
+    const dupRes = await submitApplicationAction({
+      academicYear: '2027-2028',
+      semester: '1st Semester',
+      purpose: 'Enrollment',
+    });
+    assert.equal(dupRes.success, false);
+    if (!dupRes.success) {
+      assert.match(dupRes.error, /already submitted/i);
+    }
+  });
+
+  it('12. Existing legacy document ID prevents new canonical submission', async () => {
+    process.env.TEST_SESSION_COOKIE = studentESession;
+
+    const legacyAppId = 'demo-student-e-uid_2028-2029_1st';
+    await getAdminFirestore().collection('clearanceApplications').doc(legacyAppId).set({
+      studentUid: 'demo-student-e-uid',
+      academicYear: '2028-2029',
+      semester: '1st',
+      purpose: 'Enrollment',
+      overallStatus: 'pending',
+      financialStatus: 'pending',
+      submittedAt: new Date().toISOString(),
+    });
+
+    const dupRes = await submitApplicationAction({
+      academicYear: '2028-2029',
+      semester: '1st Semester',
+      purpose: 'Enrollment',
     });
     assert.equal(dupRes.success, false);
     if (!dupRes.success) {
