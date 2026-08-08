@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Live Multi-Role Clearance Journey', () => {
-  test.setTimeout(300000);
+  test.setTimeout(120000);
 
   test('Complete 9-step multi-role clearance workflow (Student G -> Signatories -> Accountant -> Adviser -> Dean -> Approved Student)', async ({ page }) => {
     // Automatically accept native window.confirm dialogs used in Signatory and Accountant dashboards

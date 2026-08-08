@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Printable Clearance Certificate QA', () => {
-  test('Student A can view and print official prototype clearance record', async ({ page }) => {
+  test('Student A can view and print prototype clearance record', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('student.a@example.test');
     await page.getByLabel(/password/i).fill('password123');

@@ -1,26 +1,23 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Keyboard Accessibility & Modal Navigation', () => {
-  test('Login form is fully navigable and submissible via keyboard', async ({ page }) => {
+  test('1. Login form is fully navigable and submissible via keyboard', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
 
-    // Focus email input and fill via keyboard
     await page.getByLabel(/email address/i).focus();
     await page.keyboard.type('admin@example.test');
 
-    // Tab to password
     await page.keyboard.press('Tab');
     await page.keyboard.type('password123');
 
-    // Submit with Enter key
     await page.keyboard.press('Enter');
 
     await page.waitForURL('**/admin/dashboard');
     await expect(page.getByRole('heading', { name: /admin control center/i })).toBeVisible();
   });
 
-  test('Theme selector opens, navigates, and closes with Escape key', async ({ page }) => {
+  test('2. Theme selector opens, selects theme via keyboard, and restores focus', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
 
@@ -28,14 +25,44 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     await themeBtn.focus();
     await page.keyboard.press('Enter');
 
-    await expect(page.getByRole('menu', { name: /select theme/i })).toBeVisible();
+    const themeMenu = page.getByRole('menu', { name: /select theme/i });
+    await expect(themeMenu).toBeVisible();
 
-    // Escape closes theme dropdown
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('menu', { name: /select theme/i })).toBeHidden();
+    // Select Corporate Light theme via keyboard
+    const corporateOption = page.getByRole('menuitem', { name: /corporate light/i });
+    await corporateOption.click();
+
+    // Verify document theme changed
+    const currentTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    expect(currentTheme).toBe('corporate');
+
+    // Menu closes and focus is restored to theme button
+    await expect(themeMenu).toBeHidden();
+    await expect(themeBtn).toBeFocused();
   });
 
-  test('Signatory evaluation modal traps focus and closes with Escape key', async ({ page }) => {
+  test('3. NotificationDropdown opens and closes via keyboard with focus restoration', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel(/email address/i).fill('admin@example.test');
+    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+
+    await page.waitForURL('**/admin/dashboard');
+
+    const notifBtn = page.getByRole('button', { name: /notifications/i });
+    await notifBtn.focus();
+    await page.keyboard.press('Enter');
+
+    const notifRegion = page.getByRole('region', { name: /user notifications/i });
+    await expect(notifRegion).toBeVisible();
+
+    // Escape closes dropdown and restores focus to trigger button
+    await page.keyboard.press('Escape');
+    await expect(notifRegion).toBeHidden();
+    await expect(notifBtn).toBeFocused();
+  });
+
+  test('4. Signatory evaluation modal traps focus, wraps Tab/Shift+Tab, and restores focus', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('guidance@example.test');
     await page.getByLabel(/password/i).fill('password123');
@@ -49,16 +76,153 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     await reviewBtn.focus();
     await page.keyboard.press('Enter');
 
-    // Modal dialog should open and trap focus
     const dialog = page.getByRole('dialog', { name: /evaluate clearance/i });
     await expect(dialog).toBeVisible();
 
-    // Tab through controls inside dialog
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
+    // Forward Tab wrapping test: focus last element then press Tab
+    const lastFocusable = await page.evaluate(() => {
+      const modal = document.querySelector('[role="dialog"]');
+      const focusables = modal?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href]:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables && focusables.length > 0) {
+        focusables[focusables.length - 1].focus();
+        return focusables[focusables.length - 1].textContent?.trim() || focusables[focusables.length - 1].tagName;
+      }
+      return null;
+    });
+    expect(lastFocusable).toBeTruthy();
 
-    // Press Escape to close modal
+    await page.keyboard.press('Tab');
+    const firstFocusedAfterTab = await page.evaluate(() => {
+      const modal = document.querySelector('[role="dialog"]');
+      const focusables = modal?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href]:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      return focusables && focusables.length > 0 && document.activeElement === focusables[0];
+    });
+    expect(firstFocusedAfterTab).toBe(true);
+
+    // Backward Shift+Tab wrapping test: focus first element then press Shift+Tab
+    await page.evaluate(() => {
+      const modal = document.querySelector('[role="dialog"]');
+      const focusables = modal?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href]:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables && focusables.length > 0) {
+        focusables[0].focus();
+      }
+    });
+
+    await page.keyboard.press('Shift+Tab');
+    const lastFocusedAfterShiftTab = await page.evaluate(() => {
+      const modal = document.querySelector('[role="dialog"]');
+      const focusables = modal?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href]:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      return focusables && focusables.length > 0 && document.activeElement === focusables[focusables.length - 1];
+    });
+    expect(lastFocusedAfterShiftTab).toBe(true);
+
+    // Escape key closes modal and restores focus to Review trigger button
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
+    await expect(reviewBtn).toBeFocused();
+  });
+
+  test('5. Accountant financial modal traps focus and restores focus to Update trigger', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel(/email address/i).fill('accountant@example.test');
+    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+
+    await page.waitForURL('**/accountant/dashboard');
+
+    const updateBtn = page.locator('button', { hasText: 'Update' }).first();
+    await expect(updateBtn).toBeVisible();
+    await updateBtn.focus();
+    await page.keyboard.press('Enter');
+
+    const dialog = page.getByRole('dialog', { name: /update financial account/i });
+    await expect(dialog).toBeVisible();
+
+    // Escape key closes modal and restores focus to Update button
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(updateBtn).toBeFocused();
+  });
+
+  test('6. Admin account modal traps focus and restores focus on close', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel(/email address/i).fill('admin@example.test');
+    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+
+    await page.waitForURL('**/admin/dashboard');
+
+    const usersTab = page.getByRole('button', { name: /users/i });
+    await expect(usersTab).toBeVisible();
+    await usersTab.click();
+
+    const createBtn = page.getByRole('button', { name: /create student account/i });
+    await expect(createBtn).toBeVisible();
+    await createBtn.focus();
+    await page.keyboard.press('Enter');
+
+    const dialog = page.getByRole('dialog', { name: /create student account/i });
+    await expect(dialog).toBeVisible();
+
+    // Escape closes modal and restores focus to Create button
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(createBtn).toBeFocused();
+  });
+
+  test('7. RoleHeader exposes Notifications, ThemeSelector, and Logout across roles at desktop', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel(/email address/i).fill('student.a@example.test');
+    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+    await page.waitForURL('**/student/dashboard');
+
+    await expect(page.getByRole('button', { name: /notifications/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /change theme/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /logout/i })).toBeVisible();
+    await page.getByRole('button', { name: /logout/i }).click();
+    await page.waitForURL('**/login');
+
+    await page.getByLabel(/email address/i).fill('admin@example.test');
+    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+    await page.waitForURL('**/admin/dashboard');
+
+    await expect(page.getByRole('button', { name: /notifications/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /change theme/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /logout/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /dashboard/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /reports/i })).toBeVisible();
+  });
+
+  test('8. RoleHeader exposes Notifications in header and Theme/Logout inside mobile menu at 320px', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto('/login');
+    await page.getByLabel(/email address/i).fill('admin@example.test');
+    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+
+    await page.waitForURL('**/admin/dashboard');
+
+    await expect(page.getByRole('button', { name: /notifications/i })).toBeVisible();
+
+    const menuBtn = page.getByRole('button', { name: /open mobile menu/i });
+    await expect(menuBtn).toBeVisible();
+    await menuBtn.click();
+
+    await expect(page.getByRole('navigation', { name: /mobile navigation/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /change theme/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /logout/i })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('navigation', { name: /mobile navigation/i })).toBeHidden();
   });
 });

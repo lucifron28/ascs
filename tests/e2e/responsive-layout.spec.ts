@@ -38,6 +38,67 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
       expect(hasHorizontalOverflow).toBe(false);
     });
 
+    test(`Signatory & Accountant Dashboards have zero page-level horizontal overflow at ${vp.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.goto('/login');
+      await page.getByLabel(/email address/i).fill('guidance@example.test');
+      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('button', { name: /log in/i }).click();
+
+      await page.waitForURL('**/guidance_counselor/dashboard');
+      await expect(page.getByRole('heading', { name: /pending evaluation queue/i })).toBeVisible();
+
+      const hasSigOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(hasSigOverflow).toBe(false);
+      if (vp.width < 768) {
+        const menuBtn = page.getByRole('button', { name: /open mobile menu/i });
+        await expect(menuBtn).toBeVisible();
+        await menuBtn.click();
+      }
+
+      const logoutBtn = page.getByRole('button', { name: /logout/i });
+      await expect(logoutBtn).toBeVisible();
+      await logoutBtn.click();
+      await page.waitForURL('**/login');
+
+      await page.getByLabel(/email address/i).fill('accountant@example.test');
+      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('button', { name: /log in/i }).click();
+
+      await page.waitForURL('**/accountant/dashboard');
+      await expect(page.getByRole('heading', { name: /financial accountability management/i })).toBeVisible();
+
+      const hasAccOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(hasAccOverflow).toBe(false);
+    });
+
+    test(`Dean Dashboard & Reports have zero page-level horizontal overflow at ${vp.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.goto('/login');
+      await page.getByLabel(/email address/i).fill('dean@example.test');
+      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('button', { name: /log in/i }).click();
+
+      await page.waitForURL('**/dean/dashboard');
+      await expect(page.getByRole('heading', { name: /dean clearance oversight/i })).toBeVisible();
+      const hasDeanOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(hasDeanOverflow).toBe(false);
+
+      await page.goto('/dean/reports');
+      await page.waitForURL('**/dean/reports');
+      await expect(page.getByRole('heading', { name: /academic clearance reports/i })).toBeVisible();
+      const hasReportsOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(hasReportsOverflow).toBe(false);
+    });
+
     test(`Admin Dashboard & Reports have zero page-level horizontal overflow at ${vp.name}`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto('/login');
