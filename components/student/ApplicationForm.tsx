@@ -23,6 +23,9 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
     onSubmit: async ({ value }) => {
       if (!value.confirmCorrectness) {
         setError('You must confirm that all submitted details are correct.');
+        setTimeout(() => {
+          document.getElementById('confirmCorrectness')?.focus();
+        }, 50);
         return;
       }
 
@@ -46,14 +49,18 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
   });
 
   return (
-    <div className="card w-full bg-slate-900 border border-slate-800 shadow-2xl p-8 rounded-2xl max-w-xl mx-auto">
-      <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-        <FileText className="w-5 h-5 text-indigo-400" /> Clearance Application
+    <div className="card w-full bg-base-100 border border-base-content/10 shadow-2xl p-8 rounded-2xl max-w-xl mx-auto">
+      <h2 className="text-xl font-bold text-base-content mb-6 flex items-center gap-2">
+        <FileText className="w-5 h-5 text-primary" aria-hidden="true" /> Clearance Application
       </h2>
 
       {error && (
-        <div className="alert alert-error bg-rose-950/80 border-rose-800 text-rose-300 rounded-xl mb-6 flex items-center gap-2 p-3 text-xs">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
+        <div
+          id="application-form-error"
+          role="alert"
+          className="alert alert-error text-error-content rounded-xl mb-6 flex items-center gap-2 p-3 text-xs font-medium"
+        >
+          <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>{error}</span>
         </div>
       )}
@@ -71,7 +78,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
           {(field) => (
             <div className="form-control w-full">
               <label htmlFor="academicYear" className="label py-1">
-                <span className="label-text text-slate-300 font-medium text-xs">Academic Year</span>
+                <span className="label-text text-base-content/80 font-medium text-xs">Academic Year</span>
               </label>
               <select
                 id="academicYear"
@@ -79,7 +86,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 disabled={loading}
-                className="select select-bordered w-full bg-slate-950/50 border-slate-800 text-white rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm h-11"
+                className="select select-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="2026-2027">2026-2027</option>
                 <option value="2027-2028">2027-2028</option>
@@ -94,7 +101,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
           {(field) => (
             <div className="form-control w-full">
               <label htmlFor="semester" className="label py-1">
-                <span className="label-text text-slate-300 font-medium text-xs">Semester</span>
+                <span className="label-text text-base-content/80 font-medium text-xs">Semester</span>
               </label>
               <select
                 id="semester"
@@ -102,7 +109,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 disabled={loading}
-                className="select select-bordered w-full bg-slate-950/50 border-slate-800 text-white rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm h-11"
+                className="select select-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="1st Semester">1st Semester</option>
                 <option value="2nd Semester">2nd Semester</option>
@@ -117,7 +124,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
           {(field) => (
             <div className="form-control w-full">
               <label htmlFor="purpose" className="label py-1">
-                <span className="label-text text-slate-300 font-medium text-xs">Purpose</span>
+                <span className="label-text text-base-content/80 font-medium text-xs">Purpose</span>
               </label>
               <select
                 id="purpose"
@@ -125,7 +132,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 disabled={loading}
-                className="select select-bordered w-full bg-slate-950/50 border-slate-800 text-white rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm h-11"
+                className="select select-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="Enrollment">Enrollment / Registration</option>
                 <option value="Graduation">Graduation / Completion</option>
@@ -140,16 +147,19 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
         <form.Field name="confirmCorrectness">
           {(field) => (
             <div className="form-control w-full mt-4">
-              <label className="label cursor-pointer justify-start gap-3 py-1">
+              <label htmlFor="confirmCorrectness" className="label cursor-pointer justify-start gap-3 py-1">
                 <input
+                  id="confirmCorrectness"
                   type="checkbox"
                   name={field.name}
                   checked={field.state.value}
                   onChange={(e) => field.handleChange(e.target.checked)}
                   disabled={loading}
-                  className="checkbox checkbox-primary bg-slate-950 border-slate-800 rounded-lg transition-all focus:outline-none"
+                  aria-invalid={!!error}
+                  aria-describedby={error ? 'application-form-error' : undefined}
+                  className="checkbox checkbox-primary rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
-                <span className="label-text text-slate-400 text-xs">
+                <span className="label-text text-base-content/70 text-xs font-medium">
                   I confirm that all entered details are accurate. I understand that submitting false info will hold up my clearance processing.
                 </span>
               </label>
@@ -161,13 +171,18 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
         <button
           type="submit"
           disabled={loading}
-          className="btn btn-primary w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-none rounded-xl transition-all active:scale-[0.98] mt-6 flex items-center justify-center gap-2 h-11 text-sm font-semibold"
+          aria-busy={loading}
+          className="btn btn-primary w-full text-primary-content border-none rounded-xl transition-all shadow-lg mt-6 flex items-center justify-center gap-2 h-11 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {loading ? (
-            <span className="loading loading-spinner loading-sm" />
+            <>
+              <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+              <span>Submitting Application...</span>
+            </>
           ) : (
             <>
-              <Send className="w-4 h-4" /> Submit Application
+              <Send className="w-4 h-4" aria-hidden="true" />
+              <span>Submit Application</span>
             </>
           )}
         </button>

@@ -102,24 +102,30 @@ export default function RoleHeader({
           )}
         </div>
 
-        {/* User Info & Actions */}
-        <div className="flex-none flex items-center gap-1.5 sm:gap-3">
-          {userDisplayName && (
-            <span className="hidden xl:inline-block text-xs text-base-content/70 font-medium">
-              {userDisplayName}
-            </span>
-          )}
+        {/* Header Controls */}
+        <div className="flex-none flex items-center gap-2 sm:gap-3">
+          {/* NotificationDropdown is ALWAYS visible in top header on both desktop & mobile */}
+          <NotificationDropdown />
 
-          <button
-            onClick={handleLogoutAction}
-            className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label="Logout"
-          >
-            <LogOut className="w-4 h-4" aria-hidden="true" />
-            <span className="text-xs">Logout</span>
-          </button>
+          {/* Desktop Only: ThemeSelector & Logout */}
+          <div className="hidden md:flex items-center gap-2 sm:gap-3">
+            <ThemeSelector />
+            {userDisplayName && (
+              <span className="hidden xl:inline-block text-xs text-base-content/70 font-medium">
+                {userDisplayName}
+              </span>
+            )}
+            <button
+              onClick={handleLogoutAction}
+              className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="Logout"
+            >
+              <LogOut className="w-4 h-4" aria-hidden="true" />
+              <span className="text-xs">Logout</span>
+            </button>
+          </div>
 
-          {/* Mobile Menu Toggle Button */}
+          {/* Mobile Only: Menu Toggle Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden btn btn-sm btn-square btn-ghost text-base-content/80 hover:text-base-content rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -140,7 +146,7 @@ export default function RoleHeader({
       {mobileMenuOpen && (
         <div
           id="mobile-navigation-menu"
-          className="md:hidden bg-base-100 border-b border-base-content/10 px-4 py-3 space-y-2"
+          className="md:hidden bg-base-100 border-b border-base-content/10 px-4 py-3 space-y-3"
         >
           {navLinks.length > 0 && (
             <nav className="flex flex-col space-y-1" aria-label="Mobile navigation">
@@ -163,18 +169,20 @@ export default function RoleHeader({
             </nav>
           )}
 
-          <div className="pt-2 border-t border-base-content/10 flex items-center justify-between">
-            {userDisplayName && (
-              <span className="text-xs text-base-content/70 truncate max-w-[200px]">
-                {userDisplayName}
-              </span>
-            )}
+          {/* Mobile Theme Selector & Logout */}
+          <div className="pt-2 border-t border-base-content/10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-base-content/70 font-semibold">Theme:</span>
+              <ThemeSelector />
+            </div>
+
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
                 handleLogoutAction();
               }}
-              className="btn btn-sm btn-error btn-outline rounded-lg gap-1.5 text-xs ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error"
+              className="btn btn-sm btn-error btn-outline rounded-lg gap-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error"
+              aria-label="Logout"
             >
               <LogOut className="w-4 h-4" aria-hidden="true" />
               <span>Logout</span>
