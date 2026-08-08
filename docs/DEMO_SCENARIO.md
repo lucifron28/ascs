@@ -150,3 +150,32 @@ rejects direct dashboard navigation, and re-logs-in with the new password.
   canonical states (approved / pending / not_approved / unpaid) — you can jump
   to the dashboard of Student A/B/C/D to demonstrate any of them without
   performing the live workflow.
+
+---
+
+## Pre-Defense Checklist
+
+Execute before commencing the live capstone presentation:
+
++- [ ] Browser zoom level set to 100%
++- [ ] Recommended desktop resolution available (1440x900 or 1920x1080)
++- [ ] Firebase Auth emulator running (`http://127.0.0.1:9099`)
++- [ ] Firestore emulator running (`http://127.0.0.1:8080`)
++- [ ] Reset and seed completed (`npm run demo:reset` or `npm run demo:prepare`)
++- [ ] Admin login verified (`admin@example.test`)
++- [ ] Student G live workflow ready (for live 9-step clearance submission)
++- [ ] Pre-approved Student A available as fallback for printable clearance
++- [ ] Report pages verified (`/admin/reports` and `/dean/reports`)
++- [ ] Presentation theme selected (e.g. `Corporate Light` or `Dark Mode`)
+
+---
+
+## Mobile / Responsive Fallback Demonstration
+
+If evaluators request a mobile or tablet demonstration:
+
+1. Open Chrome DevTools (`F12` or `Ctrl+Shift+I`).
+2. Toggle device toolbar (`Ctrl+Shift+M`) and select **iPhone SE (320px)** or **iPhone 14 (390px)**.
+3. Observe responsive top navigation: branding remains visible, while navigation links collapse into the compact mobile menu button (`Menu` / `X`).
+4. Open mobile navigation menu to access Dashboard, Reports, Theme Selector, and Logout.
+5. Open Signatory or Accountant dashboard to show table horizontal scroll container and responsive modal dialog fitting the viewport without clipping action buttons.
