@@ -1,5 +1,6 @@
 'use client';
 
+import { normalizeSemester } from '@/lib/academic-term';
 import React, { useState, useEffect } from 'react';
 import { fetchPendingApprovalsAction, signClearanceAction } from '@/app/actions/clearance';
 import { ClipboardList, ShieldAlert, CheckCircle2, User, Calendar, MessageSquare, X } from 'lucide-react';
@@ -193,7 +194,7 @@ export default function SignatoryDashboard() {
                     </td>
                     <td className="text-slate-300 py-4 font-mono text-xs">{app.student_id_number}</td>
                     <td className="text-slate-300 py-4">
-                      {app.academic_year} • {app.semester} Sem
+                      {app.academic_year} • {normalizeSemester(app.semester)}
                     </td>
                     <td className="text-slate-300 py-4">
                       <span className="badge badge-sm border border-slate-700 bg-slate-800 text-slate-300 rounded-md font-medium px-2 py-0.5">
@@ -269,7 +270,7 @@ export default function SignatoryDashboard() {
               <div>
                 <span className="text-slate-500 font-medium">Academic Term:</span>{' '}
                 <span className="text-white">
-                  {selectedApp.academic_year} • {selectedApp.semester} Semester
+                  {selectedApp.academic_year} • {normalizeSemester(selectedApp.semester)}
                 </span>
               </div>
               <div>

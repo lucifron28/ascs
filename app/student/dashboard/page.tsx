@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchStudentDashboardAction } from '@/app/actions/clearance';
+import { normalizeSemester } from '@/lib/academic-term';
 import ApplicationForm from '@/components/student/ApplicationForm';
 import TrackingTable from '@/components/student/TrackingTable';
 import StatusSummary from '@/components/student/StatusSummary';
@@ -222,7 +223,7 @@ export default function StudentDashboardPage() {
                   <span className="font-bold">Program / Year:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.program || '')} - {String((dashboardData?.application as Record<string, unknown> | undefined)?.yearLevel || '')}
                 </div>
                 <div>
-                  <span className="font-bold">Academic Term:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.academicYear || '')} • {String((dashboardData?.application as Record<string, unknown> | undefined)?.semester || '')} Semester
+                  <span className="font-bold">Academic Term:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.academicYear || '')} • {(dashboardData?.application as Record<string, unknown> | undefined)?.semester ? normalizeSemester((dashboardData?.application as Record<string, unknown>).semester) : ''}
                 </div>
                 <div>
                   <span className="font-bold">Purpose:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.purpose || '')}

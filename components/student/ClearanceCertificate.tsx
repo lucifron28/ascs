@@ -1,5 +1,6 @@
 'use client';
 
+import { normalizeSemester } from '@/lib/academic-term';
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchClearanceCertificateAction } from '@/app/actions/clearance';
@@ -154,7 +155,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
           </div>
           <div>
             <span className="text-slate-500 uppercase font-semibold text-[10px] block">Academic Term & Purpose</span>
-            <span className="font-semibold text-slate-800">AY {application.academicYear} | {application.semester} Sem ({application.purpose})</span>
+            <span className="font-semibold text-slate-800">AY {application.academicYear} | {normalizeSemester(application.semester)} ({application.purpose})</span>
           </div>
         </div>
 

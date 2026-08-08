@@ -1,5 +1,6 @@
 'use client';
 
+import { normalizeSemester } from '@/lib/academic-term';
 import React, { useState, useEffect } from 'react';
 import { fetchDeanApplicationsAction } from '@/app/actions/clearance';
 import { ClipboardList, ShieldAlert, CheckCircle2, Search, CircleEllipsis, X } from 'lucide-react';
@@ -215,7 +216,7 @@ export default function DeanDashboard() {
                     </td>
                     <td className="text-slate-300 py-4 font-mono text-xs">{rec.studentNumber}</td>
                     <td className="text-slate-300 py-4">
-                      {rec.program} • {rec.academicYear} ({rec.semester} Sem)
+                      {rec.program} • {rec.academicYear} ({normalizeSemester(rec.semester)})
                     </td>
                     <td className="text-slate-300 py-4">
                       <span className="badge badge-sm border border-slate-700 bg-slate-800 text-slate-300 rounded-md font-medium px-2 py-0.5">
@@ -288,7 +289,7 @@ export default function DeanDashboard() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Academic Term:</span>
-                <span className="text-white">{selectedRecord.academicYear} • {selectedRecord.semester} Sem</span>
+                <span className="text-white">{selectedRecord.academicYear} • {normalizeSemester(selectedRecord.semester)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Submission Date:</span>
