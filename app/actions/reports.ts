@@ -1,5 +1,6 @@
 'use server';
 
+import { normalizeSemester, getSemesterStorageAliases } from '@/lib/academic-term';
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getAuthenticatedUser } from '@/lib/auth/session';
@@ -91,7 +92,7 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
     let query: Query = firestore
       .collection('clearanceApplications')
       .where('academicYear', '==', filters.academicYear)
-      .where('semester', '==', filters.semester);
+      .where('semester', 'in', getSemesterStorageAliases(filters.semester));
 
     if (filters.program) query = query.where('program', '==', filters.program);
     if (filters.yearLevel) query = query.where('yearLevel', '==', filters.yearLevel);
@@ -179,7 +180,7 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
       .collection('clearanceApplications')
       .where('adviserApproved', '==', true)
       .where('academicYear', '==', filters.academicYear)
-      .where('semester', '==', filters.semester);
+      .where('semester', 'in', getSemesterStorageAliases(filters.semester));
 
     if (filters.program) query = query.where('program', '==', filters.program);
     if (filters.yearLevel) query = query.where('yearLevel', '==', filters.yearLevel);
@@ -285,7 +286,7 @@ export async function fetchReportFilterOptionsAction(inputScope: unknown) {
     appsSnap.docs.forEach((doc) => {
       const d = doc.data();
       if (d.academicYear) academicYearsSet.add(String(d.academicYear));
-      if (d.semester) semestersSet.add(String(d.semester));
+      if (d.semester) semestersSet.add(normalizeSemester(d.semester));
       if (d.program) programsSet.add(String(d.program));
       if (d.yearLevel) yearLevelsSet.add(String(d.yearLevel));
       if (d.section) sectionsSet.add(String(d.section));
@@ -344,7 +345,7 @@ export async function exportAdminReportCsvAction(
       let query: Query = firestore
         .collection('clearanceApplications')
         .where('academicYear', '==', filters.academicYear)
-        .where('semester', '==', filters.semester);
+        .where('semester', 'in', getSemesterStorageAliases(filters.semester));
 
       if (filters.program) query = query.where('program', '==', filters.program);
       if (filters.yearLevel) query = query.where('yearLevel', '==', filters.yearLevel);
@@ -367,7 +368,7 @@ export async function exportAdminReportCsvAction(
           yearLevel: String(d.yearLevel || ''),
           section: (d.section as string) || '',
           academicYear: (d.academicYear as string) || '',
-          semester: (d.semester as string) || '',
+          semester: normalizeSemester(d.semester),
           overallStatus,
           financialStatus,
           submittedAt: (d.submittedAt as string) || '',
@@ -447,7 +448,7 @@ export async function exportDeanReportCsvAction(
         .collection('clearanceApplications')
         .where('adviserApproved', '==', true)
         .where('academicYear', '==', filters.academicYear)
-        .where('semester', '==', filters.semester);
+        .where('semester', 'in', getSemesterStorageAliases(filters.semester));
 
       if (filters.program) query = query.where('program', '==', filters.program);
       if (filters.yearLevel) query = query.where('yearLevel', '==', filters.yearLevel);
@@ -471,7 +472,7 @@ export async function exportDeanReportCsvAction(
           yearLevel: String(d.yearLevel || ''),
           section: (d.section as string) || '',
           academicYear: (d.academicYear as string) || '',
-          semester: (d.semester as string) || '',
+          semester: normalizeSemester(d.semester),
           overallStatus,
           adviserApproved: true,
           submittedAt: (d.submittedAt as string) || '',

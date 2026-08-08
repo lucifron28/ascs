@@ -1,13 +1,7 @@
+import { CANONICAL_SEMESTERS, normalizeSemester } from '@/lib/academic-term';
 import type { ReportFilters } from './types';
 
-export const VALID_SEMESTERS = [
-  '1st',
-  '2nd',
-  'Summer',
-  '1st Semester',
-  '2nd Semester',
-  'Summer Semester',
-] as const;
+export const VALID_SEMESTERS = CANONICAL_SEMESTERS;
 
 export const VALID_OVERALL_STATUSES = ['pending', 'approved', 'not_approved'] as const;
 
@@ -67,14 +61,7 @@ export function parseReportFilters(
   // 2. Semester
   let semester = getDefaultSemester();
   if (obj.semester !== undefined && obj.semester !== null && String(obj.semester).trim() !== '') {
-    if (typeof obj.semester !== 'string') {
-      throw new Error('Semester filter must be a string.');
-    }
-    const trimmedSem = obj.semester.trim();
-    if (!VALID_SEMESTERS.includes(trimmedSem as (typeof VALID_SEMESTERS)[number])) {
-      throw new Error(`Invalid semester specified: '${obj.semester}'. Allowed values are: ${VALID_SEMESTERS.join(', ')}.`);
-    }
-    semester = trimmedSem;
+    semester = normalizeSemester(obj.semester);
   }
 
   const filters: ReportFilters = {

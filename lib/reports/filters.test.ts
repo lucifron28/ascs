@@ -17,6 +17,15 @@ test('1. parseReportFilters accepts valid academic year and semester', () => {
   assert.equal(filters.semester, '2nd Semester');
 });
 
+test('1b. parseReportFilters normalizes legacy semester aliases to canonical semester', () => {
+  assert.equal(parseReportFilters({ semester: '1st' }).semester, '1st Semester');
+  assert.equal(parseReportFilters({ semester: '1st Semester' }).semester, '1st Semester');
+  assert.equal(parseReportFilters({ semester: '2nd' }).semester, '2nd Semester');
+  assert.equal(parseReportFilters({ semester: '2nd Semester' }).semester, '2nd Semester');
+  assert.equal(parseReportFilters({ semester: 'Summer' }).semester, 'Summer Semester');
+  assert.equal(parseReportFilters({ semester: 'Summer Semester' }).semester, 'Summer Semester');
+});
+
 test('2. parseReportFilters applies defaults when academic year or semester is omitted', () => {
   const filters = parseReportFilters({});
   assert.equal(filters.academicYear, getDefaultAcademicYear());
