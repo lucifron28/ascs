@@ -1,6 +1,7 @@
 'use server';
 
 import { getAdminFirestore } from '@/lib/firebase/admin';
+import { normalizeSemester, getApplicationTermDocumentIds } from '@/lib/academic-term';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { getClearanceStatusSummary } from '@/lib/clearance/status';
 import type { QueryDocumentSnapshot, Transaction, DocumentData } from 'firebase-admin/firestore';
@@ -23,19 +24,22 @@ export async function submitApplicationAction(data: {
     }
 
     const firestore = getAdminFirestore();
-    // Deterministic Application Document ID: {studentUid}_{academicYear}_{semester}
-    const cleanAcademicYear = data.academicYear.replace(/\s+/g, '-');
-    const cleanSemester = data.semester.replace(/\s+/g, '-');
-    const appId = `${studentUid}_${cleanAcademicYear}_${cleanSemester}`;
+
+    const semester = normalizeSemester(data.semester);
+    const termDocIds = getApplicationTermDocumentIds(studentUid, data.academicYear, semester);
+    const appId = termDocIds[0];
 
     // Execute submission in a Firestore Transaction
     await firestore.runTransaction(async (transaction: Transaction) => {
-      const appRef = firestore.collection('clearanceApplications').doc(appId);
-      const appSnap = await transaction.get(appRef);
+      for (const checkAppId of termDocIds) {
+        const checkAppRef = firestore.collection('clearanceApplications').doc(checkAppId);
+        const checkAppSnap = await transaction.get(checkAppRef);
 
-      if (appSnap.exists) {
-        throw new Error(`Already submitted a clearance application for ${data.academicYear} ${data.semester} Semester.`);
+        if (checkAppSnap.exists) {
+          throw new Error(`Already submitted a clearance application for ${data.academicYear} ${semester}.`);
+        }
       }
+      const appRef = firestore.collection('clearanceApplications').doc(appId);
 
       // Fetch student record for denormalization
       const studentRef = firestore.collection('students').doc(studentUid);
@@ -107,7 +111,7 @@ export async function submitApplicationAction(data: {
         yearLevel: student.yearLevel,
         section: student.section,
         academicYear: data.academicYear,
-        semester: data.semester,
+        semester: semester,
         purpose: data.purpose,
         overallStatus: 'pending',
         financialStatus: 'pending', // Starts as pending verified
@@ -150,7 +154,7 @@ export async function submitApplicationAction(data: {
         action: 'submitted_application',
         entityType: 'clearance_application',
         entityId: appId,
-        metadata: { academicYear: data.academicYear, semester: data.semester, purpose: data.purpose },
+        metadata: { academicYear: data.academicYear, semester: semester, purpose: data.purpose },
         createdAt: new Date().toISOString()
       });
 

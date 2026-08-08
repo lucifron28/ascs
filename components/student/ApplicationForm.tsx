@@ -16,7 +16,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
   const form = useForm({
     defaultValues: {
       academicYear: '2026-2027',
-      semester: '1st',
+      semester: '1st Semester',
       purpose: 'Enrollment',
       confirmCorrectness: false,
     },
@@ -104,9 +104,9 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
                 disabled={loading}
                 className="select select-bordered w-full bg-slate-950/50 border-slate-800 text-white rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm h-11"
               >
-                <option value="1st">1st Semester</option>
-                <option value="2nd">2nd Semester</option>
-                <option value="Summer">Summer Term</option>
+                <option value="1st Semester">1st Semester</option>
+                <option value="2nd Semester">2nd Semester</option>
+                <option value="Summer Semester">Summer Semester</option>
               </select>
             </div>
           )}
