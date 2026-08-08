@@ -23,19 +23,33 @@ The ASCS MVP was reviewed against applicable WCAG 2.2 AA accessibility criteria,
 
 > **Compliance Disclaimer**: The ASCS MVP was reviewed against applicable WCAG 2.2 AA accessibility criteria using automated and manual QA. This capstone prototype does not claim formal third-party accessibility certification or official institutional deployment.
 
-### Key Accessibility Enhancements Implemented
-1. **Global Skip Link**: High-contrast `SkipLink` component (`<a href="#main-content">Skip to main content</a>`) present on all authenticated headers to allow keyboard users to bypass top navigation.
-2. **Page Landmarks**: All core screens structured with `<header>`, `<nav>`, `<main id="main-content">`, `<section>`, and logical heading hierarchies (`<h1>` -> `<h2>` -> `<h3>`).
-3. **Accessible Dialogs (`AccessibleDialog`)**: Custom modals use `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, and `aria-describedby`. Keyboard focus moves automatically into the dialog on open, traps focus with `Tab` / `Shift+Tab`, closes safely on `Escape`, and restores focus to the triggering element upon close.
-4. **Form Accessibility**: Inputs include `autocomplete` attributes (`username`, `current-password`, `new-password`), `aria-invalid`, and `aria-describedby` linked to validation error paragraphs. Form submit buttons display clear loading state text (`"Signing in..."`, `"Updating Password..."`) and `aria-busy="true"`.
-5. **Theme Consistency**: Dark-only hardcoded classes (`bg-slate-950`, `text-slate-400`) replaced with DaisyUI semantic tokens (`bg-base-100`, `bg-base-200`, `bg-base-300`, `text-base-content`, `text-base-content/70`, `text-primary`, `border-base-content/10`) ensuring high contrast and legibility across Light, Dark, Corporate, and Night themes.
-6. **Focus Visibility**: Universal `:focus-visible` ring indicators applied across all themes with crisp contrast.
-7. **Reduced Motion**: Respects `@media (prefers-reduced-motion: reduce)` by disabling non-essential CSS transitions, pulse animations, and scale effects.
-8. **Print Layout**: Dedicated print media styles (`@media print`) format the clearance certificate for A4 paper output, hiding web toolbars, buttons, and navigation headers.
+### Key Accessibility & UX Enhancements Implemented
+1. **Authenticated Header Navigation (`RoleHeader`)**:
+   - **Desktop (`md` and above)**: Exposes `ASCS PKM | NavLinks | NotificationDropdown | ThemeSelector | Logout`.
+   - **Mobile (`<768px`)**: Top bar renders `ASCS PKM | NotificationDropdown | Menu toggle`. Collapsible mobile menu exposes navigation links, `ThemeSelector`, and `Logout` without duplicate controls.
+2. **Global Skip Link**: High-contrast `SkipLink` component (`<a href="#main-content">Skip to main content</a>`) present on all authenticated headers to allow keyboard users to bypass top navigation.
+3. **Page Landmarks**: All core screens structured with `<header>`, `<nav>`, `<main id="main-content">`, `<section>`, and logical heading hierarchies (`<h1>` -> `<h2>` -> `<h3>`).
+4. **Accessible Dialogs (`AccessibleDialog`)**: Custom modals use `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, and `aria-describedby`. Keyboard focus moves automatically into the dialog on open, traps focus with `Tab` / `Shift+Tab`, closes safely on `Escape`, and restores focus to the triggering element upon close.
+5. **Form Accessibility**: Inputs include `autocomplete` attributes (`username`, `current-password`, `new-password`), `aria-invalid`, and `aria-describedby` linked to validation error paragraphs. Form submit buttons display clear loading state text (`"Signing in..."`, `"Submitting Application..."`) and `aria-busy="true"`.
+6. **Theme Consistency**: Dark-only hardcoded classes (`bg-slate-950`, `text-slate-400`) replaced with DaisyUI semantic tokens (`bg-base-100`, `bg-base-200`, `bg-base-300`, `text-base-content`, `text-base-content/70`, `text-primary`, `border-base-content/10`) ensuring high contrast and legibility across themes.
+7. **Focus Visibility**: Universal `:focus-visible` ring indicators applied across all themes with crisp contrast.
+8. **Reduced Motion**: Respects `@media (prefers-reduced-motion: reduce)` by disabling non-essential CSS transitions, pulse animations, and scale effects.
+9. **Print Layout**: Dedicated print media styles (`@media print`) format the clearance certificate for A4 paper output, hiding web toolbars, buttons, and navigation headers.
 
 ---
 
-## 3. Automated UX & Accessibility Test Suite
+## 3. Multi-Theme Contrast QA Evidence
+
+| Theme | Automated Contrast | Manual Desktop (1440x900) | Manual Mobile (375x667) | Final Result |
+| :--- | :---: | :---: | :---: | :---: |
+| **Dark** | Pass (0 Critical/Serious) | Pass | Pass | **PASS** |
+| **Light** | Pass (0 Critical/Serious) | Pass | Pass | **PASS** |
+| **Corporate** | Pass (0 Critical/Serious) | Pass | Pass | **PASS** |
+| **Night** | Pass (0 Critical/Serious) | Pass | Pass | **PASS** |
+
+---
+
+## 4. Automated UX & Accessibility Test Suite
 
 The UX test suite can be executed independently via:
 
@@ -44,14 +58,14 @@ npm run test:ux
 ```
 
 This suite executes 4 dedicated Playwright test files:
-1. `tests/e2e/accessibility.spec.ts`: Automated `@axe-core/playwright` WCAG 2.2 AA scans across all 9 major routes (verifying 0 critical and 0 serious violations).
+1. `tests/e2e/accessibility.spec.ts`: Automated `@axe-core/playwright` WCAG 2.2 AA scans across all 10 major routes and open dialog states under 4 themes (`dark`, `light`, `corporate`, `night`), verifying 0 critical and 0 serious violations.
 2. `tests/e2e/responsive-layout.spec.ts`: Audits 6 viewports (`320x568`, `375x667`, `430x932`, `768x1024`, `1280x720`, `1440x900`), verifying zero page-level horizontal overflow (`scrollWidth <= clientWidth`).
-3. `tests/e2e/keyboard-navigation.spec.ts`: Verifies keyboard form completion, modal focus trapping, dropdown navigation, and `Escape` key handlers.
+3. `tests/e2e/keyboard-navigation.spec.ts`: Verifies keyboard form completion, `RoleHeader` desktop & mobile navigation, modal focus trapping (first/last Tab wrapping, `Shift+Tab` wrapping, `Escape` close, focus restoration), `ThemeSelector` theme selection, and `NotificationDropdown` interaction.
 4. `tests/e2e/print-clearance.spec.ts`: Validates printable certificate render, student data matrix, non-official prototype disclaimer text, and toolbar exclusion under print media.
 
 ---
 
-## 4. Defense Presentation Checklist
+## 5. Defense Presentation Checklist
 
 Before conducting a live capstone defense or demonstration:
 
