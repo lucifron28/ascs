@@ -168,10 +168,10 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
           <table className="w-full text-left text-xs border border-slate-200">
             <thead>
               <tr className="bg-slate-100 border-b border-slate-200 text-slate-700">
-                <th className="p-2 border-r border-slate-200">Department / Office</th>
-              <th className="p-2 border-r border-slate-200">Assigned Signatory</th>
-                <th className="p-2 border-r border-slate-200">Date Verified</th>
-                <th className="p-2 text-center">Status</th>
+                <th scope="col" className="p-2 border-r border-slate-200 font-bold">Department / Office</th>
+                <th scope="col" className="p-2 border-r border-slate-200 font-bold">Assigned Signatory</th>
+                <th scope="col" className="p-2 border-r border-slate-200 font-bold">Date Verified</th>
+                <th scope="col" className="p-2 text-center font-bold">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">

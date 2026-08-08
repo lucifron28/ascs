@@ -94,7 +94,7 @@ export default function StatusSummary({ application, financial }: StatusSummaryP
           <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Overall Status</span>
           <h2 className="text-2xl font-black tracking-tight">{currentStyles.title}</h2>
           <p className="text-xs text-slate-300 leading-relaxed">{currentStyles.desc}</p>
-          <div className="text-[10px] text-slate-500 mt-2">
+          <div className="text-[10px] text-base-content/80 font-semibold mt-2">
             Ref: {application.applicationNumber} • Submitted {new Date(application.submittedAt).toLocaleDateString()}
           </div>
         </div>
@@ -112,7 +112,7 @@ export default function StatusSummary({ application, financial }: StatusSummaryP
           <h2 className="text-2xl font-black tracking-tight">{finStyles.title}</h2>
           <p className="text-xs text-slate-300 leading-relaxed">{finStyles.desc}</p>
           {financial?.verified_at && (
-            <div className="text-[10px] text-slate-500 mt-2">
+            <div className="text-[10px] text-base-content/80 font-semibold mt-2">
               Verified on {new Date(financial.verified_at).toLocaleDateString()}
             </div>
           )}
