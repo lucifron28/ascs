@@ -95,33 +95,33 @@ export default function DeanDashboard() {
     <div className="space-y-6">
       {/* 1. Header & Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="card bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-row items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-950 border border-indigo-800/40 flex items-center justify-center text-indigo-400">
+        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
             <ClipboardList className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider">Adviser Approved</span>
-            <h3 className="text-2xl font-black text-white">{records.length}</h3>
+            <span className="text-base-content/60 text-[10px] font-semibold uppercase tracking-wider">Adviser Approved</span>
+            <h3 className="text-2xl font-black text-base-content">{records.length}</h3>
           </div>
         </div>
 
-        <div className="card bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-row items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-800/40 flex items-center justify-center text-emerald-400">
+        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-success/10 border border-success/20 flex items-center justify-center text-success">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider">Fully Cleared</span>
-            <h3 className="text-2xl font-black text-white">{clearedCount}</h3>
+            <span className="text-base-content/60 text-[10px] font-semibold uppercase tracking-wider">Fully Cleared</span>
+            <h3 className="text-2xl font-black text-base-content">{clearedCount}</h3>
           </div>
         </div>
 
-        <div className="card bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-row items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-950 border border-amber-800/40 flex items-center justify-center text-amber-400">
+        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-warning/10 border border-warning/20 flex items-center justify-center text-warning">
             <CircleEllipsis className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider">In Evaluation</span>
-            <h3 className="text-2xl font-black text-white">{pendingCount}</h3>
+            <span className="text-base-content/60 text-[10px] font-semibold uppercase tracking-wider">In Evaluation</span>
+            <h3 className="text-2xl font-black text-base-content">{pendingCount}</h3>
           </div>
         </div>
       </div>
