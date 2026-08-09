@@ -25,6 +25,11 @@ const screenshots = [
   '16-not-approved-student-view.png',
 ];
 
+const fullPageScreenshots = new Set([
+  '15-printable-clearance-prototype.png',
+  '16-not-approved-student-view.png',
+]);
+
 const diagrams = [
   '01-system-context',
   '02-container-architecture',
@@ -54,7 +59,11 @@ for (const file of screenshots) {
   try {
     const size = pngSize(path);
     if (size.width < 1200 || size.width !== 1440) failures.push(`${file} width is ${size.width}; expected 1440`);
-    if (size.height !== 900) failures.push(`${file} height is ${size.height}; expected exactly 900`);
+    if (fullPageScreenshots.has(file)) {
+      if (size.height < 900) failures.push(`${file} height is ${size.height}; expected a full-page capture at least 900px tall`);
+    } else if (size.height !== 900) {
+      failures.push(`${file} height is ${size.height}; expected exactly 900`);
+    }
   } catch (error) {
     failures.push(error instanceof Error ? error.message : String(error));
   }

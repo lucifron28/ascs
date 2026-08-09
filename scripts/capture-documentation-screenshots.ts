@@ -126,12 +126,12 @@ async function main() {
     await login(page, 'student.a@example.test', 'student/dashboard');
     await page.goto(`${baseUrl}/student/clearance/app-student-a/print`, { waitUntil: 'networkidle' });
     await page.getByTestId('printable-clearance-area').waitFor();
-    await capture(page, '15-printable-clearance-prototype.png', false);
+    await capture(page, '15-printable-clearance-prototype.png', true);
     ({ context, page } = await replaceContext(browser, context));
 
     await login(page, 'student.c@example.test', 'student/dashboard');
     await page.getByRole('heading', { name: /welcome back/i }).waitFor();
-    await capture(page, '16-not-approved-student-view.png');
+    await capture(page, '16-not-approved-student-view.png', true);
   } finally {
     await browser.close();
   }
