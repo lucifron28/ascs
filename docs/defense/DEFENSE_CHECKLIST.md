@@ -9,7 +9,7 @@
 - [ ] Run `npm run docs:diagrams` and `npm run verify:docs`.
 - [ ] Reset the local emulator and rehearse the demo script.
 - [ ] Check the verified Vercel demo URL, if one is recorded in
-      `docs/VERCEL_DEPLOYMENT.md`.
+      `docs/dev/VERCEL_DEPLOYMENT.md`.
 - [ ] Verify all diagrams and desktop screenshots open correctly.
 - [ ] Confirm projector/monitor resolution and browser zoom plan.
 

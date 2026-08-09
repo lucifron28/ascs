@@ -131,5 +131,5 @@ Emulator Suite with a deterministic fictional dataset (`tests/fixtures/demo-data
 - `npm run test:acceptance` runs unit + lint + build + integration + Rules + browser layers
   and writes `artifacts/acceptance-summary.json` from actual results.
 
-See `docs/ACCEPTANCE_TESTING.md` for the full test architecture and traceability matrix, and
+See `docs/dev/ACCEPTANCE_TESTING.md` for the full test architecture and traceability matrix, and
 `docs/DEMO_SCENARIO.md` for the live defense/demo walkthrough.

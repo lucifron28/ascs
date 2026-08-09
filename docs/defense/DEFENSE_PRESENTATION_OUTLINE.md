@@ -147,7 +147,7 @@ Talking points:
 - Acceptance orchestration runs the layers deterministically.
 - CI and Acceptance workflows validate the final pushed SHA.
 
-Visual: `docs/UX_ACCESSIBILITY_QA.md` matrix or `15-printable-clearance-prototype.png`.
+Visual: `docs/dev/UX_ACCESSIBILITY_QA.md` matrix or `15-printable-clearance-prototype.png`.
 
 ## Slide 13 - Interface evidence
 

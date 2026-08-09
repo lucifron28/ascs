@@ -123,7 +123,7 @@ The deterministic demo accounts and fictional records are documented in [`docs/D
 - [`docs/defense/DEFENSE_DEMO_SCRIPT.md`](docs/defense/DEFENSE_DEMO_SCRIPT.md) — timed live-demo script and fallback plan
 - [`docs/defense/PANEL_QA.md`](docs/defense/PANEL_QA.md) — panel questions and evidence-based answers
 - [`docs/defense/DEFENSE_CHECKLIST.md`](docs/defense/DEFENSE_CHECKLIST.md) — presentation-day checklist
-- [`docs/FINAL_HANDOFF.md`](docs/FINAL_HANDOFF.md) — final repository handoff and verification record
+- [`docs/dev/README.md`](docs/dev/README.md) — contributor, testing, QA, and deployment notes
 
 Documentation commands:
 

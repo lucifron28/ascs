@@ -89,7 +89,7 @@ Evidence: [Technical Architecture](TECHNICAL_ARCHITECTURE.md),
 | Forms | TanStack Form `^1.33.0` |
 | Server-state management | TanStack Query `^5.101.2` |
 | Testing | Node test runner via tsx, Firebase Emulator Suite, Firestore Rules Unit Testing, Playwright `^1.62.1`, axe-core Playwright `^4.12.1` |
-| Hosting / demonstration | Vercel demo deployment, subject to the deployment record in `VERCEL_DEPLOYMENT.md` |
+| Hosting / demonstration | Vercel demo deployment, subject to the deployment record in `dev/VERCEL_DEPLOYMENT.md` |
 | Version control / CI | Git, GitHub, GitHub Actions |
 
 Evidence: `package.json` and `package-lock.json`.
@@ -190,7 +190,7 @@ responsive viewport checks, keyboard/dialog checks, print checks, and the
 acceptance orchestrator. GitHub Actions runs the CI and Acceptance workflows
 for `main`.
 
-Evidence: `docs/ACCEPTANCE_TESTING.md`, `docs/UX_ACCESSIBILITY_QA.md`,
+Evidence: `docs/dev/ACCEPTANCE_TESTING.md`, `docs/dev/UX_ACCESSIBILITY_QA.md`,
 `.github/workflows/`.
 
 ## 16. Security controls
@@ -213,7 +213,7 @@ Security controls are safeguards for this MVP, not a security certification.
 For capstone demonstration and remote evaluation, the Next.js application may
 be hosted on Vercel and connected to a dedicated Firebase demo environment
 containing fictional data. The authoritative deployment status, URL, SHA, and
-verification checks belong in [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md).
+verification checks belong in [VERCEL_DEPLOYMENT.md](dev/VERCEL_DEPLOYMENT.md).
 The local screenshot library remains emulator-based and deterministic.
 
 ## 18. Known limitations

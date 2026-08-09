@@ -89,7 +89,7 @@ verification evidence, not new requirements:
 - `tests/e2e/` covers the browser journeys: mandatory password change, approved/pending/
   not-approved/unpaid dashboards, and Admin/Dean reports (Dean financial-privacy boundary).
 - The deterministic emulator dataset, safety guards, and seed/reset commands are documented
-  in `docs/ACCEPTANCE_TESTING.md` and `docs/DEMO_SCENARIO.md`.
+  in `docs/dev/ACCEPTANCE_TESTING.md` and `docs/DEMO_SCENARIO.md`.
 
 ### Deferred Items:
 1. **Bulk CSV Account Import:**
