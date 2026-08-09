@@ -9,29 +9,32 @@ data only.
 
 | Field | Value |
 | --- | --- |
-| Vercel project | Not yet verified in this repository audit |
-| Deployment URL | Not yet verified |
-| Deployment ID | Not yet verified |
-| Deployment date | Not yet verified |
-| Deployed Git SHA | Not yet verified |
-| Firebase demo project | Must be explicitly confirmed before any remote write |
-| Demo mode | Must be `NEXT_PUBLIC_DEMO_MODE=true` |
-| Emulator mode | Must be `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=false` |
+| Vercel project | `ron-cada-projects/ascs` |
+| Deployment URL | <https://ascs-one.vercel.app> |
+| Latest production deployment | <https://ascs-hycytdenp-ron-cada-projects.vercel.app> |
+| Deployment ID | `dpl_EZjZLVxuib8vbS9V3Ggj6bomoxU1` |
+| Deployment date | 2026-08-09 |
+| Deployed Git SHA | `7717063` |
+| Firebase demo project | `ascs11` (fictional demo data) |
+| Firestore database | `(default)` in `asia-southeast1` |
+| Demo mode | `NEXT_PUBLIC_DEMO_MODE=true` |
+| Emulator mode | `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=false` |
+| Deployment protection | Vercel SSO remains enabled; protected smoke test used the project bypass secret |
 
-### Current verification blocker
+### Verification result
 
-No Vercel deployment is claimed in this handoff. The repository has the Vercel
-CLI installed, but no `VERCEL_TOKEN` or authenticated Vercel session is
-available in the execution environment. Firebase CLI authentication can list
-projects, but no dedicated fictional Firebase demo project has been confirmed:
-the existing `ascs11` project is the local/emulator project, and its
-read-only `firebase firestore:databases:list --project ascs11` check reports
-that the Cloud Firestore API is disabled. It is therefore not treated as a
-remote deployment target. An owner must authenticate Vercel (or connect the
-repository in Vercel), confirm or provision a dedicated Firebase demo project,
-configure protected variables, deploy the final pushed SHA, and then run the
-smoke check below. Until those actions are completed, the local emulator
-project `ascs11` is the only verified environment.
+The production deployment is verified against the dedicated fictional Firebase
+project `ascs11`. Firebase Authentication email/password sign-in, the Admin
+session-cookie route, Firestore profile reads, the Student dashboard, Admin
+Reports, logout, and the remote demo banner were exercised successfully. The
+browser smoke test also confirmed that no request targeted the local emulator
+hosts `127.0.0.1:8080` or `127.0.0.1:9099`.
+
+Vercel SSO protection is intentionally still enabled. The public
+`npm run verify:vercel` command therefore remains suitable only for an
+unprotected/custom-domain deployment; the verified run used a temporary local
+Playwright verifier with the project’s existing protection-bypass secret. That
+verifier and all credentials were removed from the repository after the run.
 
 The current local development and screenshot environment uses Firebase Emulator
 Suite project `ascs11` on Auth `127.0.0.1:9099` and Firestore
@@ -93,12 +96,16 @@ scripts remain emulator-only and must not be repurposed for remote data.
 
 ## Deployment procedure
 
-1. Confirm the Vercel account/project and exact Firebase demo project.
-2. Configure only the variables above through Vercel's protected environment
-   settings.
-3. Deploy the final pushed Git SHA using the Vercel CLI or Git integration.
-4. If Firebase Auth rejects the Vercel hostname, add only that exact hostname
-   to Firebase Authentication Authorized domains.
+The procedure used for the verified deployment was:
+
+1. Confirm the Vercel project `ron-cada-projects/ascs` and Firebase project
+   `ascs11` as the fictional demo targets.
+2. Configure the client variables, `NEXT_PUBLIC_DEMO_MODE=true`,
+   `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=false`, and the protected Firebase Admin
+   variables in Vercel Production. Emulator host variables were not configured.
+3. Deploy the pushed Git SHA using the authenticated Vercel CLI.
+4. Deploy `firestore.rules` and `firestore.indexes.json` to the `(default)`
+   Firestore database and wait for all indexes to reach `READY`.
 5. Run the remote smoke test without starting the local Playwright web server:
 
    ```bash
@@ -110,15 +117,15 @@ scripts remain emulator-only and must not be repurposed for remote data.
 
 ## Verification checklist
 
-- [ ] `GET /` and `GET /login` load successfully.
-- [ ] Fictional Student can log in, reach the Student Dashboard, and log out.
-- [ ] Fictional Admin can log in, open Admin Reports, and log out.
-- [ ] At least one authenticated Server Action succeeds using session
+- [x] `GET /` and `GET /login` load successfully.
+- [x] Fictional Student can log in, reach the Student Dashboard, and log out.
+- [x] Fictional Admin can log in, open Admin Reports, and log out.
+- [x] At least one authenticated Server Action succeeds using session
       verification, Firebase Admin SDK, and Firestore.
-- [ ] Admin Reports load remotely.
-- [ ] Browser behavior shows no request to `127.0.0.1:8080` or `127.0.0.1:9099`.
-- [ ] Demo/Fictional Data banner is visible.
-- [ ] Remote demo credentials are not present in the repository or public
+- [x] Admin Reports load remotely.
+- [x] Browser behavior shows no request to `127.0.0.1:8080` or `127.0.0.1:9099`.
+- [x] Demo/Fictional Data banner is visible.
+- [x] Remote demo credentials are not present in the repository or public
       documentation.
 
 ## Non-production disclaimer

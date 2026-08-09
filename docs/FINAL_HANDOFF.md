@@ -5,9 +5,9 @@
 | Field | Value |
 | --- | --- |
 | Repository | `https://github.com/lucifron28/ascs` |
-| Final branch | `main` |
-| Final SHA | To be filled after the final push |
-| Release tag | To be filled only if `v0.1.0-defense` is created without moving an existing tag |
+| Final branch | `feature/remote-demo-seeding` |
+| Final SHA | `7717063` |
+| Release tag | Not created |
 | Application status | Capstone prototype / MVP; feature-frozen for defense documentation |
 
 ## What is included
@@ -39,20 +39,14 @@ Use the fictional journey beginning with Student G in `docs/defense/DEFENSE_DEMO
 
 ## Deployment record
 
-The Vercel deployment record is maintained in [`VERCEL_DEPLOYMENT.md`](VERCEL_DEPLOYMENT.md). A deployment is considered verified only when the final pushed SHA, Vercel deployment, dedicated fictional Firebase project, and `npm run verify:vercel` smoke test are recorded together. No emulator endpoint or production secret belongs in a Vercel environment.
+The Vercel deployment record is maintained in [`VERCEL_DEPLOYMENT.md`](VERCEL_DEPLOYMENT.md). The verified deployment uses the dedicated fictional Firebase project `ascs11`, with emulator variables disabled in Vercel. No emulator endpoint or production secret belongs in the repository.
 
-At handoff, the deployment fields must be one of:
-
-1. completed with the deployment URL, deployment ID, final SHA, Firebase demo project ID, and smoke-test result; or
-2. explicitly marked blocked with the exact missing authentication/project action required from the repository owner.
-
-Current state: Vercel verification is blocked because this environment has no
-authenticated Vercel CLI session/token and no confirmed dedicated fictional
-Firebase demo project. Firebase CLI can list the existing `ascs11` project, but
-its Cloud Firestore API is disabled and it remains the local/emulator project,
-not a safe remote deployment target. The repository owner must authenticate
-Vercel and confirm or provision the dedicated Firebase demo project before a
-remote URL, deployment ID, or deployed SHA can be recorded.
+Current state: verified. The production alias is
+<https://ascs-one.vercel.app>, deployment
+`dpl_EZjZLVxuib8vbS9V3Ggj6bomoxU1`, deployed from SHA `7717063`. A protected
+browser smoke test verified Student dashboard/banner/logout, Admin dashboard and
+Reports/logout, successful authenticated Server Actions, and no requests to
+`127.0.0.1:8080` or `127.0.0.1:9099`. Vercel SSO protection remains enabled.
 
 ## Scope and limitations
 
