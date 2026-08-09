@@ -98,6 +98,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
       purpose: string;
       financialUpdatedByName?: string;
       financialVerifiedAt?: string;
+      financialRemarks?: string | null;
       financialStatus: string;
     };
     approvals: Array<{
@@ -106,6 +107,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
       label: string;
       status: string;
       assignedSignatoryName?: string;
+      remarksLatest?: string | null;
       actedAt?: string | null;
     }>;
     issuedAt: string;
@@ -117,6 +119,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
       id: approval?.id || role,
       label: approval?.label || fallbackLabel,
       assignedSignatoryName: approval?.assignedSignatoryName || 'Department desk',
+      remarksLatest: approval?.remarksLatest || null,
       status: approval?.status || 'pending',
       actedAt: approval?.actedAt || null,
     };
@@ -127,6 +130,13 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
     : application.financialStatus === 'unpaid'
       ? 'Unpaid / Hold'
       : 'Pending review';
+
+  const normalizedSemester = normalizeSemester(application.semester);
+  const displaySemester = normalizedSemester === '1st Semester'
+    ? 'FIRST SEMESTER'
+    : normalizedSemester === '2nd Semester'
+      ? 'SECOND SEMESTER'
+      : 'SUMMER SEMESTER';
 
   return (
     <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
@@ -159,7 +169,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
           </h1>
           <p className="text-xs font-bold tracking-[0.2em] text-indigo-900 uppercase">PROTOTYPE / MVP</p>
           <p className="text-xs font-semibold text-slate-600 font-sans">
-            Academic Term: <span className="text-slate-950">AY {application.academicYear} • {normalizeSemester(application.semester)}</span>
+            <span className="text-slate-950">{`A.Y. ${application.academicYear} — ${displaySemester}`}</span>
           </p>
         </header>
 
@@ -195,24 +205,25 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
           </dl>
         </section>
 
-        <section aria-labelledby="signatory-heading" className="space-y-3 font-sans">
+        <section aria-labelledby="signatory-heading" data-testid="required-signatory-section" className="space-y-3 font-sans">
           <h2 id="signatory-heading" className="text-xs font-black tracking-[0.16em] uppercase text-slate-700 border-b border-slate-300 pb-1 flex items-center gap-1.5">
             <FileCheck className="w-4 h-4 text-indigo-900" aria-hidden="true" /> Required Signatory Clearance
           </h2>
-          <table aria-label="Required signatory clearance" className="w-full text-left text-xs border border-slate-300">
+          <table aria-label="Required signatory clearance" data-testid="required-signatory-table" className="w-full text-left text-xs border border-slate-300">
             <thead>
               <tr className="bg-slate-100 border-b border-slate-300 text-slate-800">
-                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Office / Signatory</th>
-                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Recorded Decision</th>
-                <th scope="col" className="p-2.5 font-black uppercase tracking-wide">Date Verified</th>
+                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Office / Requirement</th>
+                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Status</th>
+                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Assigned Signatory</th>
+                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Remarks</th>
+                <th scope="col" className="p-2.5 font-black uppercase tracking-wide">Date Reviewed</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {signatoryApprovals.map((approval) => (
                 <tr key={approval.id}>
-                  <td className="p-2.5 border-r border-slate-200">
+                  <td className="p-2.5 border-r border-slate-200 font-bold uppercase text-[10px]">
                     <span className="font-bold text-slate-900">{approval.label}</span>
-                    <span className="block text-[10px] text-slate-600">{approval.assignedSignatoryName}</span>
                   </td>
                   <td className="p-2.5 border-r border-slate-200 font-bold uppercase text-[10px]">
                     {approval.status === 'approved' ? (
@@ -222,6 +233,12 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
                     ) : (
                       <span className="text-amber-700">Pending</span>
                     )}
+                  </td>
+                  <td className="p-2.5 border-r border-slate-200 text-[11px] text-slate-700">
+                    {approval.assignedSignatoryName}
+                  </td>
+                  <td className="p-2.5 border-r border-slate-200 text-[11px] text-slate-700 break-words">
+                    {approval.remarksLatest || 'No remarks recorded.'}
                   </td>
                   <td className="p-2.5 font-mono text-[11px] text-slate-600">
                     {approval.actedAt ? new Date(approval.actedAt).toLocaleDateString() : 'N/A'}
@@ -237,19 +254,23 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
           <h2 id="financial-accountability-review" className="text-xs font-black tracking-[0.16em] uppercase text-slate-700 border-b border-slate-300 pb-1">
             Financial Accountability Review
           </h2>
-          <div className="grid grid-cols-3 gap-3 bg-slate-50 border border-slate-200 p-4 text-xs">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 p-4 text-xs">
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Accountability Status</span>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</span>
               <span className={`font-bold ${application.financialStatus === 'paid' ? 'text-emerald-700' : application.financialStatus === 'unpaid' ? 'text-red-700' : 'text-amber-700'}`}>
                 {financialStatusLabel}
               </span>
             </div>
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Reviewed By</span>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Verified By</span>
               <span className="font-semibold text-slate-800">{application.financialUpdatedByName || 'Accountant desk'}</span>
             </div>
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date Verified</span>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Remarks</span>
+              <span className="text-slate-700 break-words">{application.financialRemarks || 'No remarks recorded.'}</span>
+            </div>
+            <div>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date Reviewed</span>
               <span className="font-mono text-slate-700">{application.financialVerifiedAt ? new Date(application.financialVerifiedAt).toLocaleDateString() : 'N/A'}</span>
             </div>
           </div>
@@ -261,8 +282,8 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Date Issued</p>
             <p className="font-mono text-xs text-slate-900">{new Date(issuedAt).toLocaleDateString()}</p>
           </div>
-          <p className="max-w-sm text-right text-[10px] font-bold uppercase tracking-wider text-slate-700">
-            Prototype / MVP output for internal testing only — not an official school certificate, receipt, or electronic signature.
+          <p className="max-w-lg text-right text-[11px] leading-4 text-slate-700">
+            Prototype record generated by the ASCS capstone MVP for demonstration and evaluation purposes. This document is not an official institutional clearance certificate, receipt, or electronic signature.
           </p>
         </footer>
       </article>

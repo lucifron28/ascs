@@ -686,6 +686,7 @@ export async function fetchClearanceCertificateAction(applicationId: string) {
           label: req?.label || data.signatoryRole,
           status: data.status,
           assignedSignatoryName: data.assignedSignatoryName || 'Department Desk',
+          remarksLatest: data.remarksLatest || null,
           actedAt: data.actedAt || null,
           displayOrder: req?.displayOrder || 99,
         };
