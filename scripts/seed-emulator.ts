@@ -14,7 +14,8 @@ const DEMO_TIMESTAMP = '2026-01-15T09:00:00.000Z';
 
 export async function seedEmulator(): Promise<void> {
   const env = assertEmulatorEnvironment();
-  console.log(`🌱 Seeding Firebase Emulator Suite for project "${env.projectId}"...`);
+  const target = env.firestoreHost === 'remote' ? 'confirmed remote demo Firebase' : 'Firebase Emulator Suite';
+  console.log(`🌱 Seeding ${target} for project "${env.projectId}"...`);
 
   const auth = getAdminAuth();
   const db = getAdminFirestore();
