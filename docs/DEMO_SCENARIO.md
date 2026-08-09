@@ -33,6 +33,18 @@ npx playwright install chromium
 npm run emulators
 ```
 
+Before the reset step, make sure `.env.local` contains the local emulator
+switches below. The standalone reset/seed scripts preload this file, so no
+manual PowerShell exports are required for the normal demo workflow:
+
+```env
+NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true
+NEXT_PUBLIC_DEMO_MODE=true
+FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+FIREBASE_PROJECT_ID=ascs11
+```
+
 In a second terminal, reset and seed the deterministic fixture dataset:
 
 ```bash
