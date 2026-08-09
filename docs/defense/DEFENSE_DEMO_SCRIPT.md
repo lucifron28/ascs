@@ -64,8 +64,10 @@ financial summary is intentionally absent.
 ### 5:30 - Final student state and print prototype
 
 For a deterministic approved screen, log in as `student.a@example.test`. Show
-the approved summary and open the printable clearance prototype. State that it
-is an MVP record and not an official institutional certificate.
+the approved summary and open the printable clearance prototype. Point out the
+five required signatory rows and the separate `FINANCIAL ACCOUNTABILITY REVIEW`.
+State that it is an A4 MVP record and not an official institutional certificate
+or electronic signature.
 
 ### 6:30 - Admin overview and user management
 

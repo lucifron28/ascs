@@ -156,6 +156,9 @@ Talking points:
 - Corporate theme desktop screenshot library.
 - Approved, pending, not-approved, and unpaid states.
 - Signatory and Accountant dialogs remain usable at desktop width.
+- The printable output is an A4 PKM-slip-inspired prototype with five signatory
+  rows and a separate financial accountability review; it does not reproduce
+  signatures.
 
 Visual: `02-student-dashboard-approved.png`, `06-signatory-review-dialog.png`,
 `15-printable-clearance-prototype.png`.

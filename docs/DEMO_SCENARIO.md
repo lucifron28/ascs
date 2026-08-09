@@ -112,8 +112,9 @@ npm run demo:reset   # or: npm run demo:prepare
 
 1. **Admin dashboard / account overview** — log in as
    `admin@example.test`; show the account list, roles, and activity log.
-   Note the Database Operations card points to `npm run demo:reset` (seeding
-   is CLI-managed, not in-app).
+   Show the account list, roles, requirement assignments, and activity log. The
+   Admin UI does not expose developer-only seed/reset commands; reset the
+   fictional emulator dataset before the demonstration.
 2. **Student pending application** — log in as `student.b@example.test`;
    show the pending signatory checklist (Librarian + OSA approved, 3 pending).
 3. **Signatory approval** — log in as `guidance@example.test` (or

@@ -138,7 +138,11 @@ signatory approval rows and `financialStatus`:
 - All required signatories approved plus `unpaid` produces `not_approved`.
 - Otherwise the result is `pending`.
 - Legacy Accountant approval rows are ignored for signatory counts.
-- `printableAvailable` is true only for `approved`.
+- `printableAvailable` is true only for `approved`. The print route renders an
+  A4-oriented digital prototype record with five required signatory rows and a
+  separate Accountant financial review; the Dean remains oversight-only and is
+  not printed as a signatory. No handwritten or electronic signatures are
+  reproduced.
 
 The Dean is not inserted into the five-row required signatory matrix. Adviser
 approval sets `adviserApproved`, which is the visibility gate used by Dean

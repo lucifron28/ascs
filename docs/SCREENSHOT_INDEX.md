@@ -21,7 +21,7 @@ evidence for the manuscript and defense, not production monitoring evidence.
 | `12-admin-user-management.png` | `/admin/dashboard` | Admin | Users tab | Account lifecycle | Admin functions |
 | `13-admin-reports.png` | `/admin/reports` | Admin | Institution report | Reporting | Admin reports |
 | `14-dean-reports.png` | `/dean/reports` | Dean | Adviser-approved report | Reporting privacy | Dean reports |
-| `15-printable-clearance-prototype.png` | `/student/clearance/app-student-a/print` | Student | Approved prototype record | Output | Printable output |
+| `15-printable-clearance-prototype.png` | `/student/clearance/app-student-a/print` | Student | A4 PKM-slip-inspired prototype record: five signatories + separate financial review | Output | Printable output |
 | `16-not-approved-student-view.png` | `/student/dashboard` | Student | Student C remark / rejection | Status and limitations | Not-approved state |
 
 Reproduce with:

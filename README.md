@@ -8,7 +8,7 @@
 
 ## Overview
 
-The **Automated Student Clearance System (ASCS)** modernizes the clearance process for students at Pambayang Kolehiyo ng Mauban (PKM). It replaces paper-based routing slips with a digital workflow that provides real-time clearance tracking, role-scoped signatory sign-offs, integrated accountant financial accountability verification, and an MVP print-friendly clearance summary.
+The **Automated Student Clearance System (ASCS)** modernizes the clearance process for students at Pambayang Kolehiyo ng Mauban (PKM). It replaces paper-based routing slips with a digital workflow that provides real-time clearance tracking, five role-scoped signatory sign-offs, a separate Accountant financial accountability review, and an A4-oriented MVP print record. The print record is a PKM-slip-inspired digital prototype, not an official certificate or electronic signature.
 
 ---
 
@@ -52,7 +52,7 @@ ASCS operates on nine core collections and subcollections:
 5. **Guidance Counselor:** Reviews guidance department clearance requirements.
 6. **Area Chair:** Reviews academic program / department clearance requirements.
 7. **Adviser:** Reviews section/class adviser clearance requirements. Approval unlocks application visibility for the Dean.
-8. **Dean:** Conducts final academic review on adviser-approved clearance applications.
+8. **Dean:** Provides read-only academic oversight for adviser-approved clearance applications and Dean-scoped reports; the Dean is not a required signatory.
 9. **System Administrator:** Provisions student and staff accounts, manages user roles, deactivates/reactivates accounts, issues temporary passwords, assigns requirement signatories, and inspects activity logs.
 
 ---

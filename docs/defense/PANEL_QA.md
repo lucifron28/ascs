@@ -71,8 +71,11 @@ institutional deployment or certification.
     its remark is visible to the student.
 23. **What if approvals are still pending?** Overall status remains `pending`
     and the print record is unavailable.
-24. **When is a record printable?** When all required signatories are approved
-    and the financial state is `paid`, producing overall `approved`.
+24. **When is a record printable?** When all five required signatories are
+    approved and the financial state is `paid`, producing overall `approved`.
+    The output is an A4 PKM-slip-inspired digital prototype with a separate
+    `FINANCIAL ACCOUNTABILITY REVIEW`; it contains no reproduced signatures and
+    is not an official certificate.
 25. **Why does Adviser approval affect the Dean?** It is the academic handoff
     gate: `adviserApproved` filters Dean queues and reports without making the
     Dean another required signatory.

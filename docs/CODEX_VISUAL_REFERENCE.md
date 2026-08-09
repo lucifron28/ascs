@@ -69,7 +69,7 @@ Role: Guidance Counselor
 Fixture: first pending queue record, Review dialog open
 Theme: Corporate
 Viewport: 1440x900
-Purpose: Shows remarks and the three clearance actions.
+Purpose: Shows the readable review context, remarks requirement, and the three clearly differentiated clearance actions.
 
 ## Accountant Dashboard
 
@@ -168,7 +168,7 @@ Role: Student
 Fixture: Student A approved + paid
 Theme: Corporate / print layout
 Viewport: 1440x900
-Purpose: Shows the non-official prototype print record.
+Purpose: Shows the A4-oriented, PKM-slip-inspired digital prototype record with five required signatory rows and a separate Accountant financial review. It contains no reproduced signatures and is not an official certificate.
 
 ## Not-approved Student View
 

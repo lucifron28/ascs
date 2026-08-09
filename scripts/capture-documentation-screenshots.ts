@@ -125,7 +125,7 @@ async function main() {
 
     await login(page, 'student.a@example.test', 'student/dashboard');
     await page.goto(`${baseUrl}/student/clearance/app-student-a/print`, { waitUntil: 'networkidle' });
-    await page.getByText(/prototype record/i).first().waitFor();
+    await page.getByTestId('printable-clearance-area').waitFor();
     await capture(page, '15-printable-clearance-prototype.png', false);
     ({ context, page } = await replaceContext(browser, context));
 

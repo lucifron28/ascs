@@ -161,9 +161,15 @@ Evidence: `app/actions/notifications.ts`, `components/ui/NotificationDropdown.ts
 
 ## 14. Printable clearance output
 
-`/student/clearance/[id]/print` renders an A4-oriented print-friendly prototype
-record only when the derived overall status is `approved`. The page explicitly
-states that it is not an official institutional certificate.
+`/student/clearance/[id]/print` renders an A4-oriented, PKM-slip-inspired digital
+prototype record only when the derived overall status is `approved`. Its identity
+block includes the academic term, student number, program, year, section, and
+purpose. The record renders exactly five signatory rows (Librarian, OSA
+Coordinator, Guidance Counselor, Area Chair, and Adviser), followed by a separate
+`FINANCIAL ACCOUNTABILITY REVIEW` for the Accountant gate. The Dean is an
+oversight role and is not printed as a signatory; the prototype does not reproduce
+handwritten or electronic signatures. The page explicitly states that it is not
+an official institutional certificate, receipt, or electronic signature.
 
 Evidence: `app/student/clearance/[id]/print/page.tsx`,
 `components/student/ClearanceCertificate.tsx`,

@@ -32,6 +32,11 @@ Pending --> Financial : update paid / unpaid
 Signatories --> AdviserGate : Adviser approved
 AdviserGate --> DeanView : filter Dean queue/reports
 
+note right of DeanView
+Academic oversight only;
+not a required signatory row.
+end note
+
 note right of Approved
 Required signatories approved
 and paid financial state.
