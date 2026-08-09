@@ -22,12 +22,16 @@ data only.
 
 No Vercel deployment is claimed in this handoff. The repository has the Vercel
 CLI installed, but no `VERCEL_TOKEN` or authenticated Vercel session is
-available in the execution environment, and no dedicated fictional Firebase
-demo project has been supplied. An owner must authenticate the Vercel CLI (or
-connect the repository in Vercel), provide the dedicated Firebase demo project
-and protected variables, deploy the final pushed SHA, and then run the smoke
-check below. Until those actions are completed, the local emulator project
-`ascs11` is the only verified environment.
+available in the execution environment. Firebase CLI authentication can list
+projects, but no dedicated fictional Firebase demo project has been confirmed:
+the existing `ascs11` project is the local/emulator project, and its
+read-only `firebase firestore:databases:list --project ascs11` check reports
+that the Cloud Firestore API is disabled. It is therefore not treated as a
+remote deployment target. An owner must authenticate Vercel (or connect the
+repository in Vercel), confirm or provision a dedicated Firebase demo project,
+configure protected variables, deploy the final pushed SHA, and then run the
+smoke check below. Until those actions are completed, the local emulator
+project `ascs11` is the only verified environment.
 
 The current local development and screenshot environment uses Firebase Emulator
 Suite project `ascs11` on Auth `127.0.0.1:9099` and Firestore

@@ -47,9 +47,12 @@ At handoff, the deployment fields must be one of:
 2. explicitly marked blocked with the exact missing authentication/project action required from the repository owner.
 
 Current state: Vercel verification is blocked because this environment has no
-authenticated Vercel CLI session/token and no dedicated fictional Firebase demo
-project. The repository owner must complete those two external setup steps
-before a remote URL, deployment ID, or deployed SHA can be recorded.
+authenticated Vercel CLI session/token and no confirmed dedicated fictional
+Firebase demo project. Firebase CLI can list the existing `ascs11` project, but
+its Cloud Firestore API is disabled and it remains the local/emulator project,
+not a safe remote deployment target. The repository owner must authenticate
+Vercel and confirm or provision the dedicated Firebase demo project before a
+remote URL, deployment ID, or deployed SHA can be recorded.
 
 ## Scope and limitations
 
