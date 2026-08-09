@@ -23,6 +23,8 @@ ASCS is built using a modern server-first architecture powered by Next.js and Fi
 - **Styling & UI:** Tailwind CSS v4, daisyUI v5, Lucide React Icons
 - **Form & State:** TanStack Form & TanStack Query v5
 
+For the source-aligned architecture, trust boundaries, data model, and implemented limitations, see [`docs/TECHNICAL_ARCHITECTURE.md`](docs/TECHNICAL_ARCHITECTURE.md). The manuscript evidence map is in [`docs/MANUSCRIPT_ALIGNMENT.md`](docs/MANUSCRIPT_ALIGNMENT.md).
+
 ---
 
 ## Active Firestore Data Model
@@ -108,6 +110,31 @@ To run fully offline with local Firebase Auth and Firestore emulators:
    ```bash
    npm run test:acceptance
    ```
+
+The deterministic demo accounts and fictional records are documented in [`docs/DEMO_SCENARIO.md`](docs/DEMO_SCENARIO.md). The demo is emulator-only; it must not be seeded into a production Firebase project.
+
+## Documentation, Diagrams, and Defense Assets
+
+- [`docs/architecture/README.md`](docs/architecture/README.md) — architecture navigation
+- [`docs/diagrams/README.md`](docs/diagrams/README.md) — eight self-contained PlantUML diagrams, with SVG and PNG renders
+- [`docs/SCREENSHOT_INDEX.md`](docs/SCREENSHOT_INDEX.md) — reproducible 1440×900 Corporate-theme desktop screenshot index
+- [`docs/CODEX_VISUAL_REFERENCE.md`](docs/CODEX_VISUAL_REFERENCE.md) — figure-ready visual references and fixture mapping
+- [`docs/defense/DEFENSE_PRESENTATION_OUTLINE.md`](docs/defense/DEFENSE_PRESENTATION_OUTLINE.md) — defense slide plan
+- [`docs/defense/DEFENSE_DEMO_SCRIPT.md`](docs/defense/DEFENSE_DEMO_SCRIPT.md) — timed live-demo script and fallback plan
+- [`docs/defense/PANEL_QA.md`](docs/defense/PANEL_QA.md) — panel questions and evidence-based answers
+- [`docs/defense/DEFENSE_CHECKLIST.md`](docs/defense/DEFENSE_CHECKLIST.md) — presentation-day checklist
+- [`docs/FINAL_HANDOFF.md`](docs/FINAL_HANDOFF.md) — final repository handoff and verification record
+
+Documentation commands:
+
+```bash
+npm run docs:diagrams
+npm run docs:screenshots
+npm run verify:docs
+npm run verify:vercel
+```
+
+`docs:screenshots` targets a running local emulator-backed app and uses only fictional `@example.test` accounts. `verify:vercel` is a smoke check for a separately configured demo deployment; it never starts emulators or prints credentials.
 
 ---
 
