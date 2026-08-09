@@ -1,0 +1,42 @@
+@startuml
+title ASCS Authentication and Session Sequence
+autonumber
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign center
+
+actor User
+participant Browser
+participant "Firebase Authentication" as Auth
+participant "Next.js Server" as Server
+participant "Firebase Admin SDK" as AdminSDK
+database Firestore
+
+User -> Browser : credentials
+Browser -> Auth : signInWithEmailAndPassword()
+Auth --> Browser : ID token
+Browser -> Server : POST /api/auth/session
+Server -> AdminSDK : create session cookie
+AdminSDK --> Server : HTTP-only cookie value
+Server --> Browser : Set-Cookie (ascs_session)
+
+Browser -> Server : Server Action request
+Server -> AdminSDK : verify session cookie (revocation)
+AdminSDK --> Server : authenticated UID / claims
+Server -> Firestore : fetch users/{uid}
+Firestore --> Server : role, accountStatus, mustChangePassword
+
+alt mustChangePassword = true
+  Server --> Browser : redirect /change-password
+else account inactive
+  Server --> Browser : unauthorized
+else active authorized role
+  Server -> AdminSDK : perform trusted Auth / Firestore operation
+  AdminSDK --> Server : result
+  Server --> Browser : action response
+end
+
+User -> Browser : logout
+Browser -> Server : POST /api/auth/logout
+Server --> Browser : clear HTTP-only cookie
+@enduml

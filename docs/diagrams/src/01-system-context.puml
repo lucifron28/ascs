@@ -1,0 +1,26 @@
+@startuml
+title ASCS System Context
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam ArrowColor #334155
+
+actor "Student" as Student
+actor "Clearance\nSignatories" as Signatories
+actor "Accountant" as Accountant
+actor "Dean" as Dean
+actor "System\nAdministrator" as Admin
+
+rectangle "ASCS\nAutomated Student Clearance System\nwith Integrated Financial Accountability Monitoring" as ASCS #E0F2FE
+rectangle "Firebase\nAuthentication" as Auth #FEF3C7
+database "Cloud\nFirestore" as Firestore #DCFCE7
+
+Student --> ASCS
+Signatories --> ASCS
+Accountant --> ASCS
+Dean --> ASCS
+Admin --> ASCS
+ASCS --> Auth : identity
+ASCS --> Firestore : applications, approvals,\nfinancial state, reports
+@enduml

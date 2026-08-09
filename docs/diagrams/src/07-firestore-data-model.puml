@@ -1,0 +1,67 @@
+@startuml
+title ASCS Firestore Logical Data Model
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam entity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+}
+
+entity "users/{uid}" as Users {
+  uid
+  role
+  accountStatus / isActive
+  mustChangePassword
+}
+entity "publicUsers/{uid}" as PublicUsers {
+  fullName
+  role
+}
+entity "students/{uid}" as Students {
+  studentNumber
+  program / yearLevel / section
+}
+entity "clearanceRequirements/{id}" as Requirements {
+  role / label / displayOrder
+  assignedSignatoryId
+}
+entity "clearanceApplications/{id}" as Applications {
+  studentUid
+  academicYear / semester
+  overallStatus
+  financialStatus
+  adviserApproved
+  printableAvailable
+}
+entity "approvals/{id}" as Approvals {
+  signatoryRole
+  status
+  remarksLatest
+}
+entity "remarks/{id}" as Remarks {
+  author / content / createdAt
+}
+entity "notifications/{id}" as Notifications {
+  recipientId / isRead
+}
+entity "activityLogs/{id}" as Logs {
+  actor / action / metadata
+}
+
+Users ||--|| PublicUsers : logical projection
+Users ||--o| Students : student profile
+Students ||--o{ Applications : studentUid reference
+Requirements ||--o{ Approvals : logical requirement
+Applications ||--o{ Approvals : subcollection
+Applications ||--o{ Remarks : subcollection
+Users ||--o{ Notifications : recipientId
+Applications ||--o{ Logs : entityId
+
+note bottom of Applications
+Document-oriented storage;
+relationships are logical or denormalized.
+Firestore does not enforce foreign keys.
+end note
+@enduml

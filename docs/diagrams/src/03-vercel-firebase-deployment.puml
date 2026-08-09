@@ -1,0 +1,27 @@
+@startuml
+title ASCS Vercel / Firebase Demonstration Deployment
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam componentStyle rectangle
+skinparam ArrowColor #334155
+
+actor "User Browser" as Browser
+cloud "Vercel Demo Deployment\nNext.js 16 App\nFictional Data Only" as Vercel #E0F2FE
+cloud "Firebase Authentication\nDemo project" as Auth #FEF3C7
+database "Cloud Firestore\nDemo project" as Firestore #DCFCE7
+component "Firebase Admin SDK\nserver-side only" as AdminSDK #FDE68A
+cloud "GitHub" as GitHub #F1F5F9
+component "GitHub Actions\nCI / Acceptance" as Actions #F1F5F9
+component "Vercel Git Integration\nor CLI deployment" as Deploy #F1F5F9
+
+Browser --> Vercel : HTTPS
+Vercel --> Auth : client identity
+Vercel --> AdminSDK : server actions
+AdminSDK --> Auth
+AdminSDK --> Firestore
+Vercel --> Firestore : server-side access
+GitHub --> Actions
+GitHub --> Deploy
+Deploy --> Vercel
+@enduml

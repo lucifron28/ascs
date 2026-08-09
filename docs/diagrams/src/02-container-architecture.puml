@@ -1,0 +1,28 @@
+@startuml
+title ASCS Container Architecture
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam componentStyle rectangle
+skinparam ArrowColor #334155
+
+actor "User Browser" as Browser
+component "Next.js 16 / React UI\nApp Router pages" as UI #E0F2FE
+component "Firebase Web Auth\nemail/password sign-in" as WebAuth #FEF3C7
+component "Next.js Server Actions\nworkflow, accounts, reports" as Actions #DBEAFE
+component "Session verification\nrole and status authorization" as Authorization #F1F5F9
+component "Firebase Admin SDK\ntrusted server access" as AdminSDK #FDE68A
+cloud "Firebase Authentication" as Auth #FEF3C7
+database "Cloud Firestore" as Firestore #DCFCE7
+component "Firestore Security Rules\nclient-access boundary" as Rules #FCE7F3
+
+Browser --> UI
+UI --> WebAuth
+UI --> Actions
+Actions --> Authorization
+Authorization --> AdminSDK
+AdminSDK --> Auth
+AdminSDK --> Firestore
+UI --> Rules : direct client reads
+Rules --> Firestore : allowed reads /\ndeny privileged writes
+@enduml

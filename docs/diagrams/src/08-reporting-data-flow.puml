@@ -1,0 +1,32 @@
+@startuml
+title ASCS Reporting Data Flow
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam componentStyle rectangle
+skinparam ArrowColor #334155
+
+actor "Admin / Dean" as User
+component "Report Filters\nacademic year, semester, scope" as Filters #E0F2FE
+component "Server Action Authorization\nrole, session, status" as Authz #DBEAFE
+database "Firestore bounded queries\nmax 5,000 applications" as Firestore #DCFCE7
+component "Strict parsing /\ndeduplication" as Integrity #F1F5F9
+component "Metrics\nstatus, finance, bottlenecks, groups" as Metrics #FEF3C7
+component "UI summary" as UI #E0F2FE
+component "CSV export\nformula-safe" as CSV #FDE68A
+
+User --> Filters
+Filters --> Authz
+Authz --> Firestore
+Firestore --> Integrity
+Integrity --> Metrics
+Metrics --> UI
+Metrics --> CSV
+
+rectangle "Admin scope\ninstitution-wide + financial summary" as AdminScope #FEE2E2
+rectangle "Dean scope\nadviserApproved = true\nno financial summary" as DeanScope #F3E8FF
+Filters --> AdminScope
+Filters --> DeanScope
+AdminScope --> Authz
+DeanScope --> Authz
+@enduml

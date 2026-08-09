@@ -1,0 +1,36 @@
+@startuml
+title ASCS Role and Responsibility Boundaries
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam componentStyle rectangle
+skinparam ArrowColor #334155
+
+rectangle "Student\nSubmit / track / print approved record" as Student #E0F2FE
+rectangle "Clearance Signatories\nLibrarian\nOSA Coordinator\nGuidance Counselor\nArea Chair\nAdviser" as Signatories #E0F2FE
+rectangle "Accountant\nFinancial gate" as Accountant #FEF3C7
+rectangle "Dean\nAdviser-approved oversight" as Dean #F3E8FF
+rectangle "System Administrator\nAccounts / assignments / reports / logs" as Admin #F1F5F9
+rectangle "ASCS\nRole-scoped actions" as ASCS #DBEAFE
+
+Student --> ASCS
+Signatories --> ASCS
+Accountant --> ASCS
+Dean --> ASCS
+Admin --> ASCS
+
+note right of Accountant
+Not a duplicate approval row.
+Updates financialStatus.
+end note
+
+note right of Dean
+Academic oversight only;
+not a required signatory.
+end note
+
+note bottom of Signatories
+Adviser approval sets adviserApproved
+and unlocks Dean visibility.
+end note
+@enduml

@@ -43,6 +43,9 @@ firestore-debug.log
 # vercel
 .vercel
 
+# local documentation tool cache
+/tools/.cache/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

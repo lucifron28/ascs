@@ -1,0 +1,39 @@
+@startuml
+title ASCS Clearance Workflow and Status Derivation
+top to bottom direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam state {
+  BackgroundColor #E0F2FE
+  BorderColor #334155
+  FontColor #0F172A
+}
+
+[*] --> Pending : Student submits
+Pending --> Pending : signatory or financial review remains
+Pending --> NotApproved : required signatory = not_approved
+Pending --> NotApproved : all signatories approved\n+ financialStatus = unpaid
+Pending --> Approved : all signatories approved\n+ financialStatus = paid
+
+state Approved
+state Pending
+state "Not Approved" as NotApproved
+
+Approved --> [*] : printable prototype available
+NotApproved --> [*] : print blocked; remarks visible
+
+state "Five required signatory rows" as Signatories
+state "Accountant financial gate" as Financial
+state "Adviser approved" as AdviserGate
+state "Dean visibility" as DeanView
+
+Pending --> Signatories : evaluate rows
+Pending --> Financial : update paid / unpaid
+Signatories --> AdviserGate : Adviser approved
+AdviserGate --> DeanView : filter Dean queue/reports
+
+note right of Approved
+Required signatories approved
+and paid financial state.
+end note
+@enduml
