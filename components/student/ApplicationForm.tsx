@@ -49,9 +49,9 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
   });
 
   return (
-    <div className="card w-full bg-base-100 border border-base-content/10 shadow-2xl p-8 rounded-2xl max-w-xl mx-auto">
+    <div className="card w-full bg-base-100 border border-base-content/10 shadow-2xl p-8 rounded-2xl max-w-2xl mx-auto">
       <h2 className="text-xl font-bold text-base-content mb-6 flex items-center gap-2">
-        <FileText className="w-5 h-5 text-primary" aria-hidden="true" /> Clearance Application
+        <FileText className="w-5 h-5 text-primary" aria-hidden="true" /> Start Clearance Application
       </h2>
 
       {error && (
@@ -159,7 +159,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
                   aria-describedby={error ? 'application-form-error' : undefined}
                   className="checkbox checkbox-primary rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
-                <span className="label-text text-base-content/70 text-xs font-medium">
+                <span className="label-text text-base-content/70 text-sm leading-5 font-medium">
                   I confirm that all entered details are accurate. I understand that submitting false info will hold up my clearance processing.
                 </span>
               </label>

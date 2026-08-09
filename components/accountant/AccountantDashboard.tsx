@@ -302,8 +302,8 @@ export default function AccountantDashboard() {
                         </span>
                       )}
                     </td>
-                    <td className="text-base-content/80 py-4 text-xs italic max-w-xs truncate">
-                      {rec.notes && rec.notes.trim() !== '' ? `"${rec.notes}"` : 'No outstanding balances.'}
+                    <td className="text-base-content/80 py-4 text-xs max-w-xs truncate">
+                      {rec.notes && rec.notes.trim() !== '' ? rec.notes : 'No outstanding balances.'}
                     </td>
                     <td className="text-base-content/70 py-4 text-xs">
                       {rec.verified_at ? new Date(rec.verified_at).toLocaleDateString() : '--'}
