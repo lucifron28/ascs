@@ -306,17 +306,17 @@ export default function SignatoryDashboard() {
                 onClick={() => handleAction('not_approved')}
                 disabled={modalLoading || modalSuccess}
                 aria-busy={modalLoading && pendingAction === 'not_approved'}
-                className="btn btn-sm btn-error text-error-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-36 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error"
+                className="btn btn-sm btn-outline border-error text-base-content hover:bg-error hover:text-error-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-36 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error"
               >
-                {modalLoading && pendingAction === 'not_approved' ? 'Saving decision...' : 'Mark Not Approved'}
+                {modalLoading && pendingAction === 'not_approved' ? 'Marking Not Approved...' : 'Mark Not Approved'}
               </button>
               <button
                 onClick={() => handleAction('pending')}
                 disabled={modalLoading || modalSuccess}
                 aria-busy={modalLoading && pendingAction === 'pending'}
-                className="btn btn-sm btn-warning text-warning-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning"
+                className="btn btn-sm btn-outline border-base-content/20 text-base-content hover:bg-base-content/10 rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-base-content/30"
               >
-                {modalLoading && pendingAction === 'pending' ? 'Saving decision...' : 'Mark Pending'}
+                {modalLoading && pendingAction === 'pending' ? 'Marking Pending...' : 'Mark Pending'}
               </button>
               <button
                 onClick={() => handleAction('approved')}
@@ -324,7 +324,7 @@ export default function SignatoryDashboard() {
                 aria-busy={modalLoading && pendingAction === 'approved'}
                 className="btn btn-sm btn-success text-success-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
               >
-                {modalLoading && pendingAction === 'approved' ? 'Saving decision...' : 'Approve Clearance'}
+                {modalLoading && pendingAction === 'approved' ? 'Approving...' : 'Approve Clearance'}
               </button>
               </div>
             </div>
