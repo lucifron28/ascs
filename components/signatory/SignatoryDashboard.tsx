@@ -30,6 +30,7 @@ export default function SignatoryDashboard() {
   const [selectedApp, setSelectedApp] = useState<PendingApproval | null>(null);
   const [remarks, setRemarks] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'approved' | 'pending' | 'not_approved' | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalSuccess, setModalSuccess] = useState(false);
 
@@ -93,6 +94,7 @@ export default function SignatoryDashboard() {
     if (!window.confirm(confirmation)) return;
 
     setModalLoading(true);
+    setPendingAction(status);
     setModalError(null);
     setModalSuccess(false);
 
@@ -119,6 +121,7 @@ export default function SignatoryDashboard() {
       setModalError(message);
     } finally {
       setModalLoading(false);
+      setPendingAction(null);
     }
   };
 
@@ -233,7 +236,7 @@ export default function SignatoryDashboard() {
         title="Evaluate Clearance Requirement"
         description="Review student clearance submission and submit evaluation decision."
         preventClose={modalLoading}
-        maxWidthClass="max-w-md"
+        maxWidthClass="max-w-2xl"
       >
         {selectedApp && (
           <div className="space-y-4">
@@ -293,31 +296,37 @@ export default function SignatoryDashboard() {
             </div>
 
             {/* Modal Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 pt-3 border-t border-base-content/10">
+            <div className="space-y-2 mt-4 pt-3 border-t border-base-content/10">
+              <div>
+                <p className="text-xs font-bold text-base-content">Choose a decision</p>
+                <p className="text-[11px] text-base-content/70">Approve when the requirement is complete. Use Pending or Not Approved with a clear remark.</p>
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2" role="group" aria-label="Clearance decision actions">
               <button
                 onClick={() => handleAction('not_approved')}
                 disabled={modalLoading || modalSuccess}
-                aria-busy={modalLoading}
-                className="btn btn-sm btn-error text-error-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-9 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error"
+                aria-busy={modalLoading && pendingAction === 'not_approved'}
+                className="btn btn-sm btn-error text-error-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-36 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error"
               >
-                Mark Not Approved
+                {modalLoading && pendingAction === 'not_approved' ? 'Saving decision...' : 'Mark Not Approved'}
               </button>
               <button
                 onClick={() => handleAction('pending')}
                 disabled={modalLoading || modalSuccess}
-                aria-busy={modalLoading}
-                className="btn btn-sm btn-warning text-warning-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-9 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning"
+                aria-busy={modalLoading && pendingAction === 'pending'}
+                className="btn btn-sm btn-warning text-warning-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning"
               >
-                Mark Pending
+                {modalLoading && pendingAction === 'pending' ? 'Saving decision...' : 'Mark Pending'}
               </button>
               <button
                 onClick={() => handleAction('approved')}
                 disabled={modalLoading || modalSuccess}
-                aria-busy={modalLoading}
-                className="btn btn-sm btn-success text-success-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-9 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
+                aria-busy={modalLoading && pendingAction === 'approved'}
+                className="btn btn-sm btn-success text-success-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
               >
-                Approve Clearance
+                {modalLoading && pendingAction === 'approved' ? 'Saving decision...' : 'Approve Clearance'}
               </button>
+              </div>
             </div>
           </div>
         )}

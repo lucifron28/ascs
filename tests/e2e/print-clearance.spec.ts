@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Printable Clearance Certificate QA', () => {
-  test('Student A can view and print prototype clearance record', async ({ page }) => {
+test.describe('Printable Clearance Record QA', () => {
+  test('Student A can view and print the prototype clearance record', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('student.a@example.test');
     await page.getByLabel(/password/i).fill('password123');
@@ -10,28 +10,34 @@ test.describe('Printable Clearance Certificate QA', () => {
     await page.waitForURL('**/student/dashboard');
     await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
 
-    // Click Print Clearance Record
     const printButton = page.getByRole('button', { name: /print|preview|certificate/i });
     await expect(printButton).toBeEnabled();
     await printButton.click();
 
     await page.waitForURL('**/student/clearance/**/print');
-    await expect(page.getByRole('heading', { name: /student clearance certificate — prototype \/ mvp/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /student clearance record/i })).toBeVisible();
+    await expect(page.getByText('PROTOTYPE / MVP', { exact: true })).toBeVisible();
 
-    // Verify key student profile details
     await expect(page.getByText('STUD-2026-0001')).toBeVisible();
     await expect(page.getByText(/Pambayang Kolehiyo ng Mauban/i).first()).toBeVisible();
 
-    // Verify prototype disclaimer wording
-    await expect(page.getByText(/prototype \/ mvp output for internal testing only/i)).toBeVisible();
+    const record = page.getByTestId('printable-clearance-area');
+    await expect(record.getByText(/prototype \/ mvp output for internal testing only/i)).toBeVisible();
+    await expect(record.getByRole('heading', { name: /required signatory clearance/i })).toBeVisible();
+    await expect(record.getByRole('heading', { name: /financial accountability review/i })).toBeVisible();
+    await expect(record.getByRole('table', { name: /required signatory clearance/i }).locator('tbody tr')).toHaveCount(5);
+    await expect(record.getByText(/librarian/i).first()).toBeVisible();
+    await expect(record.getByText(/osa coordinator/i).first()).toBeVisible();
+    await expect(record.getByText(/guidance counselor/i).first()).toBeVisible();
+    await expect(record.getByText(/area chair/i).first()).toBeVisible();
+    await expect(record.getByText(/adviser/i).first()).toBeVisible();
+    await expect(record.getByText(/accountant review is a separate financial gate/i)).toBeVisible();
+    await expect(record.getByText(/dean/i)).toHaveCount(0);
+    await expect(record.getByText(/signed on|institution seal placeholder/i)).toHaveCount(0);
 
-    // Emulate print media styling
     await page.emulateMedia({ media: 'print' });
+    await expect(record).toBeVisible();
 
-    // Ensure print-only certificate content remains visible
-    await expect(page.locator('#printable-clearance-area, .bg-white').first()).toBeVisible();
-
-    // Ensure navigation button toolbar is hidden in print view
     const printToolbar = page.locator('.print\\:hidden');
     await expect(printToolbar).toBeHidden();
   });

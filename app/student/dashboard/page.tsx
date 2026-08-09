@@ -11,6 +11,14 @@ import { Printer, CheckCircle2 } from 'lucide-react';
 import RoleHeader from '@/components/layout/RoleHeader';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
 
+const REQUIRED_SIGNATORY_ROLES = new Set([
+  'librarian',
+  'osa_coordinator',
+  'guidance_counselor',
+  'area_chair',
+  'adviser',
+]);
+
 export default function StudentDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -147,8 +155,8 @@ export default function StudentDashboardPage() {
         <AccessibleDialog
           isOpen={showPrintModal}
           onClose={() => setShowPrintModal(false)}
-          title="ASCS Clearance Record Preview (Prototype)"
-          description="A4 prototype record preview of clearance approvals and financial status."
+          title="ASCS Student Clearance Record (Prototype)"
+          description="A4 prototype record preview of five signatory decisions and the separate financial gate."
           maxWidthClass="max-w-3xl"
         >
           <div className="space-y-6">
@@ -168,7 +176,8 @@ export default function StudentDashboardPage() {
                 <h2 className="text-xl font-bold uppercase tracking-wide">Pambayang Kolehiyo ng Mauban</h2>
                 <p className="text-xs italic text-slate-600">Mauban, Quezon</p>
                 <p className="text-xs font-semibold mt-4 uppercase">Automated Student Clearance System (ASCS)</p>
-                <p className="text-sm font-semibold uppercase">Student Clearance Certificate — Prototype / MVP</p>
+                <p className="text-sm font-black uppercase tracking-wide">STUDENT CLEARANCE RECORD</p>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-900">PROTOTYPE / MVP</p>
                 <div className="w-32 h-0.5 bg-slate-800 mx-auto mt-1" />
               </div>
 
@@ -197,21 +206,29 @@ export default function StudentDashboardPage() {
                 This prototype record summarizes the approval and financial status recorded in ASCS for the specified academic term. It is not an official school certificate.
               </p>
 
-              {/* Signatory grid */}
-              <div className="grid grid-cols-2 gap-6 mt-10">
+              {/* Required signatory decisions */}
+              <div className="mt-10">
+                <h3 className="text-xs font-black uppercase tracking-wider border-b border-slate-300 pb-1">Required Signatory Clearance</h3>
+                <div className="grid grid-cols-2 gap-6 mt-4">
                 {((dashboardData?.approvals as Array<{ id: string; assignee_name?: string; label?: string; acted_at?: string; signatory_role?: string }>) || [])
-                  .filter((appr) => appr.signatory_role !== 'accountant')
+                  .filter((appr) => REQUIRED_SIGNATORY_ROLES.has(appr.signatory_role || ''))
                   .map((appr) => (
                   <div key={appr.id} className="border-b border-slate-200 pb-3 flex flex-col justify-end min-h-[60px] break-inside-avoid">
-                    <div className="font-bold text-slate-800 text-xs">{appr.assignee_name || 'APPROVED'}</div>
-                    <div className="text-[10px] text-slate-500 italic uppercase">{appr.label}</div>
-                    <div className="text-[9px] text-emerald-600 font-semibold mt-1">Status: SIGNED ON {appr.acted_at ? new Date(appr.acted_at).toLocaleDateString() : new Date().toLocaleDateString()}</div>
+                    <div className="font-bold text-slate-800 text-xs">{appr.label || 'Department desk'}</div>
+                    <div className="text-[10px] text-slate-600">{appr.assignee_name || 'Department desk'}</div>
+                    <div className="text-[9px] text-emerald-700 font-semibold mt-1">Decision recorded{appr.acted_at ? ` on ${new Date(appr.acted_at).toLocaleDateString()}` : ''}</div>
                   </div>
                 ))}
+                </div>
               </div>
 
-              <div className="mt-16 text-center text-[10px] text-slate-400 italic">
-                ASCS prototype output generated for internal testing on {new Date().toLocaleDateString()} — not an official school certificate.
+              <div className="mt-8 border border-slate-200 bg-slate-50 p-4 text-xs">
+                <h3 className="font-black uppercase tracking-wider text-slate-700">Financial Accountability Review</h3>
+                <p className="mt-1 text-slate-600">The Accountant review is a separate financial gate and is not a signatory approval row.</p>
+              </div>
+
+              <div className="mt-8 text-center text-[10px] text-slate-700 font-bold uppercase tracking-wider border-t border-slate-300 pt-4">
+                Prototype / MVP output for internal testing only — not an official school certificate, receipt, or electronic signature.
               </div>
             </div>
           </div>

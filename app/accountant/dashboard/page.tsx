@@ -10,7 +10,7 @@ export default function DashboardPage() {
       <RoleHeader roleTitle="Accountant Desk" />
 
       {/* Main Content */}
-      <main id="main-content" className="flex-1 overflow-y-auto p-6 md:p-8 max-w-5xl w-full mx-auto space-y-8">
+      <main id="main-content" className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl w-full mx-auto space-y-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight text-base-content">
             Financial Accountability Management

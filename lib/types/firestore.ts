@@ -40,7 +40,7 @@ export interface StudentProfile {
 }
 
 export interface ClearanceRequirement {
-  role: Exclude<UserRole, 'student' | 'admin' | 'dean'>;
+  role: Exclude<UserRole, 'student' | 'admin' | 'dean' | 'accountant'>;
   label: string;
   displayOrder: number;
   isActive: boolean;
@@ -120,4 +120,3 @@ export interface ActivityLog {
   metadata: Record<string, unknown>;
   createdAt: FirestoreTimestamp;
 }
-

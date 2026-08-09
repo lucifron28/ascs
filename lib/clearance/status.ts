@@ -14,6 +14,14 @@ export interface ClearanceStatusSummary {
 }
 export const VALID_APPROVAL_STATUSES = ['approved', 'pending', 'not_approved'] as const;
 export const VALID_FINANCIAL_STATUSES = ['paid', 'unpaid'] as const;
+export const REQUIRED_SIGNATORY_ROLES = [
+  'librarian',
+  'osa_coordinator',
+  'guidance_counselor',
+  'area_chair',
+  'adviser',
+] as const;
+const REQUIRED_SIGNATORY_ROLE_SET = new Set<string>(REQUIRED_SIGNATORY_ROLES);
 
 export function validateApprovalStatus(status: string): boolean {
   return (VALID_APPROVAL_STATUSES as readonly string[]).includes(status);
@@ -38,9 +46,10 @@ export function getClearanceStatusSummary(
   approvals: readonly ClearanceApprovalStatus[],
   financialStatus: FinancialStatus | string | null | undefined,
 ): ClearanceStatusSummary {
-  // Filter out legacy Accountant approval rows so the Accountant is purely a financial gate
+  // Count only the five required signatory rows. Accountant and Dean are
+  // intentionally excluded because they are financial-gate and oversight roles.
   const validApprovals = approvals.filter(
-    (approval) => approval.signatoryRole !== 'accountant'
+    (approval) => REQUIRED_SIGNATORY_ROLE_SET.has(approval.signatoryRole || '')
   );
 
   const pendingCount = validApprovals.filter((approval) => approval.status !== 'approved' && approval.status !== 'not_approved').length;

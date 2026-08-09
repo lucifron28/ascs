@@ -92,7 +92,23 @@ test('7. Legacy pending Accountant approval is ignored when signatoryRole is pro
   assert.equal(summary.printableAvailable, true);
 });
 
-test('8. Printable availability is true only for approved status', () => {
+test('8. Dean oversight rows are not part of the printable signatory set', () => {
+  const summary = getClearanceStatusSummary(
+    [
+      { status: 'approved', signatoryRole: 'librarian' },
+      { status: 'approved', signatoryRole: 'osa_coordinator' },
+      { status: 'approved', signatoryRole: 'guidance_counselor' },
+      { status: 'approved', signatoryRole: 'area_chair' },
+      { status: 'approved', signatoryRole: 'adviser' },
+      { status: 'not_approved', signatoryRole: 'dean' },
+    ],
+    'paid',
+  );
+  assert.equal(summary.overallStatus, 'approved');
+  assert.equal(summary.printableAvailable, true);
+});
+
+test('9. Printable availability is true only for approved status', () => {
   const pendingSummary = getClearanceStatusSummary(
     [{ status: 'approved', signatoryRole: 'librarian' }],
     'pending'
@@ -106,7 +122,7 @@ test('8. Printable availability is true only for approved status', () => {
   assert.equal(approvedSummary.printableAvailable, true);
 });
 
-test('9. Mapping approval documents preserves status and signatoryRole', () => {
+test('10. Mapping approval documents preserves status and signatoryRole', () => {
   const rawDocData = { status: 'approved', signatoryRole: 'librarian', id: 'approval-1' };
   const mapped = mapApprovalDocToStatus(rawDocData);
   assert.equal(mapped.status, 'approved');
@@ -116,7 +132,7 @@ test('9. Mapping approval documents preserves status and signatoryRole', () => {
   assert.equal(summary.overallStatus, 'approved');
 });
 
-test('10. Invalid financial status is rejected by validator', () => {
+test('11. Invalid financial status is rejected by validator', () => {
   assert.equal(validateFinancialStatus('paid'), true);
   assert.equal(validateFinancialStatus('unpaid'), true);
   assert.equal(validateFinancialStatus('pending'), false);
@@ -124,7 +140,7 @@ test('10. Invalid financial status is rejected by validator', () => {
   assert.equal(validateFinancialStatus(''), false);
 });
 
-test('11. Invalid signatory status is rejected by validator', () => {
+test('12. Invalid signatory status is rejected by validator', () => {
   assert.equal(validateApprovalStatus('approved'), true);
   assert.equal(validateApprovalStatus('pending'), true);
   assert.equal(validateApprovalStatus('not_approved'), true);

@@ -4,11 +4,19 @@ import { normalizeSemester } from '@/lib/academic-term';
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchClearanceCertificateAction } from '@/app/actions/clearance';
-import { Printer, Shield, ArrowLeft, CheckCircle2, AlertCircle, Award, FileCheck } from 'lucide-react';
+import { Printer, Shield, ArrowLeft, CheckCircle2, AlertCircle, FileCheck } from 'lucide-react';
 
 interface ClearanceCertificateProps {
   applicationId: string;
 }
+
+const REQUIRED_SIGNATORY_ROLES = [
+  { role: 'librarian', fallbackLabel: 'Librarian' },
+  { role: 'osa_coordinator', fallbackLabel: 'OSA Coordinator' },
+  { role: 'guidance_counselor', fallbackLabel: 'Guidance Counselor' },
+  { role: 'area_chair', fallbackLabel: 'Area Chair' },
+  { role: 'adviser', fallbackLabel: 'Adviser' },
+] as const;
 
 export default function ClearanceCertificate({ applicationId }: ClearanceCertificateProps) {
   const router = useRouter();
@@ -29,7 +37,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
           if (res.success && res.certificateData) {
             setData(res.certificateData);
           } else {
-            setError(res.error || 'Failed to load clearance certificate.');
+            setError(res.error || 'Failed to load clearance record.');
           }
         }
       } catch (err: unknown) {
@@ -56,7 +64,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-        <span className="loading loading-spinner loading-lg text-primary mb-4" />
+        <span className="loading loading-spinner loading-lg text-primary mb-4" aria-hidden="true" />
         <p className="text-sm font-medium text-base-content/70">Preparing the ASCS clearance record...</p>
       </div>
     );
@@ -66,12 +74,12 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
     return (
       <div className="flex-1 max-w-xl mx-auto p-6 flex flex-col items-center justify-center text-center space-y-4">
         <div className="alert alert-error rounded-2xl shadow-lg flex flex-col items-center p-6 text-center">
-          <AlertCircle className="w-10 h-10 mb-2" />
-          <h2 className="font-bold text-base">Certificate Generation Error</h2>
-          <p className="text-xs opacity-90">{error || 'Certificate data unavailable.'}</p>
+          <AlertCircle className="w-10 h-10 mb-2" aria-hidden="true" />
+          <h2 className="font-bold text-base">Clearance Record Unavailable</h2>
+          <p className="text-xs opacity-90">{error || 'Clearance data unavailable.'}</p>
         </div>
         <button onClick={() => router.back()} className="btn btn-sm btn-ghost rounded-xl gap-2">
-          <ArrowLeft className="w-4 h-4" /> Go Back
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Go Back
         </button>
       </div>
     );
@@ -103,159 +111,161 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
     issuedAt: string;
   };
 
+  const signatoryApprovals = REQUIRED_SIGNATORY_ROLES.map(({ role, fallbackLabel }) => {
+    const approval = approvals.find((item) => item.signatoryRole === role);
+    return {
+      id: approval?.id || role,
+      label: approval?.label || fallbackLabel,
+      assignedSignatoryName: approval?.assignedSignatoryName || 'Department desk',
+      status: approval?.status || 'pending',
+      actedAt: approval?.actedAt || null,
+    };
+  });
+
+  const financialStatusLabel = application.financialStatus === 'paid'
+    ? 'Paid / Financially cleared'
+    : application.financialStatus === 'unpaid'
+      ? 'Unpaid / Hold'
+      : 'Pending review';
+
   return (
     <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
       {/* Print Control Toolbar (Hidden on Print) */}
       <div className="print:hidden flex items-center justify-between bg-base-100 p-4 rounded-2xl border border-base-content/10 shadow-md">
         <button onClick={() => router.back()} className="btn btn-sm btn-ghost rounded-xl gap-2">
-          <ArrowLeft className="w-4 h-4" /> Return to Dashboard
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Return to Dashboard
         </button>
         <button onClick={handlePrint} className="btn btn-primary btn-sm rounded-xl gap-2 font-semibold shadow-sm">
-          <Printer className="w-4 h-4" /> Print / Save PDF
+          <Printer className="w-4 h-4" aria-hidden="true" /> Print / Save PDF
         </button>
       </div>
 
-      {/* Printable MVP certificate record */}
-      <div className="bg-white text-slate-900 border-8 border-double border-indigo-900 p-8 sm:p-12 rounded-none shadow-2xl space-y-8 font-serif print:border-4 print:p-8 print:shadow-none print:m-0 print:w-full">
-        {/* Header / Seal */}
-        <div className="text-center space-y-2 border-b-2 border-slate-300 pb-6">
-          <div className="flex items-center justify-center gap-2 text-indigo-900 font-sans">
-            <Shield className="w-8 h-8 text-indigo-900 shrink-0" />
-            <span className="font-black text-xl tracking-widest uppercase">Pambayang Kolehiyo ng Mauban</span>
+      {/* A4-oriented digital prototype record */}
+      <article
+        id="printable-clearance-area"
+        data-testid="printable-clearance-area"
+        className="print-document bg-white text-slate-900 border border-slate-300 p-6 sm:p-10 rounded-none shadow-2xl space-y-6 font-serif print:border print:p-8 print:shadow-none print:m-0 print:w-full"
+      >
+        <header className="text-center space-y-2 border-b-2 border-slate-900 pb-5">
+          <div className="flex items-center justify-center gap-2 text-indigo-950 font-sans">
+            <Shield className="w-7 h-7 text-indigo-950 shrink-0" aria-hidden="true" />
+            <span className="font-black text-lg tracking-[0.18em] uppercase">Pambayang Kolehiyo ng Mauban</span>
           </div>
-          <p className="text-xs tracking-wider uppercase font-sans text-slate-600 font-semibold">
+          <p className="text-[11px] tracking-[0.16em] uppercase font-sans text-slate-600 font-semibold">
             Automated Student Clearance System (ASCS)
           </p>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 pt-2 font-serif uppercase">
-            Student Clearance Certificate — Prototype / MVP
+          <h1 className="text-2xl sm:text-3xl font-black tracking-[0.12em] text-slate-950 pt-2 uppercase">
+            STUDENT CLEARANCE RECORD
           </h1>
-          <p className="text-xs font-mono text-slate-500 font-semibold">
-            Reference No: <span className="text-indigo-950 font-bold">{application.applicationNumber}</span>
+          <p className="text-xs font-bold tracking-[0.2em] text-indigo-900 uppercase">PROTOTYPE / MVP</p>
+          <p className="text-xs font-semibold text-slate-600 font-sans">
+            Academic Term: <span className="text-slate-950">AY {application.academicYear} • {normalizeSemester(application.semester)}</span>
           </p>
-        </div>
+        </header>
 
-        {/* Certificate Preamble */}
-        <div className="text-center text-sm sm:text-base leading-relaxed space-y-3 font-serif">
-          <p>This prototype record summarizes the approval and financial status recorded in the Automated Student Clearance System for the designated term.</p>
-        </div>
+        <section aria-labelledby="student-identity-heading" className="font-sans">
+          <h2 id="student-identity-heading" className="text-xs font-black tracking-[0.16em] uppercase text-slate-700 border-b border-slate-300 pb-1">
+            Student Identity and Clearance Details
+          </h2>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 bg-slate-50 border border-slate-200 p-4 mt-3 text-xs">
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Student Name</dt>
+              <dd className="font-bold text-sm text-slate-950">{application.studentName}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Student No.</dt>
+              <dd className="font-bold text-sm font-mono text-slate-950">{application.studentNumber}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Program</dt>
+              <dd className="font-semibold text-slate-800">{application.program}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Year / Section</dt>
+              <dd className="font-semibold text-slate-800">{application.yearLevel} / {application.section}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Purpose</dt>
+              <dd className="font-semibold text-slate-800">{application.purpose}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Clearance No.</dt>
+              <dd className="font-semibold font-mono text-slate-800">{application.applicationNumber}</dd>
+            </div>
+          </dl>
+        </section>
 
-        {/* Student Profile Grid */}
-        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs font-sans">
-          <div>
-            <span className="text-slate-500 uppercase font-semibold text-[10px] block">Student Full Name</span>
-            <span className="font-bold text-sm text-slate-900">{application.studentName}</span>
-          </div>
-          <div>
-            <span className="text-slate-500 uppercase font-semibold text-[10px] block">Student Number</span>
-            <span className="font-bold text-sm font-mono text-slate-900">{application.studentNumber}</span>
-          </div>
-          <div>
-            <span className="text-slate-500 uppercase font-semibold text-[10px] block">Program & Year Level</span>
-            <span className="font-semibold text-slate-800">{application.program} - {application.yearLevel} (Section {application.section})</span>
-          </div>
-          <div>
-            <span className="text-slate-500 uppercase font-semibold text-[10px] block">Academic Term & Purpose</span>
-            <span className="font-semibold text-slate-800">AY {application.academicYear} | {normalizeSemester(application.semester)} ({application.purpose})</span>
-          </div>
-        </div>
-
-        {/* Clearance Verification Matrix */}
-        <div className="space-y-3 font-sans">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200 pb-1 flex items-center gap-1.5">
-            <FileCheck className="w-4 h-4 text-indigo-900" /> Department Clearance Sign-off Matrix
-          </h3>
-
-          <table className="w-full text-left text-xs border border-slate-200">
+        <section aria-labelledby="signatory-heading" className="space-y-3 font-sans">
+          <h2 id="signatory-heading" className="text-xs font-black tracking-[0.16em] uppercase text-slate-700 border-b border-slate-300 pb-1 flex items-center gap-1.5">
+            <FileCheck className="w-4 h-4 text-indigo-900" aria-hidden="true" /> Required Signatory Clearance
+          </h2>
+          <table aria-label="Required signatory clearance" className="w-full text-left text-xs border border-slate-300">
             <thead>
-              <tr className="bg-slate-100 border-b border-slate-200 text-slate-700">
-                <th scope="col" className="p-2 border-r border-slate-200 font-bold">Department / Office</th>
-                <th scope="col" className="p-2 border-r border-slate-200 font-bold">Assigned Signatory</th>
-                <th scope="col" className="p-2 border-r border-slate-200 font-bold">Date Verified</th>
-                <th scope="col" className="p-2 text-center font-bold">Status</th>
+              <tr className="bg-slate-100 border-b border-slate-300 text-slate-800">
+                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Office / Signatory</th>
+                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Recorded Decision</th>
+                <th scope="col" className="p-2.5 font-black uppercase tracking-wide">Date Verified</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {approvals
-                .filter((app) => app.signatoryRole !== 'accountant')
-                .map((app) => (
-                <tr key={app.id}>
-                  <td className="p-2 font-semibold border-r border-slate-200">{app.label}</td>
-                  <td className="p-2 border-r border-slate-200 text-slate-700">{app.assignedSignatoryName || 'Role Queue'}</td>
-                  <td className="p-2 border-r border-slate-200 font-mono text-[11px] text-slate-600">
-                    {app.actedAt ? new Date(app.actedAt).toLocaleDateString() : 'N/A'}
+              {signatoryApprovals.map((approval) => (
+                <tr key={approval.id}>
+                  <td className="p-2.5 border-r border-slate-200">
+                    <span className="font-bold text-slate-900">{approval.label}</span>
+                    <span className="block text-[10px] text-slate-600">{approval.assignedSignatoryName}</span>
                   </td>
-                  <td className="p-2 text-center font-bold uppercase text-[10px]">
-                    {app.status === 'approved' ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-700">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Cleared
-                      </span>
-                    ) : app.status === 'not_approved' ? (
-                      <span className="inline-flex items-center gap-1 text-red-700">
-                        <AlertCircle className="w-3 h-3 text-red-600" /> Not Approved
-                      </span>
+                  <td className="p-2.5 border-r border-slate-200 font-bold uppercase text-[10px]">
+                    {approval.status === 'approved' ? (
+                      <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Approved</span>
+                    ) : approval.status === 'not_approved' ? (
+                      <span className="inline-flex items-center gap-1 text-red-700"><AlertCircle className="w-3 h-3" aria-hidden="true" /> Not Approved</span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-amber-700">
-                        Pending
-                      </span>
+                      <span className="text-amber-700">Pending</span>
                     )}
+                  </td>
+                  <td className="p-2.5 font-mono text-[11px] text-slate-600">
+                    {approval.actedAt ? new Date(approval.actedAt).toLocaleDateString() : 'N/A'}
                   </td>
                 </tr>
               ))}
-              {/* Financial Accountability Row */}
-              <tr>
-                <td className="p-2 font-semibold border-r border-slate-200">Accountant Financial Review</td>
-                <td className="p-2 border-r border-slate-200 text-slate-700">
-                  {application.financialUpdatedByName || 'Accountant'}
-                </td>
-                <td className="p-2 border-r border-slate-200 font-mono text-[11px] text-slate-600">
-                  {application.financialVerifiedAt
-                    ? new Date(application.financialVerifiedAt).toLocaleDateString()
-                    : 'N/A'}
-                </td>
-                <td className="p-2 text-center font-bold uppercase text-[10px]">
-                  {application.financialStatus === 'paid' ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-700">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Paid
-                    </span>
-                  ) : application.financialStatus === 'unpaid' ? (
-                    <span className="inline-flex items-center gap-1 text-red-700">
-                      <AlertCircle className="w-3 h-3 text-red-600" /> Unpaid
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-amber-700">
-                      Pending
-                    </span>
-                  )}
-                </td>
-              </tr>
             </tbody>
           </table>
-        </div>
+          <p className="text-[10px] text-slate-600">Decisions are recorded in ASCS; this prototype does not reproduce handwritten or electronic signatures.</p>
+        </section>
 
-        <div className="pt-8 grid grid-cols-2 gap-8 items-end font-sans">
-          <div className="space-y-2">
-            <div className="w-24 h-24 border-2 border-dashed border-slate-400 rounded-full flex items-center justify-center text-[10px] text-slate-700 font-bold uppercase text-center p-2">
-              Institution Seal Placeholder
+        <section aria-labelledby="financial-accountability-review" className="space-y-3 font-sans">
+          <h2 id="financial-accountability-review" className="text-xs font-black tracking-[0.16em] uppercase text-slate-700 border-b border-slate-300 pb-1">
+            Financial Accountability Review
+          </h2>
+          <div className="grid grid-cols-3 gap-3 bg-slate-50 border border-slate-200 p-4 text-xs">
+            <div>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Accountability Status</span>
+              <span className={`font-bold ${application.financialStatus === 'paid' ? 'text-emerald-700' : application.financialStatus === 'unpaid' ? 'text-red-700' : 'text-amber-700'}`}>
+                {financialStatusLabel}
+              </span>
             </div>
-            <p className="text-[10px] text-slate-700 font-semibold">
-              Date Issued: <span className="font-mono font-bold text-slate-900">{new Date(issuedAt).toLocaleDateString()}</span>
-            </p>
+            <div>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Reviewed By</span>
+              <span className="font-semibold text-slate-800">{application.financialUpdatedByName || 'Accountant desk'}</span>
+            </div>
+            <div>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date Verified</span>
+              <span className="font-mono text-slate-700">{application.financialVerifiedAt ? new Date(application.financialVerifiedAt).toLocaleDateString() : 'N/A'}</span>
+            </div>
           </div>
+          <p className="text-[10px] text-slate-600">The Accountant review is a separate financial gate and is not a signatory approval row.</p>
+        </section>
 
-          <div className="text-center space-y-1">
-            <div className="border-b border-slate-900 pb-1 font-bold text-sm uppercase text-slate-900">
-              Academic Dean Review
-            </div>
-            <p className="text-xs text-slate-600 font-serif">Pambayang Kolehiyo ng Mauban</p>
-            <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider flex items-center justify-center gap-1">
-              <Award className="w-3 h-3" /> All configured approvals recorded
-            </p>
+        <footer className="flex items-end justify-between gap-6 border-t border-slate-300 pt-4 font-sans">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Date Issued</p>
+            <p className="font-mono text-xs text-slate-900">{new Date(issuedAt).toLocaleDateString()}</p>
           </div>
-        </div>
-        <p className="text-center text-[10px] font-sans font-bold uppercase tracking-wider text-slate-700 border-t border-slate-200 pt-4">
-          Prototype / MVP output for internal testing only — not an official school certificate.
-        </p>
-      </div>
+          <p className="max-w-sm text-right text-[10px] font-bold uppercase tracking-wider text-slate-700">
+            Prototype / MVP output for internal testing only — not an official school certificate, receipt, or electronic signature.
+          </p>
+        </footer>
+      </article>
     </div>
   );
 }

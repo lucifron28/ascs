@@ -136,9 +136,9 @@ export default function AccountantDashboard() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-white font-sans">
-        <span className="loading loading-spinner loading-lg text-indigo-500 mb-2" />
-        <p className="text-slate-400 text-sm animate-pulse">Loading financial accounts...</p>
+      <div className="flex flex-col items-center justify-center py-20 text-base-content font-sans">
+        <span className="loading loading-spinner loading-lg text-primary mb-2" />
+        <p className="text-base-content/70 text-sm animate-pulse">Loading financial accounts...</p>
       </div>
     );
   }
@@ -189,19 +189,19 @@ export default function AccountantDashboard() {
       </div>
 
       {error && (
-        <div className="alert alert-error bg-rose-950/80 border-rose-800 text-rose-300 rounded-xl flex items-center gap-2 p-3 text-sm">
+        <div className="alert alert-error bg-error/10 border-error/20 text-error-content rounded-xl flex items-center gap-2 p-3 text-sm">
           <span>Error: {error}</span>
-          <button onClick={loadRecords} className="btn btn-xs btn-outline border-rose-800 text-rose-300 rounded-lg ml-auto">
+          <button onClick={loadRecords} className="btn btn-xs btn-outline border-error/40 text-error-content rounded-lg ml-auto">
             Retry
           </button>
         </div>
       )}
 
       {/* 2. Filters & Actions Bar */}
-      <div className="card bg-slate-900/60 border border-slate-800/80 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 justify-between">
+      <div className="card bg-base-100 border border-base-content/10 shadow-sm p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 justify-between">
         {/* Search */}
         <div className="relative w-full md:max-w-xs">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/60">
             <Search className="w-4 h-4" />
           </div>
           <input
@@ -209,7 +209,7 @@ export default function AccountantDashboard() {
             placeholder="Search by student name or ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input input-bordered w-full pl-9 bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-600 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs h-10"
+            className="input input-bordered w-full pl-9 bg-base-200 border-base-content/10 focus:border-primary text-base-content rounded-xl placeholder-base-content/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary text-xs h-10"
           />
         </div>
 
@@ -220,7 +220,7 @@ export default function AccountantDashboard() {
             className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
               statusFilter === 'all'
                 ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             All
@@ -230,7 +230,7 @@ export default function AccountantDashboard() {
             className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
               statusFilter === 'pending'
                 ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Pending
@@ -240,7 +240,7 @@ export default function AccountantDashboard() {
             className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
               statusFilter === 'unpaid'
                 ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Unpaid Dues
@@ -250,7 +250,7 @@ export default function AccountantDashboard() {
             className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
               statusFilter === 'paid'
                 ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Paid / Cleared
@@ -268,11 +268,11 @@ export default function AccountantDashboard() {
       ) : (
         <div className="card bg-base-100 border border-base-content/10 shadow-xl p-6 rounded-2xl">
           <div className="overflow-x-auto w-full">
-            <table className="table w-full text-left text-sm border-separate border-spacing-y-2">
+            <table className="table w-full min-w-[960px] text-left text-sm border-separate border-spacing-y-2">
               <thead>
                 <tr className="text-base-content/70 text-xs uppercase tracking-wider border-b border-base-content/10">
                   <th scope="col" className="bg-transparent pb-4 pl-4 font-bold">Student</th>
-                  <th scope="col" className="bg-transparent pb-4 font-bold">ID Number</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Student No.</th>
                   <th scope="col" className="bg-transparent pb-4 font-bold">Account Status</th>
                   <th scope="col" className="bg-transparent pb-4 font-bold">Pending Dues Notes</th>
                   <th scope="col" className="bg-transparent pb-4 font-bold">Last Verified</th>
@@ -445,7 +445,7 @@ export default function AccountantDashboard() {
                 aria-busy={modalLoading}
                 className="btn btn-sm btn-primary rounded-xl text-xs font-semibold px-5"
               >
-                {modalLoading ? 'Saving Account Status...' : 'Save Financial Status'}
+                {modalLoading ? 'Saving financial status...' : 'Save Financial Status'}
               </button>
             </div>
           </form>

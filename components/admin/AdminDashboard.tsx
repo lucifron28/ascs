@@ -22,7 +22,6 @@ import {
   Shield,
   FileCheck,
   Activity,
-  Database,
   Search,
   CheckCircle2,
   AlertCircle,
@@ -563,17 +562,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Quick Admin Actions Card */}
-          <div className="card bg-base-100 border border-base-content/10 shadow-lg rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <Database className="w-5 h-5 text-primary" /> Database Operations
-            </h2>
-            <p className="text-sm text-base-content/70">
-              Deterministic demo data is managed outside the application: run{' '}
-              <code className="font-mono text-xs bg-base-200 px-1.5 py-0.5 rounded">npm run demo:reset</code>{' '}
-              against the Firebase Emulator Suite to reset and reseed the fictional fixture dataset.
-            </p>
-          </div>
         </div>
       )}
 

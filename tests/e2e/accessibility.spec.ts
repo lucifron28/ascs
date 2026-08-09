@@ -57,7 +57,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
     await assertZeroSevereViolations(page);
 
     await page.goto('/student/clearance/app-student-a/print');
-    await expect(page.getByRole('heading', { name: /student clearance certificate — prototype \/ mvp/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /student clearance record/i })).toBeVisible();
     await assertZeroSevereViolations(page);
   });
 

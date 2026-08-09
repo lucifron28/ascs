@@ -61,6 +61,11 @@ body {
 }
 
 /* 3. Media print styling for Clearance Certificate & reports */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
 @media print {
   body {
     background: #ffffff !important;
@@ -82,5 +87,12 @@ body {
   .break-inside-avoid {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
+  }
+
+  .print-document {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
   }
 }

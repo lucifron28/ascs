@@ -84,9 +84,9 @@ export default function DeanDashboard() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-white">
-        <span className="loading loading-spinner loading-lg text-indigo-500 mb-2" />
-        <p className="text-slate-400 text-sm animate-pulse">Loading academic queue...</p>
+      <div className="flex flex-col items-center justify-center py-20 text-base-content">
+        <span className="loading loading-spinner loading-lg text-primary mb-2" />
+        <p className="text-base-content/70 text-sm animate-pulse">Loading academic queue...</p>
       </div>
     );
   }
@@ -127,19 +127,19 @@ export default function DeanDashboard() {
       </div>
 
       {error && (
-        <div className="alert alert-error bg-rose-950/80 border-rose-800 text-rose-300 rounded-xl flex items-center gap-2 p-3 text-sm">
+        <div className="alert alert-error bg-error/10 border-error/20 text-error-content rounded-xl flex items-center gap-2 p-3 text-sm">
           <span>Error: {error}</span>
-          <button onClick={loadRecords} className="btn btn-xs btn-outline border-rose-800 text-rose-300 rounded-lg ml-auto">
+          <button onClick={loadRecords} className="btn btn-xs btn-outline border-error/40 text-error-content rounded-lg ml-auto">
             Retry
           </button>
         </div>
       )}
 
       {/* 2. Filters & Actions Bar */}
-      <div className="card bg-slate-900/60 border border-slate-800/80 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 justify-between">
+      <div className="card bg-base-100 border border-base-content/10 shadow-sm p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 justify-between">
         {/* Search */}
         <div className="relative w-full md:max-w-xs">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/60">
             <Search className="w-4 h-4" />
           </div>
           <input
@@ -147,7 +147,7 @@ export default function DeanDashboard() {
             placeholder="Search by student name or ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input input-bordered w-full pl-9 bg-slate-950/50 border-slate-800 focus:border-indigo-500 text-white rounded-xl placeholder-slate-600 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs h-10"
+            className="input input-bordered w-full pl-9 bg-base-200 border-base-content/10 focus:border-primary text-base-content rounded-xl placeholder-base-content/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary text-xs h-10"
           />
         </div>
 
@@ -158,7 +158,7 @@ export default function DeanDashboard() {
             className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
               statusFilter === 'all'
                 ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             All
@@ -168,7 +168,7 @@ export default function DeanDashboard() {
             className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
               statusFilter === 'pending'
                 ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Pending
@@ -178,7 +178,7 @@ export default function DeanDashboard() {
             className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
               statusFilter === 'approved'
                 ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Cleared
@@ -188,22 +188,24 @@ export default function DeanDashboard() {
 
       {/* 3. Academic Queue List */}
       {filteredRecords.length === 0 ? (
-        <div className="card bg-slate-900 border border-slate-800/40 p-12 rounded-2xl text-center space-y-2">
-          <CircleEllipsis className="w-8 h-8 text-slate-600 mx-auto" />
-          <h3 className="text-slate-400 font-bold text-sm">No Student Records Found</h3>
-          <p className="text-slate-600 text-xs">Only applications cleared by academic advisers are visible here.</p>
+        <div className="card bg-base-100 border border-base-content/10 p-12 rounded-2xl text-center space-y-2 shadow-sm">
+          <CircleEllipsis className="w-8 h-8 text-base-content/50 mx-auto" />
+          <h3 className="text-base-content font-bold text-sm">No Student Records Found</h3>
+          <p className="text-base-content/70 text-xs">Only applications cleared by academic advisers are visible here.</p>
         </div>
       ) : (
-        <div className="card bg-slate-900 border border-slate-800 shadow-2xl p-6 rounded-2xl">
+        <div className="card bg-base-100 border border-base-content/10 shadow-xl p-6 rounded-2xl">
           <div className="overflow-x-auto w-full">
-            <table className="table w-full text-left text-sm border-separate border-spacing-y-2">
+            <table className="table w-full min-w-[980px] text-left text-sm border-separate border-spacing-y-2">
               <thead>
                 <tr className="text-base-content/70 text-xs uppercase tracking-wider border-b border-base-content/10">
                   <th scope="col" className="bg-transparent pb-4 pl-4 font-bold">Student</th>
-                  <th scope="col" className="bg-transparent pb-4 font-bold">ID Number</th>
-                  <th scope="col" className="bg-transparent pb-4 font-bold">Program / Term</th>
-                  <th scope="col" className="bg-transparent pb-4 font-bold">Purpose</th>
-                  <th scope="col" className="bg-transparent pb-4 font-bold">Clearance Status</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Student No.</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Program</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Year</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Section</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Semester</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Status</th>
                   <th scope="col" className="bg-transparent pb-4 pr-4 text-right font-bold">Oversight</th>
                 </tr>
               </thead>
@@ -215,25 +217,21 @@ export default function DeanDashboard() {
                       <span className="text-[10px] text-base-content/60 font-normal mt-0.5">Ref: {rec.applicationNumber}</span>
                     </td>
                     <td className="text-base-content/80 py-4 font-mono text-xs">{rec.studentNumber}</td>
-                    <td className="text-base-content/80 py-4">
-                      {rec.program} • {rec.academicYear} ({normalizeSemester(rec.semester)})
-                    </td>
-                    <td className="text-base-content/80 py-4">
-                      <span className="badge badge-sm border border-base-content/10 bg-base-300 text-base-content rounded-md font-medium px-2 py-0.5">
-                        {rec.purpose}
-                      </span>
-                    </td>
+                    <td className="text-base-content/80 py-4">{rec.program}</td>
+                    <td className="text-base-content/80 py-4">{rec.yearLevel}</td>
+                    <td className="text-base-content/80 py-4">{rec.section}</td>
+                    <td className="text-base-content/80 py-4 whitespace-nowrap">{normalizeSemester(rec.semester)}</td>
                     <td className="py-4">
                       {rec.overallStatus === 'approved' ? (
-                        <span className="badge badge-sm border border-emerald-800/60 bg-emerald-950/40 text-emerald-400 rounded-md font-medium px-2 py-0.5">
+                        <span className="badge badge-sm border border-success/30 bg-success/10 text-success rounded-md font-medium px-2 py-0.5">
                           Cleared
                         </span>
                       ) : rec.overallStatus === 'not_approved' ? (
-                        <span className="badge badge-sm border border-rose-800/60 bg-rose-950/40 text-rose-400 rounded-md font-medium px-2 py-0.5">
+                        <span className="badge badge-sm border border-error/30 bg-error/10 text-error rounded-md font-medium px-2 py-0.5">
                           Hold Remarks
                         </span>
                       ) : (
-                        <span className="badge badge-sm border border-amber-800/60 bg-amber-950/40 text-amber-400 rounded-md font-medium px-2 py-0.5">
+                        <span className="badge badge-sm border border-warning/30 bg-warning/10 text-warning rounded-md font-medium px-2 py-0.5">
                           Reviewing
                         </span>
                       )}
@@ -257,84 +255,84 @@ export default function DeanDashboard() {
 
       {/* 4. Details Modal Dialog */}
       {selectedRecord && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 text-white w-full max-w-md rounded-2xl shadow-2xl p-6 relative flex flex-col gap-4">
+        <div className="fixed inset-0 bg-base-content/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-base-100 border border-base-content/10 text-base-content w-full max-w-md rounded-2xl shadow-2xl p-6 relative flex flex-col gap-4">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-bold text-lg text-white">Clearance Overview</h3>
+            <div className="flex items-center justify-between pb-3 border-b border-base-content/10">
+              <h3 className="font-bold text-lg text-base-content">Clearance Overview</h3>
               <button
                 onClick={() => setSelectedRecord(null)}
-                className="btn btn-sm btn-ghost hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg p-1.5"
+                className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg p-1.5"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Overview */}
-            <div className="bg-slate-950/40 border border-slate-850/50 p-4 rounded-xl space-y-2.5 text-xs">
+            <div className="bg-base-200 border border-base-content/10 p-4 rounded-xl space-y-2.5 text-xs">
               <div className="flex justify-between">
-                <span className="text-slate-500">Student Name:</span>
-                <span className="font-semibold text-white">{selectedRecord.studentName}</span>
+                <span className="text-base-content/70">Student Name:</span>
+                <span className="font-semibold text-base-content">{selectedRecord.studentName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">ID Number:</span>
-                <span className="font-mono text-white">{selectedRecord.studentNumber}</span>
+                <span className="text-base-content/70">ID Number:</span>
+                <span className="font-mono text-base-content">{selectedRecord.studentNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Academic Program:</span>
-                <span className="text-white">{selectedRecord.program} ({selectedRecord.yearLevel} - {selectedRecord.section})</span>
+                <span className="text-base-content/70">Academic Program:</span>
+                <span className="text-base-content">{selectedRecord.program} ({selectedRecord.yearLevel} - {selectedRecord.section})</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Clearance Ref:</span>
-                <span className="font-mono text-white">{selectedRecord.applicationNumber}</span>
+                <span className="text-base-content/70">Clearance Ref:</span>
+                <span className="font-mono text-base-content">{selectedRecord.applicationNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Academic Term:</span>
-                <span className="text-white">{selectedRecord.academicYear} • {normalizeSemester(selectedRecord.semester)}</span>
+                <span className="text-base-content/70">Academic Term:</span>
+                <span className="text-base-content">{selectedRecord.academicYear} • {normalizeSemester(selectedRecord.semester)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Submission Date:</span>
-                <span className="text-white">{new Date(selectedRecord.submittedAt).toLocaleDateString()}</span>
+                <span className="text-base-content/70">Submission Date:</span>
+                <span className="text-base-content">{new Date(selectedRecord.submittedAt).toLocaleDateString()}</span>
               </div>
             </div>
 
             {/* Status indicators */}
-            <div className="space-y-3 p-3 border border-slate-800 bg-slate-950/20 rounded-xl text-center">
-              <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider block">Clearance Status</span>
+            <div className="space-y-3 p-3 border border-base-content/10 bg-base-200 rounded-xl text-center">
+              <span className="text-base-content/70 text-[10px] font-semibold uppercase tracking-wider block">Clearance Status</span>
               
               <div className="flex justify-around items-center py-2">
                 <div className="text-center">
-                  <span className="text-[10px] text-slate-400 block mb-1">Financials</span>
+                  <span className="text-[10px] text-base-content/70 block mb-1">Financials</span>
                   {selectedRecord.financialStatus === 'paid' ? (
-                    <span className="badge badge-sm border border-emerald-800/40 bg-emerald-950/40 text-emerald-400 rounded-md">Paid</span>
+                    <span className="badge badge-sm border border-success/30 bg-success/10 text-success rounded-md">Paid</span>
                   ) : selectedRecord.financialStatus === 'unpaid' ? (
-                    <span className="badge badge-sm border border-rose-800/40 bg-rose-950/40 text-rose-400 rounded-md">Unpaid</span>
+                    <span className="badge badge-sm border border-error/30 bg-error/10 text-error rounded-md">Unpaid</span>
                   ) : (
-                    <span className="badge badge-sm border border-amber-800/40 bg-amber-950/40 text-amber-400 rounded-md">Pending</span>
+                    <span className="badge badge-sm border border-warning/30 bg-warning/10 text-warning rounded-md">Pending</span>
                   )}
                 </div>
 
                 <div className="text-center">
-                  <span className="text-[10px] text-slate-400 block mb-1">Adviser Sign-off</span>
-                  <span className="badge badge-sm border border-emerald-800/40 bg-emerald-950/40 text-emerald-400 rounded-md">Approved</span>
+                  <span className="text-[10px] text-base-content/70 block mb-1">Adviser Sign-off</span>
+                  <span className="badge badge-sm border border-success/30 bg-success/10 text-success rounded-md">Approved</span>
                 </div>
 
                 <div className="text-center">
-                  <span className="text-[10px] text-slate-400 block mb-1">Overall Status</span>
+                  <span className="text-[10px] text-base-content/70 block mb-1">Overall Status</span>
                   {selectedRecord.overallStatus === 'approved' ? (
-                    <span className="badge badge-sm border border-emerald-800/40 bg-emerald-950/40 text-emerald-400 rounded-md">Cleared</span>
+                    <span className="badge badge-sm border border-success/30 bg-success/10 text-success rounded-md">Cleared</span>
                   ) : selectedRecord.overallStatus === 'not_approved' ? (
-                    <span className="badge badge-sm border border-rose-800/40 bg-rose-950/40 text-rose-400 rounded-md">Hold</span>
+                    <span className="badge badge-sm border border-error/30 bg-error/10 text-error rounded-md">Hold</span>
                   ) : (
-                    <span className="badge badge-sm border border-amber-800/40 bg-amber-950/40 text-amber-400 rounded-md">Reviewing</span>
+                    <span className="badge badge-sm border border-warning/30 bg-warning/10 text-warning rounded-md">Reviewing</span>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Note banner */}
-            <div className="alert alert-info border border-indigo-800/40 bg-indigo-950/20 text-indigo-300 rounded-xl flex items-start gap-2 p-3 text-xs leading-relaxed">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-indigo-400 mt-0.5" />
+            <div className="alert alert-info border border-info/20 bg-info/10 text-info-content rounded-xl flex items-start gap-2 p-3 text-xs leading-relaxed">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-info mt-0.5" />
               <div>
                 <span className="font-bold block mb-0.5">Dean Oversight Mode</span>
                 The Dean has read-only visibility into student clearance status after Adviser sign-off in the MVP. Direct sign-off buttons are disabled.
@@ -344,7 +342,7 @@ export default function DeanDashboard() {
             {/* Action button */}
             <button
               onClick={() => setSelectedRecord(null)}
-              className="btn btn-outline border-slate-700 hover:bg-slate-800 text-slate-300 w-full rounded-xl font-semibold tracking-wide h-10 text-xs uppercase mt-2"
+              className="btn btn-outline border-base-content/20 hover:bg-base-content/10 text-base-content w-full rounded-xl font-semibold tracking-wide h-10 text-xs uppercase mt-2"
             >
               Close Overview
             </button>

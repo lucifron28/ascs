@@ -1,7 +1,7 @@
 import { UserRole } from '../types/roles';
 
 export interface DefaultClearanceRequirement {
-  role: Exclude<UserRole, 'student' | 'admin' | 'dean'>;
+  role: Exclude<UserRole, 'student' | 'admin' | 'dean' | 'accountant'>;
   label: string;
   displayOrder: number;
 }
@@ -13,28 +13,23 @@ export const DEFAULT_CLEARANCE_REQUIREMENTS: DefaultClearanceRequirement[] = [
     displayOrder: 1,
   },
   {
-    role: 'accountant',
-    label: 'Financial Accountability Monitoring',
-    displayOrder: 2,
-  },
-  {
     role: 'osa_coordinator',
     label: 'Office of Student Affairs Clearance',
-    displayOrder: 3,
+    displayOrder: 2,
   },
   {
     role: 'guidance_counselor',
     label: 'Guidance and Counseling Clearance',
-    displayOrder: 4,
+    displayOrder: 3,
   },
   {
     role: 'area_chair',
     label: 'Academic Department Clearance',
-    displayOrder: 5,
+    displayOrder: 4,
   },
   {
     role: 'adviser',
     label: 'Adviser Review',
-    displayOrder: 6,
+    displayOrder: 5,
   },
 ];
