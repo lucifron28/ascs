@@ -7,7 +7,6 @@ import {
   XCircle,
   Percent,
   CreditCard,
-  AlertCircle,
 } from 'lucide-react';
 
 interface SummaryCardsProps {

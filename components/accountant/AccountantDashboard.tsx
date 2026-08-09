@@ -289,15 +289,15 @@ export default function AccountantDashboard() {
                     <td className="text-base-content/80 py-4 font-mono text-xs">{rec.student_id_number}</td>
                     <td className="py-4">
                       {rec.status === 'paid' ? (
-                        <span className="badge badge-sm border border-success/30 bg-success/10 text-success rounded-md font-semibold px-2 py-0.5">
+                        <span className="badge badge-sm border border-success/30 bg-success/10 text-base-content rounded-md font-semibold px-2 py-0.5">
                           Paid / Settled
                         </span>
                       ) : rec.status === 'unpaid' ? (
-                        <span className="badge badge-sm border border-error/30 bg-error/10 text-error rounded-md font-semibold px-2 py-0.5">
+                        <span className="badge badge-sm border border-error/30 bg-error/10 text-base-content rounded-md font-semibold px-2 py-0.5">
                           Unpaid Dues
                         </span>
                       ) : (
-                        <span className="badge badge-sm border border-warning/30 bg-warning/10 text-warning rounded-md font-semibold px-2 py-0.5">
+                        <span className="badge badge-sm border border-warning/30 bg-warning/10 text-base-content rounded-md font-semibold px-2 py-0.5">
                           Pending Audit
                         </span>
                       )}
@@ -379,7 +379,7 @@ export default function AccountantDashboard() {
               <div className="grid grid-cols-2 gap-2">
                 <label className={`label cursor-pointer border rounded-xl p-3 flex items-center justify-between transition-all ${
                   statusInput === 'paid'
-                    ? 'border-success bg-success/10 text-success font-semibold'
+                    ? 'border-success bg-success/10 text-base-content font-semibold'
                     : 'border-base-content/10 bg-base-200 text-base-content/70'
                 }`}>
                   <span className="text-xs">Mark Financially Paid</span>
@@ -395,7 +395,7 @@ export default function AccountantDashboard() {
                 </label>
                 <label className={`label cursor-pointer border rounded-xl p-3 flex items-center justify-between transition-all ${
                   statusInput === 'unpaid'
-                    ? 'border-error bg-error/10 text-error font-semibold'
+                    ? 'border-error bg-error/10 text-base-content font-semibold'
                     : 'border-base-content/10 bg-base-200 text-base-content/70'
                 }`}>
                   <span className="text-xs">Mark Unpaid Dues</span>

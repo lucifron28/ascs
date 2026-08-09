@@ -289,7 +289,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => quickFill('student.a@example.test')}
               disabled={loading || success}
-              className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
+              className="btn btn-xs btn-outline border-base-content/30 hover:bg-base-content/10 text-base-content hover:text-base-content rounded-lg p-1 font-medium lowercase truncate"
             >
               student.a@example.test
             </button>
@@ -297,7 +297,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => quickFill('admin@example.test')}
               disabled={loading || success}
-              className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
+              className="btn btn-xs btn-outline border-base-content/30 hover:bg-base-content/10 text-base-content hover:text-base-content rounded-lg p-1 font-medium lowercase truncate"
             >
               admin@example.test
             </button>
@@ -305,7 +305,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => quickFill('librarian@example.test')}
               disabled={loading || success}
-              className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
+              className="btn btn-xs btn-outline border-base-content/30 hover:bg-base-content/10 text-base-content hover:text-base-content rounded-lg p-1 font-medium lowercase truncate"
             >
               librarian@example.test
             </button>
@@ -313,7 +313,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => quickFill('dean@example.test')}
               disabled={loading || success}
-              className="btn btn-xs btn-outline border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg p-1 font-medium lowercase truncate"
+              className="btn btn-xs btn-outline border-base-content/30 hover:bg-base-content/10 text-base-content hover:text-base-content rounded-lg p-1 font-medium lowercase truncate"
             >
               dean@example.test
             </button>

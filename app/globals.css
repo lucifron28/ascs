@@ -28,6 +28,20 @@ body {
   font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/*
+ * Keep muted semantic text readable in every DaisyUI theme.  The default
+ * opacity variants are intentionally subtle, but on the light and corporate
+ * themes they fall below the WCAG AA contrast threshold.  These utility
+ * classes are used for supporting copy, metadata, and icon labels, so the
+ * theme's base-content color is the appropriate accessible fallback.
+ */
+.text-base-content\/50,
+.text-base-content\/60,
+.text-base-content\/70,
+.text-base-content\/80 {
+  color: var(--color-base-content) !important;
+}
+
 /* 1. Keyboard focus visibility across all themes */
 *:focus-visible {
   outline: 2px solid currentColor;

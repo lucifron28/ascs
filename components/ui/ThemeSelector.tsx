@@ -67,11 +67,11 @@ export default function ThemeSelector() {
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-controls="theme-selector-dropdown"
-        className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content hover:text-base-content rounded-lg flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <Palette className="w-4 h-4" aria-hidden="true" />
         <span className="hidden sm:inline text-xs font-semibold capitalize">{currentTheme}</span>
-        <ChevronDown className="w-3.5 h-3.5 opacity-60" aria-hidden="true" />
+        <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
       </button>
 
       {isOpen && (
@@ -94,7 +94,7 @@ export default function ThemeSelector() {
                 } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
               >
                 <span>{theme.name}</span>
-                <span className="opacity-60 text-[10px] uppercase font-mono">{theme.id}</span>
+                <span className="text-[10px] uppercase font-mono">{theme.id}</span>
               </button>
             </li>
           ))}

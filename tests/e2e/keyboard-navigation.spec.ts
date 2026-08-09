@@ -1,4 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+async function isFocusInsideDialog(page: Page) {
+  return page.evaluate(() => {
+    const dialog = document.querySelector('[role="dialog"]');
+    return Boolean(dialog && dialog.contains(document.activeElement));
+  });
+}
 
 test.describe('Keyboard Accessibility & Modal Navigation', () => {
   test('1. Login form is fully navigable and submissible via keyboard', async ({ page }) => {
@@ -28,9 +35,10 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     const themeMenu = page.getByRole('menu', { name: /select theme/i });
     await expect(themeMenu).toBeVisible();
 
-    // Select Corporate Light theme via keyboard
+    // Select Corporate Light theme via keyboard, without pointer activation
     const corporateOption = page.getByRole('menuitem', { name: /corporate light/i });
-    await corporateOption.click();
+    await corporateOption.focus();
+    await page.keyboard.press('Enter');
 
     // Verify document theme changed
     const currentTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
@@ -55,6 +63,11 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
 
     const notifRegion = page.getByRole('region', { name: /user notifications/i });
     await expect(notifRegion).toBeVisible();
+
+    // The deterministic Admin fixture intentionally has no notifications, so
+    // this test records trigger/open/close/focus restoration only. Unread-item
+    // activation is covered by the component's keyboard semantics/manual QA.
+    await expect(notifRegion.getByRole('status')).toHaveText(/no notifications yet/i);
 
     // Escape closes dropdown and restores focus to trigger button
     await page.keyboard.press('Escape');
@@ -146,6 +159,10 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     const dialog = page.getByRole('dialog', { name: /update financial account/i });
     await expect(dialog).toBeVisible();
 
+    await expect.poll(() => isFocusInsideDialog(page)).toBe(true);
+    await page.keyboard.press('Tab');
+    await expect.poll(() => isFocusInsideDialog(page)).toBe(true);
+
     // Escape key closes modal and restores focus to Update button
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
@@ -171,6 +188,10 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
 
     const dialog = page.getByRole('dialog', { name: /create student account/i });
     await expect(dialog).toBeVisible();
+
+    await expect.poll(() => isFocusInsideDialog(page)).toBe(true);
+    await page.keyboard.press('Tab');
+    await expect.poll(() => isFocusInsideDialog(page)).toBe(true);
 
     // Escape closes modal and restores focus to Create button
     await page.keyboard.press('Escape');

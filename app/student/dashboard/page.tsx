@@ -122,7 +122,7 @@ export default function StudentDashboardPage() {
             {/* Print Action Bar */}
             {(dashboardData?.application as { overallStatus?: string } | undefined)?.overallStatus === 'approved' && (
               <div className="card bg-emerald-950/20 border border-emerald-800/40 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5 text-emerald-300 text-sm">
+                <div className="flex items-center gap-2.5 text-base-content text-sm">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                   <span>Your clearance is approved. Print the ASCS prototype record for review.</span>
                 </div>

@@ -120,4 +120,43 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
       expect(hasOverflowReports).toBe(false);
     });
   }
+
+  test('Signatory Review dialog remains usable at 320px', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto('/login');
+    await page.getByLabel(/email address/i).fill('guidance@example.test');
+    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+
+    await page.waitForURL('**/guidance_counselor/dashboard');
+    await expect(page.getByRole('heading', { name: /pending evaluation queue/i })).toBeVisible();
+
+    const reviewBtn = page.locator('button', { hasText: 'Review' }).first();
+    await expect(reviewBtn).toBeVisible();
+    await reviewBtn.click();
+
+    const dialog = page.getByRole('dialog', { name: /evaluate clearance requirement/i });
+    await expect(dialog).toBeVisible();
+
+    const dialogBox = await dialog.boundingBox();
+    expect(dialogBox).not.toBeNull();
+    expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(320);
+
+    const dialogBody = dialog.locator('div.overflow-y-auto').first();
+    await expect(dialogBody).toBeVisible();
+    const scrollMetrics = await dialogBody.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      overflowY: getComputedStyle(element).overflowY,
+    }));
+    expect(scrollMetrics.overflowY).toBe('auto');
+    expect(scrollMetrics.scrollHeight).toBeGreaterThanOrEqual(scrollMetrics.clientHeight);
+
+    for (const label of [/mark not approved/i, /mark pending/i, /approve clearance/i]) {
+      const action = dialog.getByRole('button', { name: label });
+      await action.scrollIntoViewIfNeeded();
+      await expect(action).toBeVisible();
+    }
+  });
 });

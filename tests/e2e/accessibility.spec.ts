@@ -4,6 +4,25 @@ import AxeBuilder from '@axe-core/playwright';
 const RUN_AXE = (page: Page) =>
   new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
 
+const REPRESENTATIVE_THEMES = ['dark', 'light', 'corporate', 'night'] as const;
+
+async function setTheme(page: Page, theme: (typeof REPRESENTATIVE_THEMES)[number]) {
+  await page.evaluate((value) => {
+    document.documentElement.setAttribute('data-theme', value);
+  }, theme);
+  // The application animates theme colors for 200ms; wait for the final
+  // colors before running axe so it does not sample an in-between palette.
+  await page.waitForTimeout(450);
+}
+
+async function loginAs(page: Page, email: string, route: string) {
+  await page.goto('/login');
+  await page.getByLabel(/email address/i).fill(email);
+  await page.getByLabel(/password/i).fill('password123');
+  await page.getByRole('button', { name: /log in/i }).click();
+  await page.waitForURL(`**/${route}`);
+}
+
 async function assertZeroSevereViolations(page: Page) {
   const results = await RUN_AXE(page).analyze();
   const severe = results.violations.filter(
@@ -125,10 +144,91 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
     await assertZeroSevereViolations(page);
 
     // Multi-Theme contrast scan across dark, light, corporate, night
-    const THEMES = ['dark', 'light', 'corporate', 'night'];
-    for (const theme of THEMES) {
-      await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme);
+    for (const theme of REPRESENTATIVE_THEMES) {
+      await setTheme(page, theme);
       await assertZeroSevereViolations(page);
     }
+  });
+
+  test.describe('Representative four-theme accessibility matrix', () => {
+    test('Login is scanned under dark, light, corporate, and night themes', async ({ page }) => {
+      await page.goto('/login');
+      await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
+
+      for (const theme of REPRESENTATIVE_THEMES) {
+        await setTheme(page, theme);
+        await assertZeroSevereViolations(page);
+      }
+    });
+
+    test('Student Dashboard is scanned under all representative themes', async ({ page }) => {
+      await loginAs(page, 'student.a@example.test', 'student/dashboard');
+      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+
+      for (const theme of REPRESENTATIVE_THEMES) {
+        await setTheme(page, theme);
+        await assertZeroSevereViolations(page);
+      }
+    });
+
+    test('Signatory Dashboard and Review dialog are scanned under all representative themes', async ({ page }) => {
+      await loginAs(page, 'guidance@example.test', 'guidance_counselor/dashboard');
+      await expect(page.getByRole('heading', { name: /pending evaluation queue/i })).toBeVisible();
+
+      for (const theme of REPRESENTATIVE_THEMES) {
+        await setTheme(page, theme);
+        await assertZeroSevereViolations(page);
+
+        const reviewBtn = page.locator('button', { hasText: 'Review' }).first();
+        await expect(reviewBtn).toBeVisible();
+        await reviewBtn.click();
+        const dialog = page.getByRole('dialog', { name: /evaluate clearance requirement/i });
+        await expect(dialog).toBeVisible();
+        await assertZeroSevereViolations(page);
+        await dialog.getByRole('button', { name: /close dialog/i }).click();
+        await expect(dialog).toBeHidden();
+      }
+    });
+
+    test('Accountant Dashboard and Update dialog are scanned under all representative themes', async ({ page }) => {
+      await loginAs(page, 'accountant@example.test', 'accountant/dashboard');
+      await expect(page.getByRole('heading', { name: /financial accountability management/i })).toBeVisible();
+
+      for (const theme of REPRESENTATIVE_THEMES) {
+        await setTheme(page, theme);
+        await assertZeroSevereViolations(page);
+
+        const updateBtn = page.locator('button', { hasText: 'Update' }).first();
+        await expect(updateBtn).toBeVisible();
+        await updateBtn.click();
+        const dialog = page.getByRole('dialog', { name: /update financial account/i });
+        await expect(dialog).toBeVisible();
+        await assertZeroSevereViolations(page);
+        await dialog.getByRole('button', { name: /close dialog/i }).click();
+        await expect(dialog).toBeHidden();
+      }
+    });
+
+    test('Admin Reports are scanned under all representative themes', async ({ page }) => {
+      await loginAs(page, 'admin@example.test', 'admin/dashboard');
+      await page.goto('/admin/reports');
+      await expect(page.getByRole('heading', { name: /institution clearance & analytical reports/i })).toBeVisible();
+
+      for (const theme of REPRESENTATIVE_THEMES) {
+        await setTheme(page, theme);
+        await assertZeroSevereViolations(page);
+      }
+    });
+
+    test('Dean Reports are scanned under all representative themes', async ({ page }) => {
+      await loginAs(page, 'dean@example.test', 'dean/dashboard');
+      await page.goto('/dean/reports');
+      await expect(page.getByRole('heading', { name: /academic clearance reports/i })).toBeVisible();
+
+      for (const theme of REPRESENTATIVE_THEMES) {
+        await setTheme(page, theme);
+        await assertZeroSevereViolations(page);
+      }
+    });
   });
 });

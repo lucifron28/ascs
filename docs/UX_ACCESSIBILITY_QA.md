@@ -2,26 +2,26 @@
 
 ## 1. Executive QA Matrix
 
-The ASCS MVP was reviewed against applicable WCAG 2.2 AA accessibility criteria, responsive viewport constraints, keyboard operation standards, and theme consistency requirements using automated Playwright/axe-core testing and manual verification.
+The ASCS MVP was reviewed against applicable WCAG 2.2 AA accessibility criteria, responsive viewport constraints, keyboard operation standards, and theme consistency requirements using automated Playwright/axe-core testing. Manual desktop and mobile evidence is reported separately below and is only marked when recorded.
 
-| Route / Flow | Mobile (320px) | Keyboard Nav | Dialog Semantics | Form A11y | Theme Consistency | Axe Violations | Final Result |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Login (`/login`) | Yes | Yes | N/A | Yes | Yes | 0 Critical / Serious | **PASS** |
-| Change Password (`/change-password`) | Yes | Yes | N/A | Yes | Yes | 0 Critical / Serious | **PASS** |
-| Student Dashboard (`/student/dashboard`) | Yes | Yes | Yes | Yes | Yes | 0 Critical / Serious | **PASS** |
-| Signatory Dashboard (`/*_coordinator/dashboard`) | Yes | Yes | Yes | Yes | Yes | 0 Critical / Serious | **PASS** |
-| Accountant Dashboard (`/accountant/dashboard`) | Yes | Yes | Yes | Yes | Yes | 0 Critical / Serious | **PASS** |
-| Dean Dashboard (`/dean/dashboard`) | Yes | Yes | Yes | N/A | Yes | 0 Critical / Serious | **PASS** |
-| Dean Reports (`/dean/reports`) | Yes | Yes | N/A | Yes | Yes | 0 Critical / Serious | **PASS** |
-| Admin Dashboard (`/admin/dashboard`) | Yes | Yes | Yes | Yes | Yes | 0 Critical / Serious | **PASS** |
-| Admin Reports (`/admin/reports`) | Yes | Yes | N/A | Yes | Yes | 0 Critical / Serious | **PASS** |
-| Printable Clearance (`/student/clearance/[id]/print`) | Yes | Yes | N/A | N/A | Print White | 0 Critical / Serious | **PASS** |
+| Route / Flow | Primary-State Axe | Representative Four-Theme Axe | Responsive Evidence | Keyboard/Dialog Evidence | Final Result |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Login (`/login`) | Pass | Pass | Pass (six viewports) | Pass (keyboard login) | **PASS** |
+| Change Password (`/change-password`) | Pass | Not in matrix | Not recorded | Not recorded | **PASS** |
+| Student Dashboard (`/student/dashboard`) | Pass | Pass | Pass (six viewports) | Not recorded | **PASS** |
+| Signatory Dashboard and Review dialog | Pass | Pass | Pass (six viewports and 320px dialog) | Pass (focus wrap and restoration) | **PASS** |
+| Accountant Dashboard and Update dialog | Pass | Pass | Pass (six viewports) | Pass (containment and restoration) | **PASS** |
+| Dean Dashboard (`/dean/dashboard`) | Pass | Not in matrix | Pass (six viewports) | Not recorded | **PASS** |
+| Dean Reports (`/dean/reports`) | Pass | Pass | Pass (six viewports) | Not applicable | **PASS** |
+| Admin Dashboard (`/admin/dashboard`) | Pass | Not in matrix | Pass (six viewports) | Pass (containment and restoration) | **PASS** |
+| Admin Reports (`/admin/reports`) | Pass | Pass | Pass (six viewports) | Not applicable | **PASS** |
+| Printable Clearance (`/student/clearance/[id]/print`) | Pass | Not in matrix | Not recorded | Not applicable | **PASS** |
 
 ---
 
 ## 2. Engineering QA Target & Standards
 
-> **Compliance Disclaimer**: The ASCS MVP was reviewed against applicable WCAG 2.2 AA accessibility criteria using automated and manual QA. This capstone prototype does not claim formal third-party accessibility certification or official institutional deployment.
+> **Compliance Disclaimer**: The documented matrix below is based on automated Playwright/axe-core checks and targeted keyboard/responsive browser tests. Manual desktop and mobile evidence was not recorded for this verification pass. This capstone prototype does not claim formal third-party accessibility certification or official institutional deployment.
 
 ### Key Accessibility & UX Enhancements Implemented
 1. **Authenticated Header Navigation (`RoleHeader`)**:
@@ -42,10 +42,12 @@ The ASCS MVP was reviewed against applicable WCAG 2.2 AA accessibility criteria,
 
 | Theme | Automated Contrast | Manual Desktop (1440x900) | Manual Mobile (375x667) | Final Result |
 | :--- | :---: | :---: | :---: | :---: |
-| **Dark** | Pass (0 Critical/Serious) | Pass | Pass | **PASS** |
-| **Light** | Pass (0 Critical/Serious) | Pass | Pass | **PASS** |
-| **Corporate** | Pass (0 Critical/Serious) | Pass | Pass | **PASS** |
-| **Night** | Pass (0 Critical/Serious) | Pass | Pass | **PASS** |
+| **Dark** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
+| **Light** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
+| **Corporate** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
+| **Night** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
+
+**Evidence boundaries:** "Representative automated" means that Login, Student Dashboard, Signatory Dashboard plus its open Review dialog, Accountant Dashboard plus its open Update dialog, Admin Reports, and Dean Reports are each scanned under Dark, Light, Corporate, and Night themes. It does not mean that every route and every dialog was scanned under every theme. The manual desktop and mobile columns are marked "Not recorded" for this automated verification pass.
 
 ---
 
@@ -58,9 +60,9 @@ npm run test:ux
 ```
 
 This suite executes 4 dedicated Playwright test files:
-1. `tests/e2e/accessibility.spec.ts`: Automated `@axe-core/playwright` WCAG 2.2 AA scans across all 10 major routes and open dialog states under 4 themes (`dark`, `light`, `corporate`, `night`), verifying 0 critical and 0 serious violations.
-2. `tests/e2e/responsive-layout.spec.ts`: Audits 6 viewports (`320x568`, `375x667`, `430x932`, `768x1024`, `1280x720`, `1440x900`), verifying zero page-level horizontal overflow (`scrollWidth <= clientWidth`).
-3. `tests/e2e/keyboard-navigation.spec.ts`: Verifies keyboard form completion, `RoleHeader` desktop & mobile navigation, modal focus trapping (first/last Tab wrapping, `Shift+Tab` wrapping, `Escape` close, focus restoration), `ThemeSelector` theme selection, and `NotificationDropdown` interaction.
+1. `tests/e2e/accessibility.spec.ts`: Automated `@axe-core/playwright` WCAG 2.2 AA scans cover the major routes in their primary state and add a representative six-screen matrix under 4 themes (`dark`, `light`, `corporate`, `night`). Color-contrast and document-title rules remain enabled; assertions fail on critical or serious violations.
+2. `tests/e2e/responsive-layout.spec.ts`: Audits 6 viewports (`320x568`, `375x667`, `430x932`, `768x1024`, `1280x720`, `1440x900`), verifies zero page-level horizontal overflow (`scrollWidth <= clientWidth`), and opens the Signatory Review dialog at 320px to verify its bounds, scrollable body, and reachable actions.
+3. `tests/e2e/keyboard-navigation.spec.ts`: Verifies keyboard form completion, `RoleHeader` desktop and mobile navigation, full Signatory modal focus trapping (first/last Tab wrapping, `Shift+Tab` wrapping, `Escape` close, focus restoration), Accountant/Admin dialog containment and restoration, keyboard `ThemeSelector` activation, and `NotificationDropdown` trigger/open/close/focus restoration. The deterministic Admin fixture has no unread notification, so unread-item activation is documented as component-semantics/manual evidence rather than fabricated in the browser test.
 4. `tests/e2e/print-clearance.spec.ts`: Validates printable certificate render, student data matrix, non-official prototype disclaimer text, and toolbar exclusion under print media.
 
 ---
@@ -73,7 +75,7 @@ Before conducting a live capstone defense or demonstration:
 - [ ] Run `npm run demo:reset` to seed deterministic fixture data.
 - [ ] Set browser zoom level to 100% on standard desktop resolution (1440x900 or 1920x1080).
 - [ ] Open `http://localhost:3000/login`.
-- [ ] Verify Demo Environment Banner (`Demo Environment — Fictional Data`) is visible.
+- [ ] Verify Demo Environment Banner (`Demo Environment - Fictional Data`) is visible.
 - [ ] Use `student.g@example.test` for the live 9-step multi-role clearance workflow.
 - [ ] Use `student.a@example.test` for pre-cleared certificate print demonstration fallback.
 - [ ] Select presentation theme (e.g. `Corporate Light` or `Dark Mode`) via theme selector.
