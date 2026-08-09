@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Shield, LogOut, Menu, X, Info } from 'lucide-react';
+import { signOut } from 'firebase/auth';
 import SkipLink from './SkipLink';
 import ThemeSelector from '@/components/ui/ThemeSelector';
 import NotificationDropdown from '@/components/ui/NotificationDropdown';
+import { firebaseAuth } from '@/lib/firebase/client';
 
 export interface NavLinkItem {
   label: string;
@@ -36,7 +38,10 @@ export default function RoleHeader({
     try {
       const res = await fetch('/api/auth/logout', { method: 'POST' });
       if (res.ok) {
-        router.push('/login');
+        // Clear the browser Firebase session as well as the HTTP-only server
+        // cookie so a subsequent login in the same tab starts cleanly.
+        await signOut(firebaseAuth).catch(() => undefined);
+        router.replace('/login');
         router.refresh();
       }
     } catch (err) {

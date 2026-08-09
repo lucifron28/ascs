@@ -8,6 +8,10 @@ import {
   DEMO_APPLICATION_FIXTURES,
 } from '../tests/fixtures/demo-data';
 
+// Keep the fictional evidence dataset stable across resets so screenshots and
+// defense walkthroughs do not change merely because the clock moved.
+const DEMO_TIMESTAMP = '2026-01-15T09:00:00.000Z';
+
 export async function seedEmulator(): Promise<void> {
   const env = assertEmulatorEnvironment();
   console.log(`🌱 Seeding Firebase Emulator Suite for project "${env.projectId}"...`);
@@ -32,8 +36,8 @@ export async function seedEmulator(): Promise<void> {
       ...req,
       assignedSignatoryId,
       assignedSignatoryName,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DEMO_TIMESTAMP,
+      updatedAt: DEMO_TIMESTAMP,
     });
   }
 
@@ -79,7 +83,7 @@ export async function seedEmulator(): Promise<void> {
       ...(user.mustChangePassword ? { mustChangePassword: true } : {}),
     });
 
-    const now = new Date();
+    const now = new Date(DEMO_TIMESTAMP);
     await usersCol.doc(authUid).set({
       uid: authUid,
       email: user.email,
@@ -124,7 +128,7 @@ export async function seedEmulator(): Promise<void> {
 
   for (const appFixture of DEMO_APPLICATION_FIXTURES) {
     const appRef = appsCol.doc(appFixture.id);
-    const nowIso = new Date().toISOString();
+    const nowIso = DEMO_TIMESTAMP;
 
     await appRef.set({
       applicationNumber: appFixture.applicationNumber,
