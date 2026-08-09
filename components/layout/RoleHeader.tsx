@@ -32,7 +32,11 @@ export default function RoleHeader({
 }: RoleHeaderProps) {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isDemo = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
+  // Keep the safety banner visible for both local emulator demos and the
+  // explicitly configured remote fictional-data demo deployment.
+  const isDemo =
+    process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ||
+    process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
 
   const defaultLogout = async () => {
     try {
