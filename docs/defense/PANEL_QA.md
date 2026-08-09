@@ -84,6 +84,23 @@ institutional deployment or certification.
     existing application for the same term.
 27. **How are remarks enforced?** Server actions require non-empty remarks for
     `pending` and `not_approved` decisions and preserve remark history.
+27a. **Why does the digital record differ from the paper clearance slip?** The
+     paper slip informed the information hierarchy and office checklist. ASCS
+     converts that structure into machine-readable workflow fields so a student
+     can see status, assigned signatory, remarks, and review dates without
+     pretending that a digital prototype is the institution's handwritten form.
+27b. **Which paper-slip elements were retained?** The record retains the
+     institution header, clearance title, academic term, student identity block,
+     office checklist, remarks/date areas, and explanatory note. No personal
+     details or handwritten signatures from the reference paper were copied.
+27c. **Why is there no reproduced signature column?** The MVP records each
+     signatory's decision and actor name in the audit trail. It does not create a
+     fake handwritten or electronic signature, and the printed page is labelled
+     a nonofficial prototype record.
+27d. **Where are Accountant and Dean responsibilities shown?** Accountant
+     verification appears in the separate Financial Accountability Review. Dean
+     access is an Adviser-approved oversight path, so Dean is not one of the five
+     required signatory rows.
 
 ## Reports and data integrity
 

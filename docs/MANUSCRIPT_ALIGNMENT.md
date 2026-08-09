@@ -12,9 +12,14 @@ Monitoring for Pambayang Kolehiyo ng Mauban.**
 ## 2. Problem addressed
 
 ASCS addresses the routing, visibility, and accountability problems of a
-paper-based clearance process. It provides a single workflow for student
-submission, role-scoped signatory decisions, a separate Accountant financial
-gate, Adviser-to-Dean visibility, notifications, audit logs, and scoped reports.
+paper-based clearance process. The existing PKM clearance-slip hierarchy
+informed the digital record's institution header, clearance title, academic
+term, identity block, office checklist, remarks, dates, and closing note; the
+digital system restructures those fields into readable status data rather than
+reproducing handwritten signatures or personal paper details. It provides a
+single workflow for student submission, role-scoped signatory decisions, a
+separate Accountant financial gate, Adviser-to-Dean visibility, notifications,
+audit logs, and scoped reports.
 
 Evidence: `app/actions/clearance.ts`, `components/student/`,
 `components/signatory/`, `components/accountant/`, `docs/DEMO_SCENARIO.md`.
@@ -165,8 +170,10 @@ Evidence: `app/actions/notifications.ts`, `components/ui/NotificationDropdown.ts
 prototype record only when the derived overall status is `approved`. Its identity
 block includes the academic term, student number, program, year, section, and
 purpose. The record renders exactly five signatory rows (Librarian, OSA
-Coordinator, Guidance Counselor, Area Chair, and Adviser), followed by a separate
-`FINANCIAL ACCOUNTABILITY REVIEW` for the Accountant gate. The Dean is an
+Coordinator, Guidance Counselor, Area Chair, and Adviser) with explicit Office /
+Requirement, Status, Assigned Signatory, Remarks, and Date Reviewed columns,
+followed by a separate `FINANCIAL ACCOUNTABILITY REVIEW` containing Status,
+Verified By, Remarks, and Date Reviewed for the Accountant gate. The Dean is an
 oversight role and is not printed as a signatory; the prototype does not reproduce
 handwritten or electronic signatures. The page explicitly states that it is not
 an official institutional certificate, receipt, or electronic signature.

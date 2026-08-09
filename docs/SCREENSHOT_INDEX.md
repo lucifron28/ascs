@@ -1,9 +1,11 @@
 # ASCS Desktop Screenshot Index
 
 Canonical screenshots are captured locally from the Firebase Emulator Suite
-with deterministic fictional fixtures, a 1440x900 desktop viewport, device
-scale factor 1, browser zoom 100%, and the Corporate theme. They are interface
-evidence for the manuscript and defense, not production monitoring evidence.
+with deterministic fictional fixtures, device scale factor 1, browser zoom
+100%, and the Corporate theme. Screenshots 01–14 use a 1440x900 desktop
+viewport; screenshots 15–16 use full-page capture at 1440px width (with the same
+1440x900 base viewport). They are interface evidence for the manuscript and
+defense, not production monitoring evidence.
 
 | File | Route | Role | Scenario | Manuscript use | Defense slide use |
 | --- | --- | --- | --- | --- | --- |

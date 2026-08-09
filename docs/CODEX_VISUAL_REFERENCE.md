@@ -2,8 +2,10 @@
 
 These desktop screenshots are the canonical visual reference for the current
 ASCS interface. Every image is local, deterministic, fictional, Corporate
-theme, 1440x900 base viewport, device scale factor 1, and browser zoom 100%.
-The screenshot script waits for the primary screen state before capture.
+theme, device scale factor 1, and browser zoom 100%. Screenshots 01–14 use a
+1440x900 viewport; screenshots 15–16 are full-page captures at 1440px width so
+the complete printable and not-approved evidence remains visible. The
+screenshot script waits for the primary screen state before capture.
 
 ## Login
 
@@ -167,7 +169,7 @@ Route: `/student/clearance/app-student-a/print`
 Role: Student
 Fixture: Student A approved + paid
 Theme: Corporate / print layout
-Viewport: 1440x900
+Viewport: 1440px wide, full-page (base viewport 1440x900)
 Purpose: Shows the A4-oriented, PKM-slip-inspired digital prototype record with five required signatory rows and a separate Accountant financial review. It contains no reproduced signatures and is not an official certificate.
 
 ## Not-approved Student View
@@ -178,5 +180,5 @@ Route: `/student/dashboard`
 Role: Student
 Fixture: Student C with Librarian rejection remark
 Theme: Corporate
-Viewport: 1440x900
+Viewport: 1440px wide, full-page (base viewport 1440x900)
 Purpose: Shows visible remarks and blocked printability.
