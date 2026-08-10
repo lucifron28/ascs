@@ -11,10 +11,10 @@ data only.
 | --- | --- |
 | Vercel project | `ron-cada-projects/ascs` |
 | Deployment URL | <https://ascs-one.vercel.app> |
-| Latest production deployment | <https://ascs-hycytdenp-ron-cada-projects.vercel.app> |
-| Deployment ID | `dpl_EZjZLVxuib8vbS9V3Ggj6bomoxU1` |
-| Deployment date | 2026-08-09 |
-| Deployed Git SHA | `7717063` |
+| Latest production deployment | <https://ascs-hm5sp6hlo-ron-cada-projects.vercel.app> |
+| Deployment ID | `dpl_ATwdV76cHNnYkLrcaL9HVSrqLaWT` |
+| Deployment date | 2026-08-10 |
+| Deployed Git SHA | `8da54f5` |
 | Firebase demo project | `ascs11` (fictional demo data) |
 | Firestore database | `(default)` in `asia-southeast1` |
 | Demo mode | `NEXT_PUBLIC_DEMO_MODE=true` |
