@@ -71,7 +71,7 @@ export default function CsvExportButton({ scope, filters }: CsvExportButtonProps
 
         <ul
           tabIndex={0}
-          className="dropdown-content z-30 menu p-2 shadow-xl bg-base-100 border border-base-content/10 rounded-2xl w-60 text-xs space-y-1 mt-1"
+          className="dropdown-content z-30 menu p-2 shadow-lg bg-base-100 border border-base-content/15 rounded-xl w-60 text-sm space-y-1 mt-1"
         >
           <li className="menu-title text-[10px] uppercase font-bold text-base-content/50 px-2 py-1">
             Choose Export Type
@@ -90,13 +90,13 @@ export default function CsvExportButton({ scope, filters }: CsvExportButtonProps
           </li>
           <li>
             <button onClick={() => handleExport('program-breakdown')} className="flex items-center gap-2 py-2">
-              <FileSpreadsheet className="w-4 h-4 text-indigo-500 shrink-0" />
+              <FileSpreadsheet className="w-4 h-4 text-primary shrink-0" />
               <span>Program Breakdown CSV</span>
             </button>
           </li>
           <li>
             <button onClick={() => handleExport('application-detail')} className="flex items-center gap-2 py-2">
-              <FileSpreadsheet className="w-4 h-4 text-emerald-500 shrink-0" />
+              <FileSpreadsheet className="w-4 h-4 text-success shrink-0" />
               <span>Application Details CSV</span>
             </button>
           </li>

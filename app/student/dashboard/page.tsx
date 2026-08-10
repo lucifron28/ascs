@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { fetchStudentDashboardAction } from '@/app/actions/clearance';
 import { normalizeSemester } from '@/lib/academic-term';
 import ApplicationForm from '@/components/student/ApplicationForm';
@@ -89,9 +90,9 @@ export default function StudentDashboardPage() {
       <main id="main-content" className="flex-1 overflow-y-auto p-6 md:p-8 max-w-5xl w-full mx-auto space-y-8">
         {/* Error Alert panel */}
         {error && (
-          <div className="alert alert-error bg-rose-950/80 border-rose-800 text-rose-300 rounded-xl flex items-center gap-2 p-3 text-sm">
+          <div className="alert alert-error bg-error/10 border-error/30 text-error rounded-xl flex items-center gap-2 p-3 text-sm">
             <span>Error: {error}</span>
-            <button onClick={loadDashboard} className="btn btn-xs btn-outline border-rose-800 text-rose-300 rounded-lg ml-auto">
+            <button onClick={loadDashboard} className="btn btn-sm min-h-11 btn-outline border-error text-error rounded-lg ml-auto">
               Retry
             </button>
           </div>
@@ -111,7 +112,7 @@ export default function StudentDashboardPage() {
         {dashboardData?.application === null ? (
           /* Application submission screen */
           <div className="space-y-6">
-            <div className="card bg-base-100 border border-base-content/10 p-6 rounded-2xl max-w-xl mx-auto text-center space-y-3 shadow-sm">
+            <div className="card bg-base-100 border border-base-content/15 p-6 rounded-xl max-w-xl mx-auto text-center space-y-3 shadow-sm">
               <p className="text-sm text-base-content/70 font-medium">
                 You do not have an active clearance application for the current semester. Complete the form below to initiate your checklist.
               </p>
@@ -129,14 +130,14 @@ export default function StudentDashboardPage() {
 
             {/* Print Action Bar */}
             {(dashboardData?.application as { overallStatus?: string } | undefined)?.overallStatus === 'approved' && (
-              <div className="card bg-emerald-950/20 border border-emerald-800/40 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="card bg-success/10 border border-success/30 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5 text-base-content text-sm">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
                   <span>Your clearance is approved. Print the ASCS prototype record for review.</span>
                 </div>
                 <button
                   onClick={handlePrint}
-                  className="btn btn-sm btn-success bg-emerald-600 hover:bg-emerald-500 text-white border-none rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-950/30"
+                  className="btn btn-sm min-h-11 btn-success rounded-xl flex items-center gap-1.5 shadow-sm"
                 >
                   <Printer className="w-4 h-4" /> Print Clearance Record
                 </button>
@@ -173,6 +174,13 @@ export default function StudentDashboardPage() {
             {/* Printable Content */}
             <div id="printable-clearance-area" className="bg-white text-slate-900 p-8 font-serif leading-relaxed text-sm rounded-xl border border-slate-200 shadow-sm">
               <div className="text-center space-y-1 mb-8">
+                <Image
+                  src="/pkmlogo.png"
+                  alt="Pambayang Kolehiyo ng Mauban seal"
+                  width={88}
+                  height={88}
+                  className="h-16 w-16 object-contain mx-auto mb-3"
+                />
                 <h2 className="text-xl font-bold uppercase tracking-wide">Pambayang Kolehiyo ng Mauban</h2>
                 <p className="text-xs italic text-slate-600">Mauban, Quezon</p>
                 <p className="text-xs font-semibold mt-4 uppercase">Automated Student Clearance System (ASCS)</p>

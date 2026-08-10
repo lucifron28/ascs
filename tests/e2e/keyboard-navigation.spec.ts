@@ -35,14 +35,14 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     const themeMenu = page.getByRole('menu', { name: /select theme/i });
     await expect(themeMenu).toBeVisible();
 
-    // Select Corporate Light theme via keyboard, without pointer activation
-    const corporateOption = page.getByRole('menuitem', { name: /corporate light/i });
-    await corporateOption.focus();
+    // Select ASCS Light via keyboard, without pointer activation.
+    const lightOption = page.getByRole('menuitem', { name: /ascs light/i });
+    await lightOption.focus();
     await page.keyboard.press('Enter');
 
     // Verify document theme changed
     const currentTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
-    expect(currentTheme).toBe('corporate');
+    expect(currentTheme).toBe('ascs-light');
 
     // Menu closes and focus is restored to theme button
     await expect(themeMenu).toBeHidden();
@@ -207,6 +207,7 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     await page.waitForURL('**/student/dashboard');
 
     await expect(page.getByRole('button', { name: /notifications/i })).toBeVisible();
+    await expect(page.locator('header img[src*="pkmlogo.png"]')).toBeVisible();
     await expect(page.getByRole('button', { name: /change theme/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /logout/i })).toBeVisible();
     await page.getByRole('button', { name: /logout/i }).click();

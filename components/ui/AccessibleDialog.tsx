@@ -114,10 +114,10 @@ export default function AccessibleDialog({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`card w-full ${maxWidthClass} bg-base-100 border border-base-content/10 shadow-2xl rounded-2xl max-h-[90vh] flex flex-col focus:outline-none`}
+        className={`card w-full ${maxWidthClass} bg-base-100 border border-base-content/15 shadow-lg rounded-xl max-h-[90vh] flex flex-col focus:outline-none`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-base-content/10 shrink-0">
+        <div className="flex items-center justify-between p-5 border-b border-base-content/15 shrink-0">
           <div>
             <h2 id={titleId} className="text-lg font-bold text-base-content tracking-tight">
               {title}
@@ -132,7 +132,7 @@ export default function AccessibleDialog({
             onClick={onClose}
             disabled={preventClose}
             aria-label="Close dialog"
-            className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+            className="btn btn-sm min-h-11 min-w-11 btn-circle btn-ghost text-base-content/70 hover:text-base-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
           >
             <X className="w-4 h-4" aria-hidden="true" />
           </button>

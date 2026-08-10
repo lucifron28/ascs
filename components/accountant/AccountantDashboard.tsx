@@ -147,7 +147,7 @@ export default function AccountantDashboard() {
     <div className="space-y-6">
       {/* 1. Header & Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-5 rounded-xl flex flex-row items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
             <CreditCard className="w-6 h-6" />
           </div>
@@ -157,7 +157,7 @@ export default function AccountantDashboard() {
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-5 rounded-xl flex flex-row items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-warning/10 border border-warning/20 flex items-center justify-center text-warning">
             <CircleEllipsis className="w-6 h-6" />
           </div>
@@ -167,7 +167,7 @@ export default function AccountantDashboard() {
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-5 rounded-xl flex flex-row items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-success/10 border border-success/20 flex items-center justify-center text-success">
             <CheckCircle2 className="w-6 h-6" />
           </div>
@@ -177,7 +177,7 @@ export default function AccountantDashboard() {
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-5 rounded-xl flex flex-row items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-error/10 border border-error/20 flex items-center justify-center text-error">
             <AlertCircle className="w-6 h-6" />
           </div>
@@ -198,7 +198,7 @@ export default function AccountantDashboard() {
       )}
 
       {/* 2. Filters & Actions Bar */}
-      <div className="card bg-base-100 border border-base-content/10 shadow-sm p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 justify-between">
+      <div className="card bg-base-100 border border-base-content/15 shadow-sm p-4 rounded-xl flex flex-col md:flex-row items-center gap-4 justify-between">
         {/* Search */}
         <div className="relative w-full md:max-w-xs">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/60">
@@ -209,7 +209,7 @@ export default function AccountantDashboard() {
             placeholder="Search by student name or ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input input-bordered w-full pl-9 bg-base-200 border-base-content/10 focus:border-primary text-base-content rounded-xl placeholder-base-content/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary text-xs h-10"
+            className="input input-bordered w-full pl-9 bg-base-200 border-base-content/15 focus:border-primary text-base-content rounded-xl placeholder-base-content/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary text-sm h-11"
           />
         </div>
 
@@ -217,40 +217,40 @@ export default function AccountantDashboard() {
         <div className="flex gap-2 w-full md:w-auto shrink-0 justify-end">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
+            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
               statusFilter === 'all'
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
+                ? 'bg-primary text-primary-content hover:bg-primary/90'
+                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             All
           </button>
           <button
             onClick={() => setStatusFilter('pending')}
-            className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
+            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
               statusFilter === 'pending'
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
+                ? 'bg-primary text-primary-content hover:bg-primary/90'
+                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Pending
           </button>
           <button
             onClick={() => setStatusFilter('unpaid')}
-            className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
+            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
               statusFilter === 'unpaid'
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
+                ? 'bg-primary text-primary-content hover:bg-primary/90'
+                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Unpaid Dues
           </button>
           <button
             onClick={() => setStatusFilter('paid')}
-            className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
+            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
               statusFilter === 'paid'
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
+                ? 'bg-primary text-primary-content hover:bg-primary/90'
+                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Paid / Cleared
@@ -260,13 +260,14 @@ export default function AccountantDashboard() {
 
       {/* 3. Accounts Queue List */}
       {filteredRecords.length === 0 ? (
-        <div className="card bg-base-100 border border-base-content/10 p-12 rounded-2xl text-center space-y-2 shadow-sm">
+        <div className="card bg-base-100 border border-base-content/15 p-12 rounded-xl text-center space-y-2 shadow-sm">
           <CircleEllipsis className="w-8 h-8 text-base-content/50 mx-auto" aria-hidden="true" />
           <h3 className="text-base-content font-bold text-sm">No Accounts Found</h3>
           <p className="text-base-content/70 text-xs font-medium">Try adjusting your filters or search query.</p>
         </div>
       ) : (
-        <div className="card bg-base-100 border border-base-content/10 shadow-xl p-6 rounded-2xl">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-6 rounded-xl">
+          <p className="sm:hidden mb-3 text-xs text-base-content/60">Swipe horizontally to view all columns.</p>
           <div className="overflow-x-auto w-full">
             <table className="table w-full min-w-[960px] text-left text-sm border-separate border-spacing-y-2">
               <thead>
@@ -289,15 +290,15 @@ export default function AccountantDashboard() {
                     <td className="text-base-content/80 py-4 font-mono text-xs">{rec.student_id_number}</td>
                     <td className="py-4">
                       {rec.status === 'paid' ? (
-                        <span className="badge badge-sm border border-success/30 bg-success/10 text-base-content rounded-md font-semibold px-2 py-0.5">
+                        <span className="badge badge-sm border border-success/30 bg-success/10 text-success rounded-md font-semibold px-2 py-0.5">
                           Paid / Settled
                         </span>
                       ) : rec.status === 'unpaid' ? (
-                        <span className="badge badge-sm border border-error/30 bg-error/10 text-base-content rounded-md font-semibold px-2 py-0.5">
+                        <span className="badge badge-sm border border-error/30 bg-error/10 text-error rounded-md font-semibold px-2 py-0.5">
                           Unpaid Dues
                         </span>
                       ) : (
-                        <span className="badge badge-sm border border-warning/30 bg-warning/10 text-base-content rounded-md font-semibold px-2 py-0.5">
+                        <span className="badge badge-sm border border-warning/30 bg-warning/10 text-warning rounded-md font-semibold px-2 py-0.5">
                           Pending Audit
                         </span>
                       )}
@@ -312,7 +313,7 @@ export default function AccountantDashboard() {
                       <button
                         onClick={() => handleOpenUpdate(rec)}
                         aria-label={`Update financial status for ${rec.student_name}`}
-                        className="btn btn-xs btn-primary rounded-lg font-semibold shadow-sm flex items-center gap-1 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="btn btn-sm min-h-11 btn-primary rounded-lg font-semibold shadow-sm flex items-center gap-1 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         <FileText className="w-3 h-3" aria-hidden="true" /> Update
                       </button>

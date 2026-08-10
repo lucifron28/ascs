@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useForm } from '@tanstack/react-form';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseAuth as auth } from '@/lib/firebase/client';
@@ -124,15 +125,19 @@ export default function LoginPage() {
         <ThemeSelector />
       </div>
 
-      {/* Background Radial Glow */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[120px] pointer-events-none" />
-
       {/* Main Content Area */}
       <main id="main-content" className="relative w-full max-w-md p-4 z-10">
         {/* Title / Logo Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+        <div className="flex flex-col items-center text-center mb-8">
+          <Image
+            src="/pkmlogo.png"
+            alt="Pamantasan ng Kolehiyo ng Mauban seal"
+            width={96}
+            height={96}
+            preload
+            className="h-20 w-20 object-contain mb-3"
+          />
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">
             ASCS PKM
           </h1>
           <p className="text-base-content/70 text-sm mt-2 font-medium">
@@ -141,7 +146,7 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <div className="card w-full bg-base-100 border border-base-content/10 shadow-2xl p-8 rounded-2xl">
+        <div className="card w-full bg-base-100 border border-base-content/15 shadow-lg p-8 rounded-2xl">
           <h2 className="text-xl font-bold text-base-content mb-6 flex items-center gap-2">
             <LogIn className="w-5 h-5 text-primary" /> Sign In
           </h2>
@@ -202,7 +207,7 @@ export default function LoginPage() {
                       aria-invalid={field.state.meta.isTouched && field.state.meta.errors.length > 0}
                       aria-describedby={field.state.meta.isTouched && field.state.meta.errors.length > 0 ? 'email-error' : undefined}
                       placeholder="name@example.com"
-                      className="input input-bordered w-full pl-10 bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="input input-bordered w-full pl-10 bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     />
                   </div>
                   {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
@@ -245,7 +250,7 @@ export default function LoginPage() {
                       aria-invalid={field.state.meta.isTouched && field.state.meta.errors.length > 0}
                       aria-describedby={field.state.meta.isTouched && field.state.meta.errors.length > 0 ? 'password-error' : undefined}
                       placeholder="••••••••"
-                      className="input input-bordered w-full pl-10 bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="input input-bordered w-full pl-10 bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     />
                   </div>
                   {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
@@ -262,7 +267,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading || success}
               aria-busy={loading}
-              className="btn btn-primary w-full rounded-xl shadow-lg mt-6 flex items-center justify-center gap-2 h-11 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="btn btn-primary w-full rounded-xl shadow-sm mt-6 flex items-center justify-center gap-2 min-h-12 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               {loading ? (
                 <>
@@ -281,15 +286,16 @@ export default function LoginPage() {
 
         {/* Demo Credentials Quick Fill Panel (explicitly opt-in) */}
         {demoMode && (
-          <div className="card w-full mt-6 bg-base-100 border border-base-content/10 p-5 rounded-2xl shadow-md">
-          <h3 className="text-xs font-bold text-base-content/60 mb-3 uppercase tracking-wider">
-            DEMO / EMULATOR ONLY (FICTIONAL DATA)
+          <div className="card w-full mt-6 bg-base-100 border border-base-content/15 p-5 rounded-2xl shadow-sm">
+          <h3 className="text-sm font-bold text-base-content/70 mb-3 uppercase tracking-wider">
+            Demo access (fictional data)
           </h3>
+          <div className="grid gap-2">
             <button
               type="button"
               onClick={() => quickFill('student.a@example.test')}
               disabled={loading || success}
-              className="btn btn-xs btn-outline border-base-content/30 hover:bg-base-content/10 text-base-content hover:text-base-content rounded-lg p-1 font-medium lowercase truncate"
+              className="btn btn-sm min-h-11 btn-outline border-base-content/30 hover:bg-base-200 text-base-content hover:text-base-content rounded-lg px-3 font-medium lowercase truncate"
             >
               student.a@example.test
             </button>
@@ -297,7 +303,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => quickFill('admin@example.test')}
               disabled={loading || success}
-              className="btn btn-xs btn-outline border-base-content/30 hover:bg-base-content/10 text-base-content hover:text-base-content rounded-lg p-1 font-medium lowercase truncate"
+              className="btn btn-sm min-h-11 btn-outline border-base-content/30 hover:bg-base-200 text-base-content hover:text-base-content rounded-lg px-3 font-medium lowercase truncate"
             >
               admin@example.test
             </button>
@@ -305,7 +311,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => quickFill('librarian@example.test')}
               disabled={loading || success}
-              className="btn btn-xs btn-outline border-base-content/30 hover:bg-base-content/10 text-base-content hover:text-base-content rounded-lg p-1 font-medium lowercase truncate"
+              className="btn btn-sm min-h-11 btn-outline border-base-content/30 hover:bg-base-200 text-base-content hover:text-base-content rounded-lg px-3 font-medium lowercase truncate"
             >
               librarian@example.test
             </button>
@@ -313,10 +319,11 @@ export default function LoginPage() {
               type="button"
               onClick={() => quickFill('dean@example.test')}
               disabled={loading || success}
-              className="btn btn-xs btn-outline border-base-content/30 hover:bg-base-content/10 text-base-content hover:text-base-content rounded-lg p-1 font-medium lowercase truncate"
+              className="btn btn-sm min-h-11 btn-outline border-base-content/30 hover:bg-base-200 text-base-content hover:text-base-content rounded-lg px-3 font-medium lowercase truncate"
             >
               dean@example.test
             </button>
+          </div>
           </div>
         )}
       </main>

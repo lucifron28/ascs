@@ -31,7 +31,7 @@ The ASCS MVP was reviewed against applicable WCAG 2.2 AA accessibility criteria,
 3. **Page Landmarks**: All core screens structured with `<header>`, `<nav>`, `<main id="main-content">`, `<section>`, and logical heading hierarchies (`<h1>` -> `<h2>` -> `<h3>`).
 4. **Accessible Dialogs (`AccessibleDialog`)**: Custom modals use `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, and `aria-describedby`. Keyboard focus moves automatically into the dialog on open, traps focus with `Tab` / `Shift+Tab`, closes safely on `Escape`, and restores focus to the triggering element upon close.
 5. **Form Accessibility**: Inputs include `autocomplete` attributes (`username`, `current-password`, `new-password`), `aria-invalid`, and `aria-describedby` linked to validation error paragraphs. Form submit buttons display clear loading state text (`"Signing in..."`, `"Submitting Application..."`) and `aria-busy="true"`.
-6. **Theme Consistency**: Dark-only hardcoded classes (`bg-slate-950`, `text-slate-400`) replaced with DaisyUI semantic tokens (`bg-base-100`, `bg-base-200`, `bg-base-300`, `text-base-content`, `text-base-content/70`, `text-primary`, `border-base-content/10`) ensuring high contrast and legibility across themes.
+6. **Theme Consistency**: Dark-only hardcoded classes (`bg-slate-950`, `text-slate-400`) replaced with DaisyUI semantic tokens (`bg-base-100`, `bg-base-200`, `bg-base-300`, `text-base-content`, `text-base-content/70`, `text-primary`, `border-base-content/10`) ensuring high contrast and legibility across themes. The production selector exposes only `ASCS Light` and `ASCS Dark`; legacy `corporate` and `night` aliases remain supported for saved links and cookies.
 7. **Focus Visibility**: Universal `:focus-visible` ring indicators applied across all themes with crisp contrast.
 8. **Reduced Motion**: Respects `@media (prefers-reduced-motion: reduce)` by disabling non-essential CSS transitions, pulse animations, and scale effects.
 9. **Print Layout**: Dedicated print media styles (`@media print`) format the clearance certificate for A4 paper output, hiding web toolbars, buttons, and navigation headers.
@@ -42,12 +42,12 @@ The ASCS MVP was reviewed against applicable WCAG 2.2 AA accessibility criteria,
 
 | Theme | Automated Contrast | Manual Desktop (1440x900) | Manual Mobile (375x667) | Final Result |
 | :--- | :---: | :---: | :---: | :---: |
-| **Dark** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
-| **Light** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
-| **Corporate** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
-| **Night** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
+| **ASCS Dark** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
+| **ASCS Light** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
+| **Corporate alias** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
+| **Night alias** | Pass (0 Critical/Serious) | Not recorded | Not recorded | **PASS** |
 
-**Evidence boundaries:** "Representative automated" means that Login, Student Dashboard, Signatory Dashboard plus its open Review dialog, Accountant Dashboard plus its open Update dialog, Admin Reports, and Dean Reports are each scanned under Dark, Light, Corporate, and Night themes. It does not mean that every route and every dialog was scanned under every theme. The manual desktop and mobile columns are marked "Not recorded" for this automated verification pass.
+**Evidence boundaries:** "Representative automated" means that Login, Student Dashboard, Signatory Dashboard plus its open Review dialog, Accountant Dashboard plus its open Update dialog, Admin Reports, and Dean Reports are each scanned under the two production themes and their two legacy aliases. It does not mean that every route and every dialog was scanned under every theme. The manual desktop and mobile columns are marked "Not recorded" for this automated verification pass.
 
 ---
 
@@ -60,7 +60,7 @@ npm run test:ux
 ```
 
 This suite executes 4 dedicated Playwright test files:
-1. `tests/e2e/accessibility.spec.ts`: Automated `@axe-core/playwright` WCAG 2.2 AA scans cover the major routes in their primary state and add a representative six-screen matrix under 4 themes (`dark`, `light`, `corporate`, `night`). Color-contrast and document-title rules remain enabled; assertions fail on critical or serious violations.
+1. `tests/e2e/accessibility.spec.ts`: Automated `@axe-core/playwright` WCAG 2.2 AA scans cover the major routes in their primary state and add a representative six-screen matrix under the two production themes (`ascs-light`, `ascs-dark`) plus legacy aliases (`corporate`, `night`). Color-contrast and document-title rules remain enabled; assertions fail on critical or serious violations.
 2. `tests/e2e/responsive-layout.spec.ts`: Audits 6 viewports (`320x568`, `375x667`, `430x932`, `768x1024`, `1280x720`, `1440x900`), verifies zero page-level horizontal overflow (`scrollWidth <= clientWidth`), and opens the Signatory Review dialog at 320px to verify its bounds, scrollable body, and reachable actions.
 3. `tests/e2e/keyboard-navigation.spec.ts`: Verifies keyboard form completion, `RoleHeader` desktop and mobile navigation, full Signatory modal focus trapping (first/last Tab wrapping, `Shift+Tab` wrapping, `Escape` close, focus restoration), Accountant/Admin dialog containment and restoration, keyboard `ThemeSelector` activation, and `NotificationDropdown` trigger/open/close/focus restoration. The deterministic Admin fixture has no unread notification, so unread-item activation is documented as component-semantics/manual evidence rather than fabricated in the browser test.
 4. `tests/e2e/print-clearance.spec.ts`: Validates printable certificate render, student data matrix, non-official prototype disclaimer text, and toolbar exclusion under print media.
@@ -78,4 +78,4 @@ Before conducting a live capstone defense or demonstration:
 - [ ] Verify Demo Environment Banner (`Demo Environment - Fictional Data`) is visible.
 - [ ] Use `student.g@example.test` for the live 9-step multi-role clearance workflow.
 - [ ] Use `student.a@example.test` for pre-cleared certificate print demonstration fallback.
-- [ ] Select presentation theme (e.g. `Corporate Light` or `Dark Mode`) via theme selector.
+- [ ] Select presentation theme (`ASCS Light` or `ASCS Dark`) via theme selector.

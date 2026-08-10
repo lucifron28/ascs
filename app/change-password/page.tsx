@@ -114,7 +114,7 @@ export default function ChangePasswordPage() {
       <main id="main-content" className="w-full max-w-md space-y-6 z-10">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center mx-auto shadow-md">
+          <div className="w-14 h-14 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center mx-auto shadow-sm">
             <Lock className="w-7 h-7 text-primary" aria-hidden="true" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-base-content">
@@ -126,7 +126,7 @@ export default function ChangePasswordPage() {
         </div>
 
         {/* Form Card */}
-        <div className="card bg-base-100 border border-base-content/10 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6">
+        <div className="card bg-base-100 border border-base-content/15 p-6 sm:p-8 rounded-xl shadow-sm space-y-6">
           {error && (
             <div role="alert" className="alert alert-error text-error-content text-xs rounded-xl flex items-start gap-2.5 p-3 font-medium">
               <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
@@ -156,7 +156,7 @@ export default function ChangePasswordPage() {
                 disabled={loading || success}
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="input input-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
 
@@ -175,7 +175,7 @@ export default function ChangePasswordPage() {
                 disabled={loading || success}
                 autoComplete="new-password"
                 placeholder="••••••••"
-                className="input input-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
 
@@ -194,7 +194,7 @@ export default function ChangePasswordPage() {
                 disabled={loading || success}
                 autoComplete="new-password"
                 placeholder="••••••••"
-                className="input input-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
 

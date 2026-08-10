@@ -52,19 +52,19 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
     switch (status) {
       case 'approved':
         return (
-          <span className="badge border border-emerald-800/60 bg-emerald-950/40 text-emerald-400 text-xs px-2.5 py-1 rounded-lg font-medium">
+          <span className="badge border border-success/40 bg-success/10 text-success text-xs px-2.5 py-1 rounded-lg font-semibold">
             Approved
           </span>
         );
       case 'not_approved':
         return (
-          <span className="badge border border-rose-800/60 bg-rose-950/40 text-rose-400 text-xs px-2.5 py-1 rounded-lg font-medium">
+          <span className="badge border border-error/40 bg-error/10 text-error text-xs px-2.5 py-1 rounded-lg font-semibold">
             Not Approved
           </span>
         );
       default:
         return (
-          <span className="badge border border-amber-800/60 bg-amber-950/40 text-amber-400 text-xs px-2.5 py-1 rounded-lg font-medium">
+          <span className="badge border border-warning/40 bg-warning/10 text-warning text-xs px-2.5 py-1 rounded-lg font-semibold">
             Pending
           </span>
         );
@@ -74,12 +74,13 @@ export default function TrackingTable({ approvals, remarks }: TrackingTableProps
   return (
     <div className="space-y-6">
       {/* Approvals Checklist Card */}
-      <div className="card bg-base-100 border border-base-content/10 shadow-xl p-6 rounded-2xl">
+      <div className="card bg-base-100 border border-base-content/15 shadow-sm p-6 rounded-xl">
         <h3 className="text-lg font-bold text-base-content mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
           <span>Signatory Checklist</span>
         </h3>
 
+        <p className="sm:hidden mb-3 text-xs text-base-content/60">Swipe horizontally to view all columns.</p>
         <div className="overflow-x-auto w-full">
           <table className="table w-full text-left text-sm border-separate border-spacing-y-2">
             <thead>

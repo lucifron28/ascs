@@ -8,10 +8,10 @@ mkdirSync(outputDir, { recursive: true });
 
 const viewport = { width: 1440, height: 900 };
 
-async function setCorporateTheme(page: Page) {
+async function setAscsLightTheme(page: Page) {
   const themeButton = page.getByRole('button', { name: /change theme/i });
   await themeButton.click();
-  await page.getByRole('menuitem', { name: /corporate light/i }).click();
+  await page.getByRole('menuitem', { name: /ascs light/i }).click();
   await page.waitForTimeout(450);
 }
 
@@ -22,7 +22,7 @@ async function login(page: Page, email: string, route: string) {
   await page.getByLabel(/password/i).fill('password123');
   await page.getByRole('button', { name: /log in/i }).click();
   await page.waitForURL(`**/${route}`, { timeout: 30_000 });
-  await setCorporateTheme(page);
+  await setAscsLightTheme(page);
 }
 
 async function logout(page: Page) {
@@ -53,7 +53,7 @@ async function main() {
 
   try {
     await page.goto(`${baseUrl}/login`, { waitUntil: 'networkidle' });
-    await setCorporateTheme(page);
+    await setAscsLightTheme(page);
     await page.getByRole('heading', { name: 'Sign In' }).waitFor();
     await capture(page, '01-login.png', false);
 

@@ -3,7 +3,8 @@
 import { normalizeSemester } from '@/lib/academic-term';
 import React, { useState, useEffect } from 'react';
 import { fetchDeanApplicationsAction } from '@/app/actions/clearance';
-import { ClipboardList, ShieldAlert, CheckCircle2, Search, CircleEllipsis, X } from 'lucide-react';
+import { ClipboardList, ShieldAlert, CheckCircle2, Search, CircleEllipsis } from 'lucide-react';
+import AccessibleDialog from '@/components/ui/AccessibleDialog';
 
 interface DeanApplication {
   id: string;
@@ -95,7 +96,7 @@ export default function DeanDashboard() {
     <div className="space-y-6">
       {/* 1. Header & Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-5 rounded-xl flex flex-row items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
             <ClipboardList className="w-6 h-6" />
           </div>
@@ -105,7 +106,7 @@ export default function DeanDashboard() {
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-5 rounded-xl flex flex-row items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-success/10 border border-success/20 flex items-center justify-center text-success">
             <CheckCircle2 className="w-6 h-6" />
           </div>
@@ -115,7 +116,7 @@ export default function DeanDashboard() {
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-content/10 shadow-sm p-5 rounded-2xl flex flex-row items-center gap-4">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-5 rounded-xl flex flex-row items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-warning/10 border border-warning/20 flex items-center justify-center text-warning">
             <CircleEllipsis className="w-6 h-6" />
           </div>
@@ -136,7 +137,7 @@ export default function DeanDashboard() {
       )}
 
       {/* 2. Filters & Actions Bar */}
-      <div className="card bg-base-100 border border-base-content/10 shadow-sm p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 justify-between">
+      <div className="card bg-base-100 border border-base-content/15 shadow-sm p-4 rounded-xl flex flex-col md:flex-row items-center gap-4 justify-between">
         {/* Search */}
         <div className="relative w-full md:max-w-xs">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/60">
@@ -147,7 +148,7 @@ export default function DeanDashboard() {
             placeholder="Search by student name or ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input input-bordered w-full pl-9 bg-base-200 border-base-content/10 focus:border-primary text-base-content rounded-xl placeholder-base-content/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary text-xs h-10"
+            className="input input-bordered w-full pl-9 bg-base-200 border-base-content/15 focus:border-primary text-base-content rounded-xl placeholder-base-content/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary text-sm h-11"
           />
         </div>
 
@@ -155,30 +156,30 @@ export default function DeanDashboard() {
         <div className="flex gap-2 w-full md:w-auto shrink-0 justify-end">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
+            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
               statusFilter === 'all'
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
+                ? 'bg-primary text-primary-content hover:bg-primary/90'
+                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             All
           </button>
           <button
             onClick={() => setStatusFilter('pending')}
-            className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
+            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
               statusFilter === 'pending'
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
+                ? 'bg-primary text-primary-content hover:bg-primary/90'
+                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Pending
           </button>
           <button
             onClick={() => setStatusFilter('approved')}
-            className={`btn btn-xs rounded-lg px-3 h-8 text-[11px] font-semibold border-none ${
+            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
               statusFilter === 'approved'
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                : 'bg-base-200 text-base-content/70 hover:bg-base-300 hover:text-base-content'
+                ? 'bg-primary text-primary-content hover:bg-primary/90'
+                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
             Cleared
@@ -188,13 +189,14 @@ export default function DeanDashboard() {
 
       {/* 3. Academic Queue List */}
       {filteredRecords.length === 0 ? (
-        <div className="card bg-base-100 border border-base-content/10 p-12 rounded-2xl text-center space-y-2 shadow-sm">
+        <div className="card bg-base-100 border border-base-content/15 p-12 rounded-xl text-center space-y-2 shadow-sm">
           <CircleEllipsis className="w-8 h-8 text-base-content/50 mx-auto" />
           <h3 className="text-base-content font-bold text-sm">No Student Records Found</h3>
           <p className="text-base-content/70 text-xs">Only applications cleared by academic advisers are visible here.</p>
         </div>
       ) : (
-        <div className="card bg-base-100 border border-base-content/10 shadow-xl p-6 rounded-2xl">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-6 rounded-xl">
+          <p className="sm:hidden mb-3 text-xs text-base-content/60">Swipe horizontally to view all columns.</p>
           <div className="overflow-x-auto w-full">
             <table className="table w-full min-w-[980px] text-left text-sm border-separate border-spacing-y-2">
               <thead>
@@ -240,7 +242,7 @@ export default function DeanDashboard() {
                       <button
                         onClick={() => setSelectedRecord(rec)}
                         aria-label={`View oversight details for ${rec.studentName}`}
-                        className="btn btn-xs btn-primary rounded-lg font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="btn btn-sm min-h-11 btn-primary rounded-lg font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         Details
                       </button>
@@ -254,22 +256,18 @@ export default function DeanDashboard() {
       )}
 
       {/* 4. Details Modal Dialog */}
-      {selectedRecord && (
-        <div className="fixed inset-0 bg-base-content/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-base-100 border border-base-content/10 text-base-content w-full max-w-md rounded-2xl shadow-2xl p-6 relative flex flex-col gap-4">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-base-content/10">
-              <h3 className="font-bold text-lg text-base-content">Clearance Overview</h3>
-              <button
-                onClick={() => setSelectedRecord(null)}
-                className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg p-1.5"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <AccessibleDialog
+        isOpen={!!selectedRecord}
+        onClose={() => setSelectedRecord(null)}
+        title="Clearance Overview"
+        description="Read-only oversight details for the selected clearance application."
+        maxWidthClass="max-w-md"
+      >
+        {selectedRecord && (
+          <div className="space-y-4">
 
             {/* Overview */}
-            <div className="bg-base-200 border border-base-content/10 p-4 rounded-xl space-y-2.5 text-xs">
+            <div className="bg-base-200 border border-base-content/15 p-4 rounded-xl space-y-2.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-base-content/70">Student Name:</span>
                 <span className="font-semibold text-base-content">{selectedRecord.studentName}</span>
@@ -297,7 +295,7 @@ export default function DeanDashboard() {
             </div>
 
             {/* Status indicators */}
-            <div className="space-y-3 p-3 border border-base-content/10 bg-base-200 rounded-xl text-center">
+            <div className="space-y-3 p-3 border border-base-content/15 bg-base-200 rounded-xl text-center">
               <span className="text-base-content/70 text-[10px] font-semibold uppercase tracking-wider block">Clearance Status</span>
               
               <div className="flex justify-around items-center py-2">
@@ -331,8 +329,8 @@ export default function DeanDashboard() {
             </div>
 
             {/* Note banner */}
-            <div className="alert alert-info border border-info/20 bg-info/10 text-info-content rounded-xl flex items-start gap-2 p-3 text-xs leading-relaxed">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-info mt-0.5" />
+            <div className="alert alert-info border border-info/30 bg-info/10 text-base-content rounded-xl flex items-start gap-2 p-3 text-sm leading-relaxed">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-info mt-0.5" aria-hidden="true" />
               <div>
                 <span className="font-bold block mb-0.5">Dean Oversight Mode</span>
                 The Dean has read-only visibility into student clearance status after Adviser sign-off in the MVP. Direct sign-off buttons are disabled.
@@ -342,13 +340,13 @@ export default function DeanDashboard() {
             {/* Action button */}
             <button
               onClick={() => setSelectedRecord(null)}
-              className="btn btn-outline border-base-content/20 hover:bg-base-content/10 text-base-content w-full rounded-xl font-semibold tracking-wide h-10 text-xs uppercase mt-2"
+              className="btn btn-sm min-h-11 btn-outline border-base-content/25 hover:bg-base-200 text-base-content w-full rounded-xl font-semibold tracking-wide text-xs uppercase mt-2"
             >
               Close Overview
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </AccessibleDialog>
     </div>
   );
 }

@@ -134,7 +134,7 @@ export default function NotificationDropdown() {
           setIsOpen(next);
           if (next) loadNotifications();
         }}
-        className="btn btn-sm btn-ghost hover:bg-base-content/10 text-base-content/70 hover:text-base-content rounded-lg relative p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="btn btn-sm min-h-11 min-w-11 btn-ghost hover:bg-base-content/10 text-base-content/80 hover:text-base-content rounded-lg relative p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -153,10 +153,10 @@ export default function NotificationDropdown() {
           id="notification-dropdown-menu"
           role="region"
           aria-label="User Notifications"
-          className="absolute right-0 mt-2 shadow-2xl bg-base-100 border border-base-content/10 rounded-2xl w-80 sm:w-96 z-50 max-h-[28rem] overflow-hidden flex flex-col focus:outline-none"
+          className="absolute right-0 mt-2 shadow-lg bg-base-100 border border-base-content/15 rounded-xl w-80 sm:w-96 z-50 max-h-[28rem] overflow-hidden flex flex-col focus:outline-none"
         >
           {/* Dropdown Header */}
-          <div className="p-3.5 border-b border-base-content/10 bg-base-200/50 flex items-center justify-between shrink-0">
+          <div className="p-3.5 border-b border-base-content/15 bg-base-200/50 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-primary" aria-hidden="true" />
               <span className="font-bold text-xs uppercase tracking-wider text-base-content">

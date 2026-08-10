@@ -3,8 +3,9 @@
 import { normalizeSemester } from '@/lib/academic-term';
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { fetchClearanceCertificateAction } from '@/app/actions/clearance';
-import { Printer, Shield, ArrowLeft, CheckCircle2, AlertCircle, FileCheck } from 'lucide-react';
+import { Printer, ArrowLeft, CheckCircle2, AlertCircle, FileCheck } from 'lucide-react';
 
 interface ClearanceCertificateProps {
   applicationId: string;
@@ -73,7 +74,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
   if (error || !data) {
     return (
       <div className="flex-1 max-w-xl mx-auto p-6 flex flex-col items-center justify-center text-center space-y-4">
-        <div className="alert alert-error rounded-2xl shadow-lg flex flex-col items-center p-6 text-center">
+        <div className="alert alert-error rounded-xl shadow-sm flex flex-col items-center p-6 text-center">
           <AlertCircle className="w-10 h-10 mb-2" aria-hidden="true" />
           <h2 className="font-bold text-base">Clearance Record Unavailable</h2>
           <p className="text-xs opacity-90">{error || 'Clearance data unavailable.'}</p>
@@ -141,7 +142,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
   return (
     <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
       {/* Print Control Toolbar (Hidden on Print) */}
-      <div className="print:hidden flex items-center justify-between bg-base-100 p-4 rounded-2xl border border-base-content/10 shadow-md">
+      <div className="print:hidden flex items-center justify-between bg-base-100 p-4 rounded-xl border border-base-content/15 shadow-sm">
         <button onClick={() => router.back()} className="btn btn-sm btn-ghost rounded-xl gap-2">
           <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Return to Dashboard
         </button>
@@ -158,7 +159,13 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
       >
         <header className="text-center space-y-2 border-b-2 border-slate-900 pb-5">
           <div className="flex items-center justify-center gap-2 text-indigo-950 font-sans">
-            <Shield className="w-7 h-7 text-indigo-950 shrink-0" aria-hidden="true" />
+            <Image
+              src="/pkmlogo.png"
+              alt="Pambayang Kolehiyo ng Mauban seal"
+              width={56}
+              height={56}
+              className="h-10 w-10 shrink-0 object-contain"
+            />
             <span className="font-black text-lg tracking-[0.18em] uppercase">Pambayang Kolehiyo ng Mauban</span>
           </div>
           <p className="text-[11px] tracking-[0.16em] uppercase font-sans text-slate-600 font-semibold">

@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 const RUN_AXE = (page: Page) =>
   new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
 
-const REPRESENTATIVE_THEMES = ['dark', 'light', 'corporate', 'night'] as const;
+const REPRESENTATIVE_THEMES = ['ascs-dark', 'ascs-light', 'corporate', 'night'] as const;
 
 async function setTheme(page: Page, theme: (typeof REPRESENTATIVE_THEMES)[number]) {
   await page.evaluate((value) => {
@@ -143,7 +143,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
     await expect(page.getByRole('button', { name: /apply filters/i })).toBeEnabled();
     await assertZeroSevereViolations(page);
 
-    // Multi-Theme contrast scan across dark, light, corporate, night
+    // Multi-theme contrast scan across the production themes and legacy aliases.
     for (const theme of REPRESENTATIVE_THEMES) {
       await setTheme(page, theme);
       await assertZeroSevereViolations(page);
@@ -151,7 +151,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
   });
 
   test.describe('Representative four-theme accessibility matrix', () => {
-    test('Login is scanned under dark, light, corporate, and night themes', async ({ page }) => {
+    test('Login is scanned under ASCS Light, ASCS Dark, and legacy aliases', async ({ page }) => {
       await page.goto('/login');
       await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
 

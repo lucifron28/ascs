@@ -151,7 +151,7 @@ export default function SignatoryDashboard() {
             Department desk: <span className="font-semibold text-base-content">{formatRoleName(role)}</span>
           </p>
         </div>
-        <div className="badge border border-base-content/10 bg-base-200 text-base-content rounded-lg p-3 font-medium text-xs">
+        <div className="badge border border-base-content/15 bg-base-200 text-base-content rounded-lg p-3 font-medium text-sm">
           Pending Applications: {queue.length}
         </div>
       </div>
@@ -159,7 +159,7 @@ export default function SignatoryDashboard() {
       {error && (
         <div role="alert" className="alert alert-error text-error-content rounded-xl flex items-center gap-2 p-3 text-sm font-medium">
           <span>Error: {error}</span>
-          <button onClick={loadQueue} className="btn btn-xs btn-outline border-error text-error-content rounded-lg ml-auto">
+          <button onClick={loadQueue} className="btn btn-sm min-h-11 btn-outline border-error text-error rounded-lg ml-auto">
             Retry
           </button>
         </div>
@@ -167,7 +167,7 @@ export default function SignatoryDashboard() {
 
       {/* Pending Queue Table */}
       {queue.length === 0 ? (
-        <div className="card bg-base-100 border border-base-content/10 p-10 rounded-2xl text-center space-y-3 shadow-sm">
+        <div className="card bg-base-100 border border-base-content/15 p-10 rounded-xl text-center space-y-3 shadow-sm">
           <CheckCircle2 className="w-10 h-10 text-success mx-auto" aria-hidden="true" />
           <h3 className="text-base-content font-bold text-lg">No Pending Evaluations</h3>
           <p className="text-base-content/70 text-xs max-w-sm mx-auto font-medium">
@@ -175,7 +175,8 @@ export default function SignatoryDashboard() {
           </p>
         </div>
       ) : (
-        <div className="card bg-base-100 border border-base-content/10 shadow-xl p-6 rounded-2xl">
+        <div className="card bg-base-100 border border-base-content/15 shadow-sm p-6 rounded-xl">
+          <p className="sm:hidden mb-3 text-xs text-base-content/60">Swipe horizontally to view all columns.</p>
           <div className="overflow-x-auto w-full">
             <table className="table w-full text-left text-sm border-separate border-spacing-y-2">
               <thead>
@@ -216,7 +217,7 @@ export default function SignatoryDashboard() {
                       <button
                         onClick={() => handleOpenReview(app)}
                         aria-label={`Review clearance for ${app.student_name}`}
-                        className="btn btn-xs btn-primary rounded-lg font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="btn btn-sm min-h-11 btn-primary rounded-lg font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         Review
                       </button>
@@ -256,7 +257,7 @@ export default function SignatoryDashboard() {
             )}
 
             {/* Student Info Details */}
-            <div className="bg-base-200 border border-base-content/10 p-4 rounded-xl space-y-2 text-xs">
+            <div className="bg-base-200 border border-base-content/15 p-4 rounded-xl space-y-2 text-sm">
               <div>
                 <span className="text-base-content/60 font-medium">Student Name:</span>{' '}
                 <span className="font-semibold text-base-content">{selectedApp.student_name}</span>
@@ -291,7 +292,7 @@ export default function SignatoryDashboard() {
                 onChange={(e) => setRemarks(e.target.value)}
                 disabled={modalLoading || modalSuccess}
                 placeholder="Enter remarks... (Required for Mark Pending or Mark Not Approved actions)"
-                className="textarea textarea-bordered w-full h-24 bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="textarea textarea-bordered w-full h-24 bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
 
@@ -306,7 +307,7 @@ export default function SignatoryDashboard() {
                 onClick={() => handleAction('not_approved')}
                 disabled={modalLoading || modalSuccess}
                 aria-busy={modalLoading && pendingAction === 'not_approved'}
-                className="btn btn-sm btn-outline border-error text-base-content hover:bg-error hover:text-error-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-36 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error"
+                className="btn btn-sm min-h-11 btn-outline border-error text-error hover:bg-error hover:text-error-content rounded-xl text-xs font-semibold tracking-wide uppercase sm:min-w-36 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error"
               >
                 {modalLoading && pendingAction === 'not_approved' ? 'Marking Not Approved...' : 'Mark Not Approved'}
               </button>
@@ -314,7 +315,7 @@ export default function SignatoryDashboard() {
                 onClick={() => handleAction('pending')}
                 disabled={modalLoading || modalSuccess}
                 aria-busy={modalLoading && pendingAction === 'pending'}
-                className="btn btn-sm btn-outline border-base-content/20 text-base-content hover:bg-base-content/10 rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-base-content/30"
+                className="btn btn-sm min-h-11 btn-outline border-base-content/25 text-base-content hover:bg-base-200 rounded-xl text-xs font-semibold tracking-wide uppercase sm:min-w-32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-base-content/30"
               >
                 {modalLoading && pendingAction === 'pending' ? 'Marking Pending...' : 'Mark Pending'}
               </button>
@@ -322,7 +323,7 @@ export default function SignatoryDashboard() {
                 onClick={() => handleAction('approved')}
                 disabled={modalLoading || modalSuccess}
                 aria-busy={modalLoading && pendingAction === 'approved'}
-                className="btn btn-sm btn-success text-success-content rounded-xl text-[10px] font-semibold tracking-wide uppercase h-10 sm:min-w-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
+                className="btn btn-sm min-h-11 btn-success text-success-content rounded-xl text-xs font-semibold tracking-wide uppercase sm:min-w-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
               >
                 {modalLoading && pendingAction === 'approved' ? 'Approving...' : 'Approve Clearance'}
               </button>
