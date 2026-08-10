@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const testBaseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://127.0.0.1:3000';
+const parsedTestURL = new URL(testBaseURL);
+const testHost = parsedTestURL.hostname || '127.0.0.1';
+const testPort = parsedTestURL.port || (parsedTestURL.protocol === 'https:' ? '443' : '80');
+
 export default defineConfig({
   testDir: './tests/e2e',
   globalSetup: './scripts/prepare-e2e.ts',
@@ -8,7 +13,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
-    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://127.0.0.1:3000',
+    baseURL: testBaseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
@@ -20,8 +25,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx next start -H 127.0.0.1 -p 3000',
-    url: 'http://127.0.0.1:3000',
+    command: `npx next start -H ${testHost} -p ${testPort}`,
+    url: testBaseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     env: {

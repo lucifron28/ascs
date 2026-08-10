@@ -35,14 +35,14 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     const themeMenu = page.getByRole('menu', { name: /select theme/i });
     await expect(themeMenu).toBeVisible();
 
-    // Select Corporate Light theme via keyboard, without pointer activation
-    const corporateOption = page.getByRole('menuitem', { name: /corporate light/i });
-    await corporateOption.focus();
+    // Select ASCS Light via keyboard, without pointer activation.
+    const lightOption = page.getByRole('menuitem', { name: /ascs light/i });
+    await lightOption.focus();
     await page.keyboard.press('Enter');
 
     // Verify document theme changed
     const currentTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
-    expect(currentTheme).toBe('corporate');
+    expect(currentTheme).toBe('ascs-light');
 
     // Menu closes and focus is restored to theme button
     await expect(themeMenu).toBeHidden();
