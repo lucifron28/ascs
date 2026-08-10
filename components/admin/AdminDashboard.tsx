@@ -450,7 +450,7 @@ export default function AdminDashboard() {
   return (
     <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-base-100 p-6 rounded-2xl border border-base-content/10 shadow-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-base-100 p-6 rounded-xl border border-base-content/15 shadow-sm">
         <div>
           <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
             <Shield className="w-7 h-7 text-primary" /> Admin Control Center
@@ -462,7 +462,7 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={loadData}
-            className="btn btn-sm btn-ghost border border-base-content/20 text-base-content hover:bg-base-content/10 font-semibold"
+            className="btn btn-sm min-h-11 btn-ghost border border-base-content/25 text-base-content hover:bg-base-200 font-semibold"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
@@ -470,11 +470,11 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="tabs tabs-boxed bg-base-100 p-1.5 rounded-2xl border border-base-content/10 flex flex-wrap gap-1">
+      <div className="tabs tabs-boxed bg-base-100 p-1.5 rounded-xl border border-base-content/15 flex flex-wrap gap-1">
         <button
           onClick={() => setActiveTab('overview')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'overview' ? 'tab-active bg-primary text-white shadow-md' : 'text-base-content/70'
+            activeTab === 'overview' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70'
           }`}
         >
           <Activity className="w-4 h-4" /> Overview
@@ -482,7 +482,7 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('users')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'users' ? 'tab-active bg-primary text-white shadow-md' : 'text-base-content/70'
+            activeTab === 'users' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70'
           }`}
         >
           <Users className="w-4 h-4" /> Users ({users.length})
@@ -490,7 +490,7 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('requirements')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'requirements' ? 'tab-active bg-primary text-white shadow-md' : 'text-base-content/70'
+            activeTab === 'requirements' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70'
           }`}
         >
           <ListOrdered className="w-4 h-4" /> Requirements ({requirements.length})
@@ -498,7 +498,7 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('logs')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'logs' ? 'tab-active bg-primary text-white shadow-md' : 'text-base-content/70'
+            activeTab === 'logs' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70'
           }`}
         >
           <FileCheck className="w-4 h-4" /> Audit Logs ({logs.length})
@@ -507,7 +507,7 @@ export default function AdminDashboard() {
 
       {/* Error Alert */}
       {error && (
-        <div className="alert alert-error rounded-2xl shadow-lg border border-error/20 flex items-center justify-between">
+        <div className="alert alert-error rounded-xl shadow-sm border border-error/30 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <span className="text-sm font-medium">{error}</span>
@@ -523,7 +523,7 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="stat bg-base-100 border border-base-content/10 rounded-2xl shadow-sm">
+            <div className="stat bg-base-100 border border-base-content/15 rounded-xl shadow-sm">
               <div className="stat-figure text-primary">
                 <Users className="w-8 h-8 opacity-80" />
               </div>
@@ -532,7 +532,7 @@ export default function AdminDashboard() {
               <div className="stat-desc text-xs mt-1">Across 9 role types</div>
             </div>
 
-            <div className="stat bg-base-100 border border-base-content/10 rounded-2xl shadow-sm">
+            <div className="stat bg-base-100 border border-base-content/15 rounded-xl shadow-sm">
               <div className="stat-figure text-secondary">
                 <UserCheck className="w-8 h-8 opacity-80" />
               </div>
@@ -543,7 +543,7 @@ export default function AdminDashboard() {
               <div className="stat-desc text-xs mt-1">Registered accounts</div>
             </div>
 
-            <div className="stat bg-base-100 border border-base-content/10 rounded-2xl shadow-sm">
+            <div className="stat bg-base-100 border border-base-content/15 rounded-xl shadow-sm">
               <div className="stat-figure text-accent">
                 <ListOrdered className="w-8 h-8 opacity-80" />
               </div>
@@ -552,7 +552,7 @@ export default function AdminDashboard() {
               <div className="stat-desc text-xs mt-1">Department sign-offs</div>
             </div>
 
-            <div className="stat bg-base-100 border border-base-content/10 rounded-2xl shadow-sm">
+            <div className="stat bg-base-100 border border-base-content/15 rounded-xl shadow-sm">
               <div className="stat-figure text-info">
                 <Activity className="w-8 h-8 opacity-80" />
               </div>
@@ -569,7 +569,7 @@ export default function AdminDashboard() {
       {activeTab === 'users' && (
         <div className="space-y-4">
           {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-base-100 p-4 rounded-2xl border border-base-content/10 shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-base-100 p-4 rounded-xl border border-base-content/15 shadow-sm">
             <div className="relative flex-1 w-full sm:w-auto">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/50" />
               <input
@@ -577,7 +577,7 @@ export default function AdminDashboard() {
                 placeholder="Search user by name, email, or username..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                className="input input-sm input-bordered w-full pl-10 bg-base-200 border-base-content/10 rounded-xl text-sm"
+                className="input input-sm h-11 input-bordered w-full pl-10 bg-base-200 border-base-content/15 rounded-xl text-sm"
               />
             </div>
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
@@ -586,7 +586,7 @@ export default function AdminDashboard() {
                 aria-label="Filter Users by Role"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="select select-sm min-h-11 select-bordered bg-base-200 border-base-content/15 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="all">All Roles</option>
                 {ROLES_LIST.map((r) => (
@@ -600,7 +600,7 @@ export default function AdminDashboard() {
                   setModalError(null);
                   setShowCreateStudentModal(true);
                 }}
-                className="btn btn-sm btn-primary rounded-xl gap-1.5 font-semibold"
+                className="btn btn-sm min-h-11 btn-primary rounded-xl gap-1.5 font-semibold"
               >
                 <UserPlus className="w-4 h-4" /> Create Student Account
               </button>
@@ -609,7 +609,7 @@ export default function AdminDashboard() {
                   setModalError(null);
                   setShowCreateStaffModal(true);
                 }}
-                className="btn btn-sm btn-outline rounded-xl gap-1.5 font-semibold"
+                className="btn btn-sm min-h-11 btn-outline rounded-xl gap-1.5 font-semibold"
               >
                 <UserPlus className="w-4 h-4" /> Create Staff Account
               </button>
@@ -617,10 +617,11 @@ export default function AdminDashboard() {
           </div>
 
           {/* Users Table */}
-          <div className="overflow-x-auto bg-base-100 rounded-2xl border border-base-content/10 shadow-sm">
+          <p className="sm:hidden mb-2 text-xs text-base-content/60">Swipe horizontally to view all columns.</p>
+          <div className="overflow-x-auto bg-base-100 rounded-xl border border-base-content/15 shadow-sm">
             <table className="table table-zebra w-full text-sm">
               <thead>
-                <tr className="border-b border-base-content/10 bg-base-200/50">
+                <tr className="border-b border-base-content/15 bg-base-200/50">
                   <th>User Details</th>
                   <th>Student #</th>
                   <th>Role</th>
@@ -739,7 +740,7 @@ export default function AdminDashboard() {
       {/* REQUIREMENTS TAB */}
       {activeTab === 'requirements' && (
         <div className="space-y-4">
-          <div className="bg-base-100 p-4 rounded-2xl border border-base-content/10 shadow-sm">
+          <div className="bg-base-100 p-4 rounded-xl border border-base-content/15 shadow-sm">
             <h2 className="text-sm font-bold uppercase tracking-wider text-base-content/70">
               Department Clearance Requirements Sequence
             </h2>
@@ -752,7 +753,7 @@ export default function AdminDashboard() {
             {requirements.map((req) => (
               <div
                 key={req.id}
-                className="card bg-base-100 border border-base-content/10 shadow-sm rounded-2xl p-5 space-y-3"
+                className="card bg-base-100 border border-base-content/15 shadow-sm rounded-xl p-5 space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <span className="badge badge-neutral text-xs font-mono font-bold">Step {req.displayOrder}</span>
@@ -774,7 +775,7 @@ export default function AdminDashboard() {
                 <div className="pt-2 border-t border-base-content/10 flex justify-end">
                   <button
                     onClick={() => handleOpenReqModal(req)}
-                    className="btn btn-outline btn-xs rounded-lg gap-1 hover:bg-base-content/10"
+                    className="btn btn-sm min-h-11 btn-outline rounded-lg gap-1 hover:bg-base-200"
                   >
                     <UserCheck className="w-3.5 h-3.5" /> Assign Signatory
                   </button>
@@ -788,10 +789,11 @@ export default function AdminDashboard() {
       {/* AUDIT LOGS TAB */}
       {activeTab === 'logs' && (
         <div className="space-y-4">
-          <div className="overflow-x-auto bg-base-100 rounded-2xl border border-base-content/10 shadow-sm">
+          <p className="sm:hidden mb-2 text-xs text-base-content/60">Swipe horizontally to view all columns.</p>
+          <div className="overflow-x-auto bg-base-100 rounded-xl border border-base-content/15 shadow-sm">
             <table className="table table-zebra w-full text-xs">
               <thead>
-                <tr className="border-b border-base-content/10 bg-base-200/50">
+                <tr className="border-b border-base-content/15 bg-base-200/50">
                   <th>Timestamp</th>
                   <th>Actor</th>
                   <th>Action</th>
@@ -910,7 +912,7 @@ export default function AdminDashboard() {
       {/* ASSIGN SIGNATORY MODAL */}
       {selectedReq && (
         <div className="modal modal-open bg-black/60 backdrop-blur-sm z-50">
-          <div className="modal-box bg-base-100 border border-base-content/10 rounded-2xl p-6 max-w-md">
+          <div className="modal-box bg-base-100 border border-base-content/15 rounded-xl p-6 max-w-md shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <UserCheck className="w-5 h-5 text-accent" /> Assign Signatory

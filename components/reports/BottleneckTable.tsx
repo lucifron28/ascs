@@ -16,8 +16,8 @@ export default function BottleneckTable({
   }
 
   return (
-    <div className="card bg-base-100 border border-base-content/10 p-5 rounded-2xl shadow-sm space-y-4">
-      <div className="flex items-center justify-between border-b border-base-content/10 pb-3">
+    <div className="card bg-base-100 border border-base-content/15 p-5 rounded-xl shadow-sm space-y-4">
+      <div className="flex items-center justify-between border-b border-base-content/15 pb-3">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-warning" />
           <h3 className="font-bold text-xs uppercase tracking-wider text-base-content">{title}</h3>
@@ -30,7 +30,7 @@ export default function BottleneckTable({
       <div className="overflow-x-auto">
         <table className="table table-sm w-full text-xs">
           <thead>
-            <tr className="text-base-content/60 border-b border-base-content/10">
+            <tr className="text-base-content/60 border-b border-base-content/15">
               <th scope="col" className="font-semibold">Requirement Office</th>
               <th scope="col" className="font-semibold">Role</th>
               <th scope="col" className="font-semibold text-right">Total Assigned</th>

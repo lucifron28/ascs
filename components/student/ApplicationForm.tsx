@@ -49,7 +49,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
   });
 
   return (
-    <div className="card w-full bg-base-100 border border-base-content/10 shadow-2xl p-8 rounded-2xl max-w-2xl mx-auto">
+    <div className="card w-full bg-base-100 border border-base-content/15 shadow-sm p-8 rounded-xl max-w-2xl mx-auto">
       <h2 className="text-xl font-bold text-base-content mb-6 flex items-center gap-2">
         <FileText className="w-5 h-5 text-primary" aria-hidden="true" /> Start Clearance Application
       </h2>
@@ -86,7 +86,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 disabled={loading}
-                className="select select-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="select select-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="2026-2027">2026-2027</option>
                 <option value="2027-2028">2027-2028</option>
@@ -109,7 +109,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 disabled={loading}
-                className="select select-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="select select-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="1st Semester">1st Semester</option>
                 <option value="2nd Semester">2nd Semester</option>
@@ -132,7 +132,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 disabled={loading}
-                className="select select-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="select select-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <option value="Enrollment">Enrollment / Registration</option>
                 <option value="Graduation">Graduation / Completion</option>
@@ -172,7 +172,7 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
           type="submit"
           disabled={loading}
           aria-busy={loading}
-          className="btn btn-primary w-full text-primary-content border-none rounded-xl transition-all shadow-lg mt-6 flex items-center justify-center gap-2 h-11 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="btn btn-primary w-full text-primary-content border-none rounded-xl transition-all shadow-sm mt-6 flex items-center justify-center gap-2 min-h-12 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {loading ? (
             <>

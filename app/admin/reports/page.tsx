@@ -126,7 +126,7 @@ export default function AdminReportsPage() {
 
         {/* Error Alert */}
         {error && (
-          <div className="alert alert-error text-xs rounded-2xl flex items-center gap-2 p-4">
+          <div className="alert alert-error text-sm rounded-xl flex items-center gap-2 p-4">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -137,10 +137,10 @@ export default function AdminReportsPage() {
           <div className="space-y-4 py-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="card bg-base-100 border border-base-content/10 p-5 rounded-2xl h-28 animate-pulse bg-base-200/50" />
+                <div key={i} className="card bg-base-100 border border-base-content/15 p-5 rounded-xl h-28 animate-pulse bg-base-200/50" />
               ))}
             </div>
-            <div className="card bg-base-100 border border-base-content/10 p-6 rounded-2xl h-64 animate-pulse bg-base-200/50" />
+            <div className="card bg-base-100 border border-base-content/15 p-6 rounded-xl h-64 animate-pulse bg-base-200/50" />
           </div>
         )}
 

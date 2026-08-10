@@ -39,8 +39,8 @@ export default function ReportFiltersComponent({
   };
 
   return (
-    <div className="card bg-base-100 border border-base-content/10 p-5 rounded-2xl shadow-sm space-y-4">
-      <div className="flex items-center justify-between border-b border-base-content/10 pb-3">
+    <div className="card bg-base-100 border border-base-content/15 p-5 rounded-xl shadow-sm space-y-4">
+      <div className="flex items-center justify-between border-b border-base-content/15 pb-3">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-primary" aria-hidden="true" />
           <h3 className="font-bold text-xs uppercase tracking-wider text-base-content">
@@ -64,7 +64,7 @@ export default function ReportFiltersComponent({
               aria-label="Academic Year"
               value={localFilters.academicYear}
               onChange={(e) => setLocalFilters({ ...localFilters, academicYear: e.target.value })}
-              className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="select select-sm min-h-11 select-bordered bg-base-200 border-base-content/15 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               disabled={loading}
             >
               {options.academicYears.map((ay) => (
@@ -85,7 +85,7 @@ export default function ReportFiltersComponent({
               aria-label="Semester"
               value={localFilters.semester}
               onChange={(e) => setLocalFilters({ ...localFilters, semester: e.target.value })}
-              className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="select select-sm min-h-11 select-bordered bg-base-200 border-base-content/15 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               disabled={loading}
             >
               {options.semesters.map((sem) => (
@@ -106,7 +106,7 @@ export default function ReportFiltersComponent({
               aria-label="Program"
               value={localFilters.program || 'all'}
               onChange={(e) => setLocalFilters({ ...localFilters, program: e.target.value === 'all' ? undefined : e.target.value })}
-              className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="select select-sm min-h-11 select-bordered bg-base-200 border-base-content/15 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               disabled={loading}
             >
               <option value="all">All Programs</option>
@@ -128,7 +128,7 @@ export default function ReportFiltersComponent({
               aria-label="Year Level"
               value={localFilters.yearLevel || 'all'}
               onChange={(e) => setLocalFilters({ ...localFilters, yearLevel: e.target.value === 'all' ? undefined : e.target.value })}
-              className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="select select-sm min-h-11 select-bordered bg-base-200 border-base-content/15 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               disabled={loading}
             >
               <option value="all">All Year Levels</option>
@@ -150,7 +150,7 @@ export default function ReportFiltersComponent({
               aria-label="Section"
               value={localFilters.section || 'all'}
               onChange={(e) => setLocalFilters({ ...localFilters, section: e.target.value === 'all' ? undefined : e.target.value })}
-              className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="select select-sm min-h-11 select-bordered bg-base-200 border-base-content/15 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               disabled={loading}
             >
               <option value="all">All Sections</option>
@@ -172,7 +172,7 @@ export default function ReportFiltersComponent({
               aria-label="Clearance Status"
               value={localFilters.overallStatus || 'all'}
               onChange={(e) => setLocalFilters({ ...localFilters, overallStatus: e.target.value === 'all' ? undefined : e.target.value })}
-              className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="select select-sm min-h-11 select-bordered bg-base-200 border-base-content/15 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               disabled={loading}
             >
               <option value="all">All Clearance Statuses</option>
@@ -193,7 +193,7 @@ export default function ReportFiltersComponent({
                 aria-label="Financial Status"
                 value={localFilters.financialStatus || 'all'}
                 onChange={(e) => setLocalFilters({ ...localFilters, financialStatus: e.target.value === 'all' ? undefined : e.target.value })}
-                className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="select select-sm min-h-11 select-bordered bg-base-200 border-base-content/15 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 disabled={loading}
               >
                 <option value="all">All Financial Statuses</option>
@@ -206,14 +206,14 @@ export default function ReportFiltersComponent({
         </div>
 
         {/* Form Action Buttons */}
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-base-content/10">
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-base-content/15">
           <button
             type="button"
             onClick={() => {
               onReset();
             }}
             disabled={loading}
-            className="btn btn-sm btn-ghost rounded-xl text-xs gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="btn btn-sm min-h-11 btn-ghost rounded-xl text-sm gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Reset</span>
@@ -223,7 +223,7 @@ export default function ReportFiltersComponent({
             type="submit"
             disabled={loading}
             aria-busy={loading}
-            className="btn btn-sm btn-primary rounded-xl font-semibold text-xs gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="btn btn-sm min-h-11 btn-primary rounded-xl font-semibold text-sm gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {loading ? (
               <span className="loading loading-spinner loading-xs" aria-hidden="true" />

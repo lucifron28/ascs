@@ -73,7 +73,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
   if (error || !data) {
     return (
       <div className="flex-1 max-w-xl mx-auto p-6 flex flex-col items-center justify-center text-center space-y-4">
-        <div className="alert alert-error rounded-2xl shadow-lg flex flex-col items-center p-6 text-center">
+        <div className="alert alert-error rounded-xl shadow-sm flex flex-col items-center p-6 text-center">
           <AlertCircle className="w-10 h-10 mb-2" aria-hidden="true" />
           <h2 className="font-bold text-base">Clearance Record Unavailable</h2>
           <p className="text-xs opacity-90">{error || 'Clearance data unavailable.'}</p>
@@ -141,7 +141,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
   return (
     <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
       {/* Print Control Toolbar (Hidden on Print) */}
-      <div className="print:hidden flex items-center justify-between bg-base-100 p-4 rounded-2xl border border-base-content/10 shadow-md">
+      <div className="print:hidden flex items-center justify-between bg-base-100 p-4 rounded-xl border border-base-content/15 shadow-sm">
         <button onClick={() => router.back()} className="btn btn-sm btn-ghost rounded-xl gap-2">
           <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Return to Dashboard
         </button>

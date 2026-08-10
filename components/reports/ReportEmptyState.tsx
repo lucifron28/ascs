@@ -11,8 +11,8 @@ export default function ReportEmptyState({
   onReset,
 }: ReportEmptyStateProps) {
   return (
-    <div className="card bg-base-100 border border-base-content/10 p-8 text-center rounded-2xl space-y-4 my-6">
-      <div className="w-14 h-14 bg-base-200 rounded-2xl flex items-center justify-center mx-auto text-base-content/50">
+    <div className="card bg-base-100 border border-base-content/15 p-8 text-center rounded-xl space-y-4 my-6 shadow-sm">
+      <div className="w-14 h-14 bg-base-200 rounded-xl flex items-center justify-center mx-auto text-base-content/60">
         <FileQuestion className="w-7 h-7" />
       </div>
       <div className="max-w-md mx-auto space-y-1">
