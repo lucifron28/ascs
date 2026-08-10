@@ -4,6 +4,7 @@ import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-a
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { updateUserRoleAction } from '@/app/actions/admin';
+import { registerStudentAccountAction } from '@/app/actions/registration';
 import {
   createStudentAccountAction,
   createStaffAccountAction,
@@ -82,6 +83,45 @@ describe('Account Lifecycle Integration Tests', () => {
 
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.exists, false);
+  });
+
+  it('3. Student can self-register with a fixed student role and synchronized profile', async () => {
+    const registrationData = {
+      email: 'selfregistered@example.test',
+      fullName: 'Self Registered Student',
+      studentNumber: 'STUD-2026-9992',
+      program: 'BSAIS',
+      yearLevel: '1st Year',
+      section: 'A',
+      contactNumber: '09123456789',
+      password: 'student-password',
+      confirmPassword: 'student-password',
+    };
+
+    const res = await registerStudentAccountAction(registrationData);
+    assert.equal(res.success, true);
+    if (!res.success) return;
+
+    const uid = res.user.uid;
+    const authUser = await getAdminAuth().getUser(uid);
+    assert.equal(authUser.customClaims?.role, 'student');
+    assert.equal(authUser.customClaims?.mustChangePassword, false);
+
+    const userDoc = await getAdminFirestore().collection('users').doc(uid).get();
+    assert.equal(userDoc.data()?.createdBy, 'self_registration');
+    assert.equal(userDoc.data()?.mustChangePassword, false);
+
+    const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
+    assert.equal(studentDoc.data()?.studentNumber, registrationData.studentNumber);
+    assert.equal(studentDoc.data()?.program, registrationData.program);
+
+    const auditLogs = await getAdminFirestore()
+      .collection('activityLogs')
+      .where('action', '==', 'self_register_student_account')
+      .get();
+    const auditData = auditLogs.docs.find((doc) => doc.data().entityId === uid)?.data();
+    assert.ok(auditData, 'Self-registration should create an audit record');
+    assert.equal((auditData?.metadata as Record<string, unknown>)?.password, undefined);
   });
 
   it('6. Duplicate account creation fails safely', async () => {

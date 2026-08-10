@@ -7,6 +7,7 @@ import { firebaseAuth } from '@/lib/firebase/client';
 import { getPasswordChangeRecovery } from '@/lib/auth/password-transition';
 import { Lock, ShieldAlert, CheckCircle2, ArrowRight } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
+import PasswordInput from '@/components/auth/PasswordInput';
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -148,14 +149,14 @@ export default function ChangePasswordPage() {
                   Current Temporary Password
                 </span>
               </label>
-              <input
+              <PasswordInput
                 id="currentPassword"
-                type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 disabled={loading || success}
                 autoComplete="current-password"
                 placeholder="••••••••"
+                leadingIcon={<Lock className="w-4 h-4" aria-hidden="true" />}
                 className="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
@@ -167,14 +168,14 @@ export default function ChangePasswordPage() {
                   New Password (min. 8 chars)
                 </span>
               </label>
-              <input
+              <PasswordInput
                 id="newPassword"
-                type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={loading || success}
                 autoComplete="new-password"
                 placeholder="••••••••"
+                leadingIcon={<Lock className="w-4 h-4" aria-hidden="true" />}
                 className="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
@@ -186,15 +187,15 @@ export default function ChangePasswordPage() {
                   Confirm New Password
                 </span>
               </label>
-              <input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading || success}
                 autoComplete="new-password"
                 placeholder="••••••••"
-              className="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                leadingIcon={<Lock className="w-4 h-4" aria-hidden="true" />}
+                className="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
             </div>
 

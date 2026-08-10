@@ -13,6 +13,8 @@ import {
   getAccountStatusFlags,
   shouldRedirectToChangePassword,
   generateRandomTemporaryPassword,
+  validateRegistrationPassword,
+  validateStudentRegistrationInput,
   mapLifecycleError,
 } from './lifecycle-validation';
 import type { UserRole } from '@/lib/types/roles';
@@ -172,5 +174,46 @@ test('13. Sensitive error mapping helper sanitizes internal errors', () => {
   assert.equal(
     mapLifecycleError(new Error('Firestore transaction partial failure during sync')),
     'Operation encountered a synchronization issue. Check system audit logs.'
+  );
+});
+
+test('14. Public student registration normalizes profile fields and keeps the chosen password', () => {
+  const input = validateStudentRegistrationInput({
+    email: ' NEW.STUDENT@PKM.EDU.PH ',
+    studentNumber: ' stud-2026-0042 ',
+    fullName: ' New Student ',
+    program: ' bsais ',
+    yearLevel: ' 1st Year ',
+    section: ' A ',
+    contactNumber: ' 09123456789 ',
+    password: 'student-password',
+    confirmPassword: 'student-password',
+  });
+
+  assert.equal(input.email, 'new.student@pkm.edu.ph');
+  assert.equal(input.studentNumber, 'STUD-2026-0042');
+  assert.equal(input.fullName, 'New Student');
+  assert.equal(input.program, 'BSAIS');
+  assert.equal(input.contactNumber, '09123456789');
+  assert.equal(input.password, 'student-password');
+});
+
+test('15. Public registration rejects weak or mismatched passwords', () => {
+  assert.throws(
+    () => validateRegistrationPassword('short'),
+    /Password must be at least 8 characters/
+  );
+  assert.throws(
+    () => validateStudentRegistrationInput({
+      email: 'student@pkm.edu.ph',
+      studentNumber: 'STUD-2026-0043',
+      fullName: 'Student',
+      program: 'BSAIS',
+      yearLevel: '1st Year',
+      section: 'A',
+      password: 'student-password',
+      confirmPassword: 'different-password',
+    }),
+    /Passwords do not match/
   );
 });

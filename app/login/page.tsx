@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useForm } from '@tanstack/react-form';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseAuth as auth } from '@/lib/firebase/client';
 import { LogIn, Mail, Lock, ShieldAlert, Check } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
+import PasswordInput from '@/components/auth/PasswordInput';
 import {
   DEMO_ACCOUNT_DEFINITIONS,
   DEMO_ACCOUNT_GROUPS,
@@ -254,24 +256,19 @@ export default function LoginPage() {
                   <label htmlFor="password" className="label py-1">
                     <span className="label-text text-base-content/80 font-medium text-xs">Password</span>
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/50">
-                      <Lock className="w-4 h-4" aria-hidden="true" />
-                    </div>
-                    <input
-                      id="password"
-                      type="password"
-                      name={field.name}
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      disabled={loading || success}
-                      autoComplete="current-password"
-                      aria-invalid={field.state.meta.isTouched && field.state.meta.errors.length > 0}
-                      aria-describedby={field.state.meta.isTouched && field.state.meta.errors.length > 0 ? 'password-error' : undefined}
-                      placeholder="••••••••"
-                      className="input input-bordered w-full pl-10 bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    />
-                  </div>
+                  <PasswordInput
+                    id="password"
+                    name={field.name}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    disabled={loading || success}
+                    autoComplete="current-password"
+                    aria-invalid={field.state.meta.isTouched && field.state.meta.errors.length > 0}
+                    aria-describedby={field.state.meta.isTouched && field.state.meta.errors.length > 0 ? 'password-error' : undefined}
+                    placeholder="••••••••"
+                    leadingIcon={<Lock className="w-4 h-4" aria-hidden="true" />}
+                    className="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  />
                   {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
                     <p id="password-error" className="text-error text-xs mt-1.5 font-medium">
                       {field.state.meta.errors.join(', ')}
@@ -302,6 +299,16 @@ export default function LoginPage() {
             </button>
           </form>
         </div>
+
+        <p className="mt-5 text-center text-sm text-base-content/70">
+          Need an account?{' '}
+          <Link
+            href="/register"
+            className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+          >
+            Create a student account
+          </Link>
+        </p>
 
         {/* Demo Credential Picker (local emulator only; never shown on the public demo) */}
         {showDemoAccountPicker && (
