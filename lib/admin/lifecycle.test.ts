@@ -22,7 +22,7 @@ test('1. Student account input validation sanitizes inputs', () => {
     email: 'STUDENT@PKM.EDU.PH ',
     studentNumber: ' stud-2026-0001 ',
     fullName: ' Juan Dela Cruz ',
-    program: ' BSIT ',
+    program: ' BSAIS ',
     yearLevel: ' 4 ',
     section: ' A ',
   });
@@ -30,7 +30,7 @@ test('1. Student account input validation sanitizes inputs', () => {
   assert.equal(input.email, 'student@pkm.edu.ph');
   assert.equal(input.studentNumber, 'STUD-2026-0001');
   assert.equal(input.fullName, 'Juan Dela Cruz');
-  assert.equal(input.program, 'BSIT');
+  assert.equal(input.program, 'BSAIS');
   assert.equal(input.yearLevel, '4');
   assert.equal(input.section, 'A');
 });
@@ -71,7 +71,7 @@ test('4. Cryptographically generated temporary password satisfies security shape
 
 test('5. Student-required fields must be non-empty', () => {
   assert.throws(
-    () => validateStudentInput({ email: 's@pkm.edu.ph', studentNumber: 'S-1', fullName: '', program: 'BSIT', yearLevel: '1', section: 'A' }),
+    () => validateStudentInput({ email: 's@pkm.edu.ph', studentNumber: 'S-1', fullName: '', program: 'BSAIS', yearLevel: '1', section: 'A' }),
     /Full name is required/
   );
   assert.throws(
@@ -174,4 +174,3 @@ test('13. Sensitive error mapping helper sanitizes internal errors', () => {
     'Operation encountered a synchronization issue. Check system audit logs.'
   );
 });
-

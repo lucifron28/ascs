@@ -17,6 +17,7 @@ import {
 } from '@/app/actions/admin-accounts';
 import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
+import { ACADEMIC_PROGRAM_CODES, ACADEMIC_PROGRAMS, formatProgram } from '@/lib/academic-programs';
 import {
   Users,
   Shield,
@@ -48,6 +49,7 @@ interface UserRecord {
   isActive?: boolean;
   mustChangePassword?: boolean;
   studentNumber?: string;
+  program?: string;
   contactNumber?: string;
   createdAt: string;
 }
@@ -115,7 +117,7 @@ export default function AdminDashboard() {
     email: '',
     studentNumber: '',
     fullName: '',
-    program: 'BSIT',
+    program: 'BSAIS',
     yearLevel: '1',
     section: 'A',
     contactNumber: '',
@@ -216,7 +218,7 @@ export default function AdminDashboard() {
           email: '',
           studentNumber: '',
           fullName: '',
-          program: 'BSIT',
+          program: 'BSAIS',
           yearLevel: '1',
           section: 'A',
           contactNumber: '',
@@ -624,6 +626,7 @@ export default function AdminDashboard() {
                 <tr className="border-b border-base-content/15 bg-base-200/50">
                   <th>User Details</th>
                   <th>Student #</th>
+                  <th>Program</th>
                   <th>Role</th>
                   <th>Status</th>
                   <th>Password</th>
@@ -633,7 +636,7 @@ export default function AdminDashboard() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-base-content/50 text-xs">
+                    <td colSpan={7} className="text-center py-8 text-base-content/50 text-xs">
                       No matching user accounts found.
                     </td>
                   </tr>
@@ -646,6 +649,9 @@ export default function AdminDashboard() {
                       </td>
                       <td className="font-mono text-xs text-base-content/70">
                         {u.studentNumber || '--'}
+                      </td>
+                      <td className="text-xs text-base-content/80">
+                        {u.role === 'student' ? formatProgram(u.program) : '--'}
                       </td>
                       <td>
                         <span className="badge badge-primary border-primary/20 bg-primary/10 text-primary capitalize font-medium text-xs">
@@ -1075,15 +1081,19 @@ export default function AdminDashboard() {
               <label htmlFor="create-student-program" className="label py-0.5">
                 <span className="label-text text-xs font-semibold">Program</span>
               </label>
-              <input
+              <select
                 id="create-student-program"
-                type="text"
                 required
-                placeholder="BSIT"
                 value={studentForm.program}
                 onChange={(e) => setStudentForm({ ...studentForm, program: e.target.value })}
-                className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              />
+                className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                {ACADEMIC_PROGRAM_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {code} — {ACADEMIC_PROGRAMS[code]}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="form-control">
               <label htmlFor="create-student-year" className="label py-0.5">

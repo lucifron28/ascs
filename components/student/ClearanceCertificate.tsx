@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { fetchClearanceCertificateAction } from '@/app/actions/clearance';
 import { Printer, ArrowLeft, CheckCircle2, AlertCircle, FileCheck } from 'lucide-react';
+import { formatProgramNameFirst } from '@/lib/academic-programs';
 
 interface ClearanceCertificateProps {
   applicationId: string;
@@ -195,7 +196,7 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
             </div>
             <div>
               <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Program</dt>
-              <dd className="font-semibold text-slate-800">{application.program}</dd>
+              <dd className="font-semibold text-slate-800">{formatProgramNameFirst(application.program)}</dd>
             </div>
             <div>
               <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Year / Section</dt>

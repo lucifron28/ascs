@@ -8,6 +8,7 @@ import {
   VALID_OVERALL_STATUSES,
   VALID_FINANCIAL_STATUSES,
 } from './filters';
+import { formatProgram } from '@/lib/academic-programs';
 
 export const VALID_APPROVAL_STATUSES = ['pending', 'approved', 'not_approved'] as const;
 
@@ -294,7 +295,7 @@ export function calculateGroupMetrics(
   for (const [key, item] of map.entries()) {
     result.push({
       key,
-      label: key,
+      label: field === 'program' ? formatProgram(key) : key,
       total: item.total,
       approved: item.approved,
       pending: item.pending,

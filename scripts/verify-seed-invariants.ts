@@ -5,6 +5,7 @@ import {
   DEMO_STUDENT_FIXTURES,
   DEMO_REQUIREMENTS_FIXTURE,
 } from '../tests/fixtures/demo-data';
+import { isAcademicProgramCode } from '../lib/academic-programs';
 
 export async function verifySeedInvariants(): Promise<boolean> {
   assertEmulatorEnvironment();
@@ -64,6 +65,12 @@ export async function verifySeedInvariants(): Promise<boolean> {
     if (!studentDoc.exists) {
       throw new Error(`INVARIANT FAILED: Firestore students doc missing for student UID ${student.uid}`);
     }
+    const studentData = studentDoc.data();
+    if (!student.program || studentData?.program !== student.program || !isAcademicProgramCode(studentData?.program)) {
+      throw new Error(
+        `INVARIANT FAILED: Program mismatch for ${student.uid}. Expected ${student.program}, got ${studentData?.program}`
+      );
+    }
   }
 
   // 3. Check clearance requirements
@@ -83,7 +90,8 @@ export async function verifySeedInvariants(): Promise<boolean> {
   if (
     appAData?.overallStatus !== 'approved' ||
     appAData?.financialStatus !== 'paid' ||
-    appAData?.printableAvailable !== true
+    appAData?.printableAvailable !== true ||
+    appAData?.program !== 'BSAIS'
   ) {
     throw new Error(`INVARIANT FAILED: Student A state incorrect. Got: ${JSON.stringify(appAData)}`);
   }
@@ -94,7 +102,7 @@ export async function verifySeedInvariants(): Promise<boolean> {
     throw new Error('INVARIANT FAILED: Application for Student B missing.');
   }
   const appBData = appB.data();
-  if (appBData?.overallStatus !== 'pending' || appBData?.printableAvailable !== false) {
+  if (appBData?.overallStatus !== 'pending' || appBData?.printableAvailable !== false || appBData?.program !== 'BSMA') {
     throw new Error(`INVARIANT FAILED: Student B state incorrect. Got: ${JSON.stringify(appBData)}`);
   }
 
@@ -104,7 +112,7 @@ export async function verifySeedInvariants(): Promise<boolean> {
     throw new Error('INVARIANT FAILED: Application for Student C missing.');
   }
   const appCData = appC.data();
-  if (appCData?.overallStatus !== 'not_approved' || appCData?.printableAvailable !== false) {
+  if (appCData?.overallStatus !== 'not_approved' || appCData?.printableAvailable !== false || appCData?.program !== 'BEED') {
     throw new Error(`INVARIANT FAILED: Student C state incorrect. Got: ${JSON.stringify(appCData)}`);
   }
 
@@ -117,7 +125,8 @@ export async function verifySeedInvariants(): Promise<boolean> {
   if (
     appDData?.financialStatus !== 'unpaid' ||
     appDData?.overallStatus !== 'not_approved' ||
-    appDData?.printableAvailable !== false
+    appDData?.printableAvailable !== false ||
+    appDData?.program !== 'CRIM'
   ) {
     throw new Error(`INVARIANT FAILED: Student D state incorrect. Got: ${JSON.stringify(appDData)}`);
   }

@@ -13,14 +13,17 @@ npm run dev
 ```
 
 Open `http://localhost:3000/login`, use Corporate theme, set browser zoom to
-100%, and keep the demo disclaimer visible.
+100%, and keep the demo disclaimer visible. On the local emulator, use the
+grouped **Demo account** selector and **Fill Demo Credentials** helper; it is
+not present on the public Vercel demo.
 
 ## Timed walkthrough
 
 ### 0:00 - Login and scope disclaimer
 
-Use `student.g@example.test` / the local emulator password. Say that the data
-is fictional and the application is a capstone MVP. Show the shared header,
+Select **Student G - Live Journey** (`FSM` - Food Service Management) and fill
+the local emulator credentials. Say that the data is fictional and the
+application is a capstone MVP. Show the shared header,
 notification control, theme selector, and logout control.
 
 ### 0:30 - Student submission

@@ -59,9 +59,9 @@ test('3. calculateFinancialMetrics accurately counts paid, unpaid, and pending f
 
 test('4. deduplicateApplicationsById prevents double counting and throws on contradictory duplicates across all fields', () => {
   const duplicates: RawApplicationData[] = [
-    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSIT', yearLevel: '1', section: 'A', adviserApproved: true },
-    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSIT', yearLevel: '1', section: 'A', adviserApproved: true },
-    { id: 'app-2', overallStatus: 'pending', financialStatus: 'pending', program: 'BSBA', yearLevel: '2', section: 'B', adviserApproved: false },
+    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSAIS', yearLevel: '1', section: 'A', adviserApproved: true },
+    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSAIS', yearLevel: '1', section: 'A', adviserApproved: true },
+    { id: 'app-2', overallStatus: 'pending', financialStatus: 'pending', program: 'BSMA', yearLevel: '2', section: 'B', adviserApproved: false },
   ];
 
   const deduplicated = deduplicateApplicationsById(duplicates);
@@ -88,8 +88,8 @@ test('4. deduplicateApplicationsById prevents double counting and throws on cont
   // Program conflict
   assert.throws(
     () => deduplicateApplicationsById([
-      { id: 'a1', program: 'BSIT' },
-      { id: 'a1', program: 'BSBA' },
+      { id: 'a1', program: 'BSAIS' },
+      { id: 'a1', program: 'BSMA' },
     ]),
     /Contradictory records found for duplicate application ID/
   );
@@ -182,19 +182,20 @@ test('7. sortBottlenecks sorts deterministically by unresolvedCount desc, notApp
 
 test('8. calculateGroupMetrics aggregates data by program, yearLevel, or section and handles duplicates', () => {
   const apps: RawApplicationData[] = [
-    { id: '1', program: 'BSIT', yearLevel: '1', section: 'A', overallStatus: 'approved' },
-    { id: '2', program: 'BSIT', yearLevel: '1', section: 'A', overallStatus: 'pending' },
-    { id: '3', program: 'BSBA', yearLevel: '2', section: 'B', overallStatus: 'approved' },
+    { id: '1', program: 'BSAIS', yearLevel: '1', section: 'A', overallStatus: 'approved' },
+    { id: '2', program: 'BSAIS', yearLevel: '1', section: 'A', overallStatus: 'pending' },
+    { id: '3', program: 'BSMA', yearLevel: '2', section: 'B', overallStatus: 'approved' },
   ];
 
   const progMetrics = calculateGroupMetrics(apps, 'program');
   assert.equal(progMetrics.length, 2);
-  const bsit = progMetrics.find((g) => g.key === 'BSIT');
-  assert.ok(bsit);
-  assert.equal(bsit.total, 2);
-  assert.equal(bsit.approved, 1);
-  assert.equal(bsit.pending, 1);
-  assert.equal(bsit.completionRate, 0.5);
+  const bsais = progMetrics.find((g) => g.key === 'BSAIS');
+  assert.ok(bsais);
+  assert.equal(bsais.total, 2);
+  assert.equal(bsais.approved, 1);
+  assert.equal(bsais.pending, 1);
+  assert.equal(bsais.completionRate, 0.5);
+  assert.equal(bsais.label, 'BSAIS — Accounting Information System');
 
   const secMetrics = calculateGroupMetrics(apps, 'section');
   assert.equal(secMetrics.length, 2);

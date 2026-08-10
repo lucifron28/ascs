@@ -27,7 +27,7 @@ describe('Account Lifecycle Integration Tests', () => {
       email: 'newstudent@example.test',
       fullName: 'New Student One',
       studentNumber: 'STUD-2026-9991',
-      program: 'BSIT',
+      program: 'BSAIS',
       yearLevel: '1st Year',
       section: 'A',
       contactNumber: '09123456789',
@@ -57,7 +57,7 @@ describe('Account Lifecycle Integration Tests', () => {
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.exists, true);
     assert.equal(studentDoc.data()?.studentNumber, studentData.studentNumber);
-    assert.equal(studentDoc.data()?.program, 'BSIT');
+    assert.equal(studentDoc.data()?.program, 'BSAIS');
   });
 
   it('2. Admin can create a staff account without creating a student profile', async () => {
@@ -89,7 +89,7 @@ describe('Account Lifecycle Integration Tests', () => {
       email: 'student.a@example.test',
       fullName: 'Duplicate Student',
       studentNumber: 'STUD-2026-0001',
-      program: 'BSIT',
+      program: 'BSAIS',
       yearLevel: '1st Year',
       section: 'A',
       contactNumber: '09123456789',

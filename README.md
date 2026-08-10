@@ -113,6 +113,14 @@ To run fully offline with local Firebase Auth and Firestore emulators:
 
 The deterministic demo accounts and fictional records are documented in [`docs/DEMO_SCENARIO.md`](docs/DEMO_SCENARIO.md). The demo is emulator-only; it must not be seeded into a production Firebase project.
 
+When both local switches are enabled, `/login` provides one accessible,
+grouped Demo account selector for all seven student scenarios and eight staff
+identities. It only fills deterministic emulator credentials and is hidden on
+the public Vercel fictional-data deployment. Student profiles and applications
+store the compact PKM **Program Code**; the shared catalog in
+[`lib/academic-programs.ts`](lib/academic-programs.ts) supplies the canonical
+**Program Name** for UI, reports, CSV output, and print output.
+
 ## Documentation, Diagrams, and Defense Assets
 
 - [`docs/architecture/README.md`](docs/architecture/README.md) — architecture navigation

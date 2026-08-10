@@ -11,6 +11,7 @@ import StatusSummary from '@/components/student/StatusSummary';
 import { Printer, CheckCircle2 } from 'lucide-react';
 import RoleHeader from '@/components/layout/RoleHeader';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
+import { formatProgramNameFirst } from '@/lib/academic-programs';
 
 const REQUIRED_SIGNATORY_ROLES = new Set([
   'librarian',
@@ -197,7 +198,7 @@ export default function StudentDashboardPage() {
                   <span className="font-bold">Student ID No:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.studentNumber || '')}
                 </div>
                 <div>
-                  <span className="font-bold">Program / Year:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.program || '')} - {String((dashboardData?.application as Record<string, unknown> | undefined)?.yearLevel || '')}
+                  <span className="font-bold">Program / Year:</span> {formatProgramNameFirst(String((dashboardData?.application as Record<string, unknown> | undefined)?.program || ''))} - {String((dashboardData?.application as Record<string, unknown> | undefined)?.yearLevel || '')}
                 </div>
                 <div>
                   <span className="font-bold">Academic Term:</span> {String((dashboardData?.application as Record<string, unknown> | undefined)?.academicYear || '')} • {(dashboardData?.application as Record<string, unknown> | undefined)?.semester ? normalizeSemester((dashboardData?.application as Record<string, unknown>).semester) : ''}

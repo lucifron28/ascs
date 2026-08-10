@@ -1,5 +1,9 @@
 import { UserRole } from '@/lib/types/roles';
 import { ClearanceStatus, FinancialStatus, AccountStatus } from '@/lib/types/status';
+import { getDemoAccountById } from '@/lib/demo/demo-accounts';
+import type { AcademicProgramCode } from '@/lib/academic-programs';
+
+export const DEMO_EMULATOR_PASSWORD = 'password123';
 
 export interface DemoUserFixture {
   uid: string;
@@ -10,7 +14,7 @@ export interface DemoUserFixture {
   accountStatus: AccountStatus;
   mustChangePassword?: boolean;
   studentNumber?: string;
-  program?: string;
+  program?: AcademicProgramCode;
   yearLevel?: string;
   section?: string;
 }
@@ -23,161 +27,102 @@ export const DEMO_REQUIREMENTS_FIXTURE = [
   { id: 'adviser', role: 'adviser' as const, label: 'Adviser Clearance', displayOrder: 5, isActive: true },
 ];
 
+type DemoUserOverrides = Omit<Partial<DemoUserFixture>, 'uid' | 'email' | 'password' | 'role' | 'fullName'>;
+
+function buildDemoUser(id: string, overrides: DemoUserOverrides = {}): DemoUserFixture {
+  const account = getDemoAccountById(id);
+  if (!account) throw new Error(`Unknown demo account definition: ${id}`);
+
+  return {
+    uid: account.uid,
+    email: account.email,
+    password: DEMO_EMULATOR_PASSWORD,
+    role: account.role,
+    fullName: account.fullName,
+    accountStatus: 'active',
+    ...overrides,
+  };
+}
+
 export const DEMO_STAFF_FIXTURES: DemoUserFixture[] = [
-  {
-    uid: 'demo-admin-uid',
-    email: 'admin@example.test',
-    password: 'password123',
-    role: 'admin',
-    fullName: 'System Administrator',
-    accountStatus: 'active',
-  },
-  {
-    uid: 'demo-dean-uid',
-    email: 'dean@example.test',
-    password: 'password123',
-    role: 'dean',
-    fullName: 'Academic Dean',
-    accountStatus: 'active',
-  },
-  {
-    uid: 'demo-librarian-uid',
-    email: 'librarian@example.test',
-    password: 'password123',
-    role: 'librarian',
-    fullName: 'Librarian Officer',
-    accountStatus: 'active',
-  },
-  {
-    uid: 'demo-accountant-uid',
-    email: 'accountant@example.test',
-    password: 'password123',
-    role: 'accountant',
-    fullName: 'Accountant Officer',
-    accountStatus: 'active',
-  },
-  {
-    uid: 'demo-osa-uid',
-    email: 'osa@example.test',
-    password: 'password123',
-    role: 'osa_coordinator',
-    fullName: 'OSA Coordinator',
-    accountStatus: 'active',
-  },
-  {
-    uid: 'demo-guidance-uid',
-    email: 'guidance@example.test',
-    password: 'password123',
-    role: 'guidance_counselor',
-    fullName: 'Guidance Counselor',
-    accountStatus: 'active',
-  },
-  {
-    uid: 'demo-chair-uid',
-    email: 'chair@example.test',
-    password: 'password123',
-    role: 'area_chair',
-    fullName: 'Area Chair',
-    accountStatus: 'active',
-  },
-  {
-    uid: 'demo-adviser-uid',
-    email: 'adviser@example.test',
-    password: 'password123',
-    role: 'adviser',
-    fullName: 'Class Adviser',
-    accountStatus: 'active',
-  },
+  buildDemoUser('admin'),
+  buildDemoUser('dean'),
+  buildDemoUser('librarian'),
+  buildDemoUser('accountant'),
+  buildDemoUser('osa-coordinator'),
+  buildDemoUser('guidance-counselor'),
+  buildDemoUser('area-chair'),
+  buildDemoUser('adviser'),
 ];
 
 export const DEMO_STUDENT_FIXTURES: DemoUserFixture[] = [
   {
-    uid: 'demo-student-a-uid',
-    email: 'student.a@example.test',
-    password: 'password123',
-    role: 'student',
-    fullName: 'Student A (Approved)',
-    studentNumber: 'STUD-2026-0001',
-    program: 'BSIT',
-    yearLevel: '4th Year',
-    section: 'A',
-    accountStatus: 'active',
+    ...buildDemoUser('student-a', {
+      studentNumber: 'STUD-2026-0001',
+      program: 'BSAIS',
+      yearLevel: '4th Year',
+      section: 'A',
+    }),
   },
   {
-    uid: 'demo-student-b-uid',
-    email: 'student.b@example.test',
-    password: 'password123',
-    role: 'student',
-    fullName: 'Student B (Pending)',
-    studentNumber: 'STUD-2026-0002',
-    program: 'BSCS',
-    yearLevel: '3rd Year',
-    section: 'B',
-    accountStatus: 'active',
+    ...buildDemoUser('student-b', {
+      studentNumber: 'STUD-2026-0002',
+      program: 'BSMA',
+      yearLevel: '3rd Year',
+      section: 'B',
+    }),
   },
   {
-    uid: 'demo-student-c-uid',
-    email: 'student.c@example.test',
-    password: 'password123',
-    role: 'student',
-    fullName: 'Student C (Not Approved)',
-    studentNumber: 'STUD-2026-0003',
-    program: 'BSIS',
-    yearLevel: '4th Year',
-    section: 'A',
-    accountStatus: 'active',
+    ...buildDemoUser('student-c', {
+      studentNumber: 'STUD-2026-0003',
+      program: 'BEED',
+      yearLevel: '4th Year',
+      section: 'A',
+    }),
   },
   {
-    uid: 'demo-student-d-uid',
-    email: 'student.d@example.test',
-    password: 'password123',
-    role: 'student',
-    fullName: 'Student D (Unpaid Hold)',
-    studentNumber: 'STUD-2026-0004',
-    program: 'BSIT',
-    yearLevel: '2nd Year',
-    section: 'B',
-    accountStatus: 'active',
+    ...buildDemoUser('student-d', {
+      studentNumber: 'STUD-2026-0004',
+      program: 'CRIM',
+      yearLevel: '2nd Year',
+      section: 'B',
+    }),
   },
   {
-    uid: 'demo-student-e-uid',
-    email: 'student.e@example.test',
-    password: 'password123',
-    role: 'student',
-    fullName: 'Student E (Temp Pass)',
-    studentNumber: 'STUD-2026-0005',
-    program: 'BSCS',
-    yearLevel: '1st Year',
-    section: 'A',
-    accountStatus: 'active',
-    mustChangePassword: true,
+    ...buildDemoUser('student-e', {
+      studentNumber: 'STUD-2026-0005',
+      program: 'ENGLISH',
+      yearLevel: '1st Year',
+      section: 'A',
+      mustChangePassword: true,
+    }),
   },
   {
-    uid: 'demo-student-f-uid',
-    email: 'student.f@example.test',
-    password: 'password123',
-    role: 'student',
-    fullName: 'Student F (Inactive)',
-    studentNumber: 'STUD-2026-0006',
-    program: 'BSIT',
-    yearLevel: '4th Year',
-    section: 'B',
-    accountStatus: 'inactive',
+    ...buildDemoUser('student-f', {
+      studentNumber: 'STUD-2026-0006',
+      program: 'ACP',
+      yearLevel: '4th Year',
+      section: 'B',
+      accountStatus: 'inactive',
+    }),
   },
   {
-    uid: 'demo-student-g-uid',
-    email: 'student.g@example.test',
-    password: 'password123',
-    role: 'student',
-    fullName: 'Student G (Live Journey)',
-    studentNumber: 'STUD-2026-0007',
-    program: 'BSIT',
-    yearLevel: '3rd Year',
-    section: 'A',
-    accountStatus: 'active',
-    mustChangePassword: false,
+    ...buildDemoUser('student-g', {
+      studentNumber: 'STUD-2026-0007',
+      program: 'FSM',
+      yearLevel: '3rd Year',
+      section: 'A',
+      mustChangePassword: false,
+    }),
   },
 ];
+
+function studentProgram(id: string): AcademicProgramCode {
+  const account = getDemoAccountById(id);
+  const student = DEMO_STUDENT_FIXTURES.find((fixture) => fixture.uid === account?.uid);
+  if (!student?.program) throw new Error(`Missing program for demo student: ${id}`);
+  return student.program;
+}
 
 export interface DemoApplicationFixture {
   id: string;
@@ -185,7 +130,7 @@ export interface DemoApplicationFixture {
   studentUid: string;
   studentNumber: string;
   studentName: string;
-  program: string;
+  program: AcademicProgramCode;
   yearLevel: string;
   section: string;
   academicYear: string;
@@ -213,7 +158,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     studentUid: 'demo-student-a-uid',
     studentNumber: 'STUD-2026-0001',
     studentName: 'Student A (Approved)',
-    program: 'BSIT',
+    program: studentProgram('student-a'),
     yearLevel: '4th Year',
     section: 'A',
     academicYear: '2026-2027',
@@ -242,7 +187,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     studentUid: 'demo-student-b-uid',
     studentNumber: 'STUD-2026-0002',
     studentName: 'Student B (Pending)',
-    program: 'BSCS',
+    program: studentProgram('student-b'),
     yearLevel: '3rd Year',
     section: 'B',
     academicYear: '2026-2027',
@@ -271,7 +216,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     studentUid: 'demo-student-c-uid',
     studentNumber: 'STUD-2026-0003',
     studentName: 'Student C (Not Approved)',
-    program: 'BSIS',
+    program: studentProgram('student-c'),
     yearLevel: '4th Year',
     section: 'A',
     academicYear: '2026-2027',
@@ -300,7 +245,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     studentUid: 'demo-student-d-uid',
     studentNumber: 'STUD-2026-0004',
     studentName: 'Student D (Unpaid Hold)',
-    program: 'BSIT',
+    program: studentProgram('student-d'),
     yearLevel: '2nd Year',
     section: 'B',
     academicYear: '2026-2027',

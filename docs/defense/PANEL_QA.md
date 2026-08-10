@@ -19,6 +19,15 @@ institutional deployment or certification.
    validation, preview, rollback, and operational audit design.
 5. **Does the system use real student data?** No. Fixtures use fictional
    `@example.test` identities.
+5a. **Why does the local login show many demo accounts?** The emulator-only
+   selector is a rehearsal aid for all seven student scenarios and eight staff
+   identities. It requires both Demo Mode and Firebase Emulator Mode, uses the
+   normal Firebase authentication flow after filling the form, and is hidden
+   on the public Vercel demo.
+5b. **Why do the records use codes such as BSAIS and FSM?** The fictional
+   dataset uses the PKM program catalog supplied for this project. A shared
+   catalog keeps Program Code storage stable while deriving Program Name labels
+   consistently in UI, reports, CSV output, and the printable prototype.
 
 ## Architecture and technology
 

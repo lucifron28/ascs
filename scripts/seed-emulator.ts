@@ -1,6 +1,7 @@
 import { getAdminAuth, getAdminFirestore } from '../lib/firebase/admin';
 import { assertEmulatorEnvironment } from './emulator-safety';
 import { verifySeedInvariants } from './verify-seed-invariants';
+import { DEFAULT_ACADEMIC_PROGRAM_CODE, isAcademicProgramCode } from '../lib/academic-programs';
 import {
   DEMO_REQUIREMENTS_FIXTURE,
   DEMO_STAFF_FIXTURES,
@@ -106,11 +107,15 @@ export async function seedEmulator(): Promise<void> {
     });
 
     if (user.role === 'student') {
+      if (user.program && !isAcademicProgramCode(user.program)) {
+        throw new Error(`Invalid PKM program code in demo fixture for ${user.email}: ${user.program}`);
+      }
+
       await studentsCol.doc(authUid).set({
         uid: authUid,
         studentNumber: user.studentNumber || 'STUD-2026-0000',
         fullName: user.fullName,
-        program: user.program || 'BSIT',
+        program: user.program || DEFAULT_ACADEMIC_PROGRAM_CODE,
         yearLevel: user.yearLevel || '4th Year',
         section: user.section || 'A',
         email: user.email,

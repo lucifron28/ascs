@@ -8,6 +8,15 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseAuth as auth } from '@/lib/firebase/client';
 import { LogIn, Mail, Lock, ShieldAlert, Check } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
+import {
+  DEMO_ACCOUNT_DEFINITIONS,
+  DEMO_ACCOUNT_GROUPS,
+  getDemoAccountById,
+  shouldShowDemoAccountPicker,
+} from '@/lib/demo/demo-accounts';
+import { formatProgram } from '@/lib/academic-programs';
+
+const EMULATOR_DEMO_PASSWORD = 'password123';
 
 async function readJsonResponse(response: Response) {
   const body = await response.text();
@@ -23,9 +32,13 @@ async function readJsonResponse(response: Response) {
 export default function LoginPage() {
   const router = useRouter();
   const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+  const useFirebaseEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
+  const showDemoAccountPicker = shouldShowDemoAccountPicker(demoMode, useFirebaseEmulator);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [selectedDemoAccountId, setSelectedDemoAccountId] = useState('');
+  const selectedDemoAccount = getDemoAccountById(selectedDemoAccountId);
 
   // TanStack Form configuration
   const form = useForm({
@@ -112,10 +125,16 @@ export default function LoginPage() {
     },
   });
 
-  // Pre-fill helper for quick testing/demoing
-  const quickFill = (email: string) => {
-    form.setFieldValue('email', email);
-    form.setFieldValue('password', 'password123');
+  const fillDemoCredentials = () => {
+    if (!selectedDemoAccount) {
+      setError('Select a demo account before filling credentials.');
+      return;
+    }
+
+    form.setFieldValue('email', selectedDemoAccount.email);
+    form.setFieldValue('password', EMULATOR_DEMO_PASSWORD);
+    setError(null);
+    setSuccess(false);
   };
 
   return (
@@ -284,46 +303,76 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Demo Credentials Quick Fill Panel (explicitly opt-in) */}
-        {demoMode && (
+        {/* Demo Credential Picker (local emulator only; never shown on the public demo) */}
+        {showDemoAccountPicker && (
           <div className="card w-full mt-6 bg-base-100 border border-base-content/15 p-5 rounded-2xl shadow-sm">
-          <h3 className="text-sm font-bold text-base-content/70 mb-3 uppercase tracking-wider">
-            Demo access (fictional data)
-          </h3>
-          <div className="grid gap-2">
+            <h3 className="text-xs font-bold text-base-content/70 mb-3 uppercase tracking-wider">
+              Demo / Emulator Only — Fictional Data
+            </h3>
+            <div className="form-control">
+              <label htmlFor="demo-account" className="label py-1">
+                <span className="label-text text-base-content/80 font-semibold text-xs">Demo account</span>
+              </label>
+              <select
+                id="demo-account"
+                value={selectedDemoAccountId}
+                onChange={(event) => {
+                  setSelectedDemoAccountId(event.target.value);
+                  setError(null);
+                }}
+                disabled={loading || success}
+                aria-describedby={selectedDemoAccount ? 'demo-account-details' : undefined}
+                className="select select-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl text-sm min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <option value="">Select a demo account...</option>
+                {DEMO_ACCOUNT_GROUPS.map((group) => (
+                  <optgroup key={group} label={group}>
+                    {DEMO_ACCOUNT_DEFINITIONS
+                      .filter((account) => account.group === group)
+                      .map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            {selectedDemoAccount && (
+              <div id="demo-account-details" className="mt-4 rounded-xl border border-base-content/10 bg-base-200/60 p-3 text-xs">
+                <p className="font-bold text-base-content mb-2">Selected account information</p>
+                <dl className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <dt className="font-semibold text-base-content/60 min-w-24">Role / Scenario</dt>
+                    <dd className="text-base-content font-medium">{selectedDemoAccount.label}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="font-semibold text-base-content/60 min-w-24">Email</dt>
+                    <dd className="text-base-content font-mono">{selectedDemoAccount.email}</dd>
+                  </div>
+                  {selectedDemoAccount.program && (
+                    <div className="flex gap-2">
+                      <dt className="font-semibold text-base-content/60 min-w-24">Program</dt>
+                      <dd className="text-base-content">{formatProgram(selectedDemoAccount.program)}</dd>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <dt className="font-semibold text-base-content/60 min-w-24">Description</dt>
+                    <dd className="text-base-content/80">{selectedDemoAccount.description}</dd>
+                  </div>
+                </dl>
+              </div>
+            )}
+
             <button
               type="button"
-              onClick={() => quickFill('student.a@example.test')}
+              onClick={fillDemoCredentials}
               disabled={loading || success}
-              className="btn btn-sm min-h-11 btn-outline border-base-content/30 hover:bg-base-200 text-base-content hover:text-base-content rounded-lg px-3 font-medium lowercase truncate"
+              className="btn btn-sm min-h-11 btn-outline border-base-content/30 hover:bg-base-200 text-base-content hover:text-base-content rounded-xl px-3 font-semibold w-full mt-4"
             >
-              student.a@example.test
+              Fill Demo Credentials
             </button>
-            <button
-              type="button"
-              onClick={() => quickFill('admin@example.test')}
-              disabled={loading || success}
-              className="btn btn-sm min-h-11 btn-outline border-base-content/30 hover:bg-base-200 text-base-content hover:text-base-content rounded-lg px-3 font-medium lowercase truncate"
-            >
-              admin@example.test
-            </button>
-            <button
-              type="button"
-              onClick={() => quickFill('librarian@example.test')}
-              disabled={loading || success}
-              className="btn btn-sm min-h-11 btn-outline border-base-content/30 hover:bg-base-200 text-base-content hover:text-base-content rounded-lg px-3 font-medium lowercase truncate"
-            >
-              librarian@example.test
-            </button>
-            <button
-              type="button"
-              onClick={() => quickFill('dean@example.test')}
-              disabled={loading || success}
-              className="btn btn-sm min-h-11 btn-outline border-base-content/30 hover:bg-base-200 text-base-content hover:text-base-content rounded-lg px-3 font-medium lowercase truncate"
-            >
-              dean@example.test
-            </button>
-          </div>
           </div>
         )}
       </main>

@@ -46,7 +46,7 @@ const mockSummary: ReportSummary = {
     { requirementId: 'lib', role: 'librarian', label: 'Library Clearance', totalAssigned: 10, approved: 8, pending: 1, notApproved: 1, completionRate: 0.8, unresolvedCount: 2 },
   ],
   programBreakdown: [
-    { key: 'BSIT', label: 'BSIT', total: 10, approved: 6, pending: 3, notApproved: 1, completionRate: 0.6 },
+    { key: 'BSAIS', label: 'BSAIS — Accounting Information System', total: 10, approved: 6, pending: 3, notApproved: 1, completionRate: 0.6 },
   ],
   yearLevelBreakdown: [],
   sectionBreakdown: [],
@@ -73,7 +73,7 @@ test('6. Dean export excludes Admin-only financial details and user management m
     {
       studentNumber: 'STUD-001',
       studentName: 'Juan Cruz',
-      program: 'BSIT',
+      program: 'BSAIS',
       yearLevel: '1',
       section: 'A',
       academicYear: '2026-2027',
@@ -98,6 +98,6 @@ test('7. generateRequirementBreakdownCsv and generateProgramBreakdownCsv output 
 
   const progCsv = generateProgramBreakdownCsv(mockSummary);
   assert.ok(progCsv.startsWith('\uFEFF'));
-  assert.match(progCsv, /"BSIT"/);
+  assert.match(progCsv, /"BSAIS — Accounting Information System"/);
   assert.match(progCsv, /"Completion Rate \(%\)"/);
 });

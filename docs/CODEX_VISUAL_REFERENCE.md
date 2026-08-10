@@ -16,7 +16,8 @@ Role: public sign-in
 Fixture: fictional emulator accounts
 Theme: Corporate
 Viewport: 1440x900
-Purpose: Shows the accessible sign-in form and demo boundary.
+Purpose: Shows the accessible sign-in form, emulator-only fictional account
+selector, and the boundary that keeps the selector off the public Vercel demo.
 
 ## Approved Student Dashboard
 
@@ -24,7 +25,7 @@ Purpose: Shows the accessible sign-in form and demo boundary.
 
 Route: `/student/dashboard`
 Role: Student
-Fixture: Student A, approved + paid
+Fixture: Student A, approved + paid (BSAIS - Accounting Information System)
 Theme: Corporate
 Viewport: 1440x900
 Purpose: Shows cleared status and print action.
@@ -35,7 +36,7 @@ Purpose: Shows cleared status and print action.
 
 Route: `/student/dashboard`
 Role: Student
-Fixture: Student B, two approvals and three pending
+Fixture: Student B, two approvals and three pending (BSMA - Management Accounting)
 Theme: Corporate
 Viewport: 1440x900
 Purpose: Shows progress tracking and unavailable print output.
@@ -46,7 +47,7 @@ Purpose: Shows progress tracking and unavailable print output.
 
 Route: `/student/dashboard`
 Role: Student
-Fixture: Student G, active with no application
+Fixture: Student G, active with no application (FSM - Food Service Management)
 Theme: Corporate
 Viewport: 1440x900
 Purpose: Shows the new clearance submission form.
@@ -148,7 +149,8 @@ Role: System Administrator
 Fixture: seeded 2026-2027, 1st Semester data
 Theme: Corporate
 Viewport: 1440x900
-Purpose: Shows institution-wide metrics and financial summaries.
+Purpose: Shows institution-wide metrics, normalized PKM program labels, and
+financial summaries.
 
 ## Dean Reports
 
@@ -159,7 +161,8 @@ Role: Dean
 Fixture: Adviser-approved scope
 Theme: Corporate
 Viewport: 1440x900
-Purpose: Shows academic reporting with financial privacy boundary.
+Purpose: Shows normalized PKM program labels with the academic financial
+privacy boundary.
 
 ## Printable Clearance Prototype
 
@@ -167,10 +170,13 @@ Purpose: Shows academic reporting with financial privacy boundary.
 
 Route: `/student/clearance/app-student-a/print`
 Role: Student
-Fixture: Student A approved + paid
+Fixture: Student A approved + paid (BSAIS - Accounting Information System)
 Theme: Corporate / print layout
 Viewport: 1440px wide, full-page (base viewport 1440x900)
-Purpose: Shows the A4-oriented, PKM-slip-inspired digital prototype record with five required signatory rows and a separate Accountant financial review. It contains no reproduced signatures and is not an official certificate.
+Purpose: Shows the A4-oriented, PKM-slip-inspired digital prototype record with
+the normalized Accounting Information System (BSAIS) display, five required
+signatory rows, and a separate Accountant financial review. It contains no
+reproduced signatures and is not an official certificate.
 
 ## Not-approved Student View
 
@@ -178,7 +184,7 @@ Purpose: Shows the A4-oriented, PKM-slip-inspired digital prototype record with 
 
 Route: `/student/dashboard`
 Role: Student
-Fixture: Student C with Librarian rejection remark
+Fixture: Student C (BEED - Bachelor of Elementary Education) with Librarian rejection remark
 Theme: Corporate
 Viewport: 1440px wide, full-page (base viewport 1440x900)
 Purpose: Shows visible remarks and blocked printability.

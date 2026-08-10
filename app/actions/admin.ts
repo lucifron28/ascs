@@ -32,12 +32,15 @@ export async function fetchAdminUsersAction() {
       firestore.collection('students').get().catch(() => null),
     ]);
 
-    const studentMap = new Map<string, string>();
+    const studentMap = new Map<string, { studentNumber: string; program?: string }>();
     if (studentsSnap) {
       studentsSnap.docs.forEach((doc) => {
         const data = doc.data();
-        if (data.studentNumber) {
-          studentMap.set(doc.id, data.studentNumber);
+        if (data.studentNumber || data.program) {
+          studentMap.set(doc.id, {
+            studentNumber: data.studentNumber || '',
+            program: data.program || undefined,
+          });
         }
       });
     }
@@ -46,7 +49,8 @@ export async function fetchAdminUsersAction() {
       const data = doc.data();
       const role = (data.role || 'student') as UserRole;
       const studentNumber =
-        data.studentNumber || (role === 'student' ? studentMap.get(doc.id) : undefined);
+        data.studentNumber || (role === 'student' ? studentMap.get(doc.id)?.studentNumber : undefined);
+      const program = role === 'student' ? studentMap.get(doc.id)?.program : undefined;
       const accountStatus = data.accountStatus || (data.isActive === false ? 'inactive' : 'active');
       const isActive = data.isActive !== undefined ? Boolean(data.isActive) : accountStatus === 'active';
 
@@ -60,6 +64,7 @@ export async function fetchAdminUsersAction() {
         isActive,
         mustChangePassword: data.mustChangePassword ?? false,
         studentNumber: studentNumber || '',
+        program: program || '',
         contactNumber: data.contactNumber || '',
         createdAt: data.createdAt
           ? typeof data.createdAt === 'string'

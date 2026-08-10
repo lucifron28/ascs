@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
 import type { UserRole } from '@/lib/types/roles';
+import { isAcademicProgramCode } from '@/lib/academic-programs';
 
 export interface StudentAccountInput {
   email: string;
@@ -104,6 +105,10 @@ export function validateStudentInput(input: Partial<StudentAccountInput>): {
   if (typeof input.program !== 'string' || !input.program.trim()) {
     throw new Error('Program is required.');
   }
+  const program = input.program.trim().toUpperCase();
+  if (!isAcademicProgramCode(program)) {
+    throw new Error(`Invalid Program Code: ${program}.`);
+  }
   if (typeof input.yearLevel !== 'string' || !input.yearLevel.trim()) {
     throw new Error('Year level is required.');
   }
@@ -120,7 +125,7 @@ export function validateStudentInput(input: Partial<StudentAccountInput>): {
     email,
     studentNumber,
     fullName: input.fullName.trim(),
-    program: input.program.trim(),
+    program,
     yearLevel: input.yearLevel.trim(),
     section: input.section.trim(),
     contactNumber: input.contactNumber?.trim() || null,

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ReportFilters } from '@/lib/reports/types';
 import { Filter, RefreshCw, Search } from 'lucide-react';
+import { formatProgram } from '@/lib/academic-programs';
 
 export interface FilterOptions {
   academicYears: string[];
@@ -112,7 +113,7 @@ export default function ReportFiltersComponent({
               <option value="all">All Programs</option>
               {options.programs.map((prog) => (
                 <option key={prog} value={prog}>
-                  {prog}
+                  {formatProgram(prog)}
                 </option>
               ))}
             </select>
