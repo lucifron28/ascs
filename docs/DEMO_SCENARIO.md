@@ -61,6 +61,15 @@ npm run dev
 
 Open http://localhost:3000/login.
 
+When both `NEXT_PUBLIC_DEMO_MODE=true` and
+`NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true`, the login page shows one native
+**Demo account** selector grouped into Students, Clearance Signatories,
+Financial / Oversight, and Administration. Select an account to review its
+role/scenario, email, description, and (for students) program, then choose
+**Fill Demo Credentials**. The button only fills the form; it never logs in
+automatically. The picker is emulator-only and is hidden on the public Vercel
+fictional-data deployment, where the normal Firebase login form remains.
+
 One command alternative for the whole demo environment:
 
 ```bash
@@ -74,22 +83,27 @@ npm run demo:prepare   # verifies emulator env, resets, seeds, prints accounts
 All passwords are `password123` unless noted. These accounts exist only in the
 local emulator and are intentionally fictional.
 
-| Role | Email | Password | Expected purpose |
+| Group / Role | Email | Password | Expected purpose |
 | --- | --- | --- | --- |
-| System Administrator | `admin@example.test` | `password123` | Account overview, reports, CSV export |
-| Academic Dean | `dean@example.test` | `password123` | Adviser-approved visibility + Dean report privacy |
-| Librarian | `librarian@example.test` | `password123` | Approve librarian clearance |
-| Accountant | `accountant@example.test` | `password123` | Financial gate (paid/unpaid) |
-| OSA Coordinator | `osa@example.test` | `password123` | Approve OSA clearance |
-| Guidance Counselor | `guidance@example.test` | `password123` | Approve guidance clearance |
-| Area Chair | `chair@example.test` | `password123` | Approve area clearance |
-| Adviser | `adviser@example.test` | `password123` | Approve adviser clearance, unlock Dean visibility |
-| Student A | `student.a@example.test` | `password123` | Fully approved + paid, printable clearance available |
-| Student B | `student.b@example.test` | `password123` | Pending: 2 approved / 3 pending |
-| Student C | `student.c@example.test` | `password123` | Not approved: librarian remark (unreturned book) |
-| Student D | `student.d@example.test` | `password123` | Unpaid financial hold, all signatories approved |
-| Student E | `student.e@example.test` | `password123` | Temporary password: must change on first login |
-| Student F | `student.f@example.test` | `password123` | Inactive/deactivated account (disabled in Auth) |
+| Students / Student A - Approved | `student.a@example.test` | `password123` | `BSAIS` - Accounting Information System; approved + paid, printable record |
+| Students / Student B - Pending | `student.b@example.test` | `password123` | `BSMA` - Management Accounting; 2 approved / 3 pending |
+| Students / Student C - Not Approved | `student.c@example.test` | `password123` | `BEED` - Bachelor of Elementary Education; librarian remark |
+| Students / Student D - Unpaid Hold | `student.d@example.test` | `password123` | `CRIM` - Bachelor of Science in Criminology; financial hold |
+| Students / Student E - Temporary Password | `student.e@example.test` | `password123` | `ENGLISH` - Bachelor of Arts in English; forced password change |
+| Students / Student F - Inactive | `student.f@example.test` | `password123` | `ACP` - Agriculture Crop Production; Auth-disabled account |
+| Students / Student G - Live Journey | `student.g@example.test` | `password123` | `FSM` - Food Service Management; end-to-end defense workflow |
+| Clearance Signatories / Librarian | `librarian@example.test` | `password123` | Reviews the Library requirement |
+| Clearance Signatories / OSA Coordinator | `osa@example.test` | `password123` | Reviews the Office of Student Affairs requirement |
+| Clearance Signatories / Guidance Counselor | `guidance@example.test` | `password123` | Reviews the Guidance requirement |
+| Clearance Signatories / Area Chair | `chair@example.test` | `password123` | Reviews the Academic Department requirement |
+| Clearance Signatories / Adviser | `adviser@example.test` | `password123` | Reviews Adviser requirement and unlocks Dean visibility |
+| Financial / Oversight / Accountant | `accountant@example.test` | `password123` | Separate financial accountability gate |
+| Financial / Oversight / Dean | `dean@example.test` | `password123` | Read-only academic oversight after Adviser approval |
+| Administration / System Administrator | `admin@example.test` | `password123` | User lifecycle, assignments, logs, reports |
+
+The remaining supported catalog entries are `FILIPINO` (Bachelor of Arts in
+Filipino), `MATH` (Bachelor of Science in Mathematics), and `SS` (Bachelor of
+Arts in Social Studies). They remain available for future fictional records.
 
 **Seeded application state (2026-2027, 1st Semester):**
 

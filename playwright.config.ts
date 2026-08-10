@@ -31,6 +31,7 @@ export default defineConfig({
     timeout: 120 * 1000,
     env: {
       NEXT_PUBLIC_USE_FIREBASE_EMULATOR: 'true',
+      NEXT_PUBLIC_DEMO_MODE: 'true',
       NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'ascs11',
       FIREBASE_PROJECT_ID: 'ascs11',
       FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',

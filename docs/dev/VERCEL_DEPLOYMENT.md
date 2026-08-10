@@ -7,6 +7,10 @@ demonstration environment. It must not be read as evidence of official PKM
 production deployment. The deployed system, if enabled, uses fictional/demo
 data only.
 
+The emulator-only Demo account selector is intentionally absent from this
+deployment because `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=false`; remote users use
+the normal Firebase login form and no remote password is exposed client-side.
+
 | Field | Value |
 | --- | --- |
 | Vercel project | `ron-cada-projects/ascs` |

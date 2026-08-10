@@ -72,12 +72,12 @@ test('5. Dean report scope rejects financialStatus filter', () => {
 
 test('6. parseReportFilters trims strings and handles "all" values', () => {
   const filters = parseReportFilters({
-    program: ' BSIT ',
+    program: ' BSAIS ',
     yearLevel: ' 1 ',
     section: 'all',
   });
 
-  assert.equal(filters.program, 'BSIT');
+  assert.equal(filters.program, 'BSAIS');
   assert.equal(filters.yearLevel, '1');
   assert.equal(filters.section, undefined);
 });

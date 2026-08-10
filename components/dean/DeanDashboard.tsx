@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchDeanApplicationsAction } from '@/app/actions/clearance';
 import { ClipboardList, ShieldAlert, CheckCircle2, Search, CircleEllipsis } from 'lucide-react';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
+import { formatProgram, formatProgramNameFirst } from '@/lib/academic-programs';
 
 interface DeanApplication {
   id: string;
@@ -219,7 +220,7 @@ export default function DeanDashboard() {
                       <span className="text-[10px] text-base-content/60 font-normal mt-0.5">Ref: {rec.applicationNumber}</span>
                     </td>
                     <td className="text-base-content/80 py-4 font-mono text-xs">{rec.studentNumber}</td>
-                    <td className="text-base-content/80 py-4">{rec.program}</td>
+                    <td className="text-base-content/80 py-4" title={formatProgramNameFirst(rec.program)}>{formatProgram(rec.program)}</td>
                     <td className="text-base-content/80 py-4">{rec.yearLevel}</td>
                     <td className="text-base-content/80 py-4">{rec.section}</td>
                     <td className="text-base-content/80 py-4 whitespace-nowrap">{normalizeSemester(rec.semester)}</td>
@@ -278,7 +279,7 @@ export default function DeanDashboard() {
               </div>
               <div className="flex justify-between">
                 <span className="text-base-content/70">Academic Program:</span>
-                <span className="text-base-content">{selectedRecord.program} ({selectedRecord.yearLevel} - {selectedRecord.section})</span>
+                <span className="text-base-content">{formatProgramNameFirst(selectedRecord.program)} ({selectedRecord.yearLevel} - {selectedRecord.section})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-base-content/70">Clearance Ref:</span>

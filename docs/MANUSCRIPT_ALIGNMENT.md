@@ -53,7 +53,27 @@ production readiness.
 Evidence: `lib/types/roles.ts`, `tests/fixtures/demo-data.ts`,
 `docs/TECHNICAL_ARCHITECTURE.md`.
 
-## 5. Functional requirements
+## 5. Demonstration dataset and academic programs
+
+The demonstration dataset uses the PKM program catalog supplied for the ASCS
+project. Firestore keeps the stable **Program Code** on student profiles and
+clearance applications; the shared catalog derives the corresponding **Program
+Name** for student views, administrative tables, reports, CSV output, and the
+printable prototype. The seven deterministic student scenarios use BSAIS,
+BSMA, BEED, CRIM, ENGLISH, ACP, and FSM respectively; FILIPINO, MATH, and SS
+remain supported catalog entries for future fictional records.
+
+The local emulator login exposes one grouped account selector for all seven
+student scenarios and eight staff identities. The selector requires both Demo
+Mode and Firebase Emulator Mode and is not rendered on the public Vercel
+fictional-data demo. It only fills the normal Firebase login form; it does not
+bypass authentication or display a password in selected-account details.
+
+Evidence: `lib/academic-programs.ts`, `lib/demo/demo-accounts.ts`,
+`tests/fixtures/demo-data.ts`, `app/login/page.tsx`,
+`lib/academic-programs.test.ts`, `lib/demo/demo-accounts.test.ts`.
+
+## 6. Functional requirements
 
 The FRD checklist records 33 implemented requirements and one deferred item:
 Bulk CSV Account Import. The implemented requirements include account creation,
@@ -65,7 +85,7 @@ activity logs, reporting, and CSV exports.
 Evidence: `docs/FRD_COMPLIANCE_CHECKLIST.md`, `app/actions/`,
 `tests/integration/`, `tests/e2e/`.
 
-## 6. Architecture
+## 7. Architecture
 
 ASCS uses a server-first Next.js 16 App Router architecture. Browser React UI
 and Firebase Web Auth handle presentation and sign-in. Next.js Server Actions
@@ -76,7 +96,7 @@ client SDK access.
 Evidence: [Technical Architecture](TECHNICAL_ARCHITECTURE.md),
 `lib/auth/session.ts`, `lib/firebase/admin.ts`, `firestore.rules`.
 
-## 7. Technology stack
+## 8. Technology stack
 
 | Category | Final implementation |
 | --- | --- |
@@ -94,7 +114,7 @@ Evidence: [Technical Architecture](TECHNICAL_ARCHITECTURE.md),
 
 Evidence: `package.json` and `package-lock.json`.
 
-## 8. Database / Firestore model
+## 9. Database / Firestore model
 
 The active collections are `users`, `publicUsers`, `students`,
 `clearanceRequirements`, `clearanceApplications`, `notifications`, and
@@ -107,7 +127,7 @@ relational foreign-key enforcement.
 Evidence: `lib/types/firestore.ts`, `firestore.rules`,
 `firestore.indexes.json`, diagram `07-firestore-data-model`.
 
-## 9. Authentication and authorization
+## 10. Authentication and authorization
 
 The browser signs in with Firebase Auth. The server creates/verifies an
 HTTP-only session cookie, loads the Firestore profile, checks active status and
@@ -119,7 +139,7 @@ emulators.
 Evidence: `lib/auth/session.ts`, `lib/auth/edge-session.ts`, `proxy.ts`,
 `tests/rules/security-boundaries.test.ts`, `lib/auth/session-override.test.ts`.
 
-## 10. Clearance workflow
+## 11. Clearance workflow
 
 The student submits one application per academic year/semester. The server
 creates five required signatory rows: Librarian, OSA Coordinator, Guidance
@@ -131,7 +151,7 @@ Evidence: `app/actions/clearance.ts`, `lib/clearance/status.ts`,
 `tests/integration/clearance-submission.test.ts`,
 `tests/e2e/live-clearance-journey.spec.ts`, diagram `05-clearance-workflow`.
 
-## 11. Financial accountability workflow
+## 12. Financial accountability workflow
 
 The Accountant sets `financialStatus` to `paid` or `unpaid` and must provide a
 remark for an unpaid decision. A new application starts as `pending`. An
@@ -142,7 +162,7 @@ Evidence: `components/accountant/AccountantDashboard.tsx`,
 `app/actions/clearance.ts`, `tests/integration/financial-workflow.test.ts`,
 `tests/e2e/negative-workflow.spec.ts`.
 
-## 12. Reporting and analytics
+## 13. Reporting and analytics
 
 Admin reports are institution-wide and include financial summaries. Dean
 reports are limited to Adviser-approved applications and intentionally omit
@@ -154,7 +174,7 @@ Evidence: `app/actions/reports.ts`, `lib/reports/`,
 `tests/integration/reports.test.ts`, `tests/e2e/reports.spec.ts`, diagram
 `08-reporting-data-flow`.
 
-## 13. Notifications and audit logs
+## 14. Notifications and audit logs
 
 Server Actions create user-scoped in-app notifications for submissions,
 signatory actions, and financial updates. Activity logs record workflow and
@@ -164,7 +184,7 @@ logging. Email delivery is deferred.
 Evidence: `app/actions/notifications.ts`, `components/ui/NotificationDropdown.tsx`,
 `app/actions/admin.ts`, `app/actions/admin-accounts.ts`.
 
-## 14. Printable clearance output
+## 15. Printable clearance output
 
 `/student/clearance/[id]/print` renders an A4-oriented, PKM-slip-inspired digital
 prototype record only when the derived overall status is `approved`. Its identity
@@ -182,7 +202,7 @@ Evidence: `app/student/clearance/[id]/print/page.tsx`,
 `components/student/ClearanceCertificate.tsx`,
 `tests/e2e/print-clearance.spec.ts`.
 
-## 15. Testing methodology
+## 16. Testing methodology
 
 Testing combines pure unit tests, Firebase Emulator integration, client-SDK
 Firestore Rules tests, Playwright E2E journeys, axe accessibility scans,
@@ -193,7 +213,7 @@ for `main`.
 Evidence: `docs/dev/ACCEPTANCE_TESTING.md`, `docs/dev/UX_ACCESSIBILITY_QA.md`,
 `.github/workflows/`.
 
-## 16. Security controls
+## 17. Security controls
 
 - HTTP-only session cookie; no `localStorage` session storage.
 - Server-side role/status/session verification before privileged actions.
@@ -208,7 +228,7 @@ Evidence: `docs/dev/ACCEPTANCE_TESTING.md`, `docs/dev/UX_ACCESSIBILITY_QA.md`,
 
 Security controls are safeguards for this MVP, not a security certification.
 
-## 17. Deployment / demonstration environment
+## 18. Deployment / demonstration environment
 
 For capstone demonstration and remote evaluation, the Next.js application may
 be hosted on Vercel and connected to a dedicated Firebase demo environment
@@ -216,7 +236,7 @@ containing fictional data. The authoritative deployment status, URL, SHA, and
 verification checks belong in [VERCEL_DEPLOYMENT.md](dev/VERCEL_DEPLOYMENT.md).
 The local screenshot library remains emulator-based and deterministic.
 
-## 18. Known limitations
+## 19. Known limitations
 
 - Capstone prototype/MVP scope; not official institutional production software.
 - Fictional data only; no real student records.
@@ -226,7 +246,7 @@ The local screenshot library remains emulator-based and deterministic.
 - Remote demo availability depends on Firebase and Vercel configuration.
 - Manual desktop/mobile accessibility evidence is only claimed when recorded.
 
-## 19. Deferred features
+## 20. Deferred features
 
 - Bulk CSV Account Import.
 - Email notification delivery.
@@ -235,7 +255,7 @@ The local screenshot library remains emulator-based and deterministic.
 - Self-service profile editing and automated email password delivery.
 - Expanded analytics and post-MVP integrations.
 
-## 20. Terminology and claims to avoid
+## 21. Terminology and claims to avoid
 
 Use "capstone prototype," "MVP," "demonstration deployment," and "fictional
 data." Avoid "production-ready," "official PKM system," "certified," "official

@@ -1,4 +1,5 @@
 import type { ReportSummary } from './types';
+import { formatProgram } from '@/lib/academic-programs';
 
 /**
  * Sanitizes a single CSV cell to prevent formula injection (=, +, -, @)
@@ -211,7 +212,7 @@ export function generateApplicationDetailCsv(
       lines.push([
         sanitizeCsvCell(app.studentNumber),
         sanitizeCsvCell(app.studentName),
-        sanitizeCsvCell(app.program),
+        sanitizeCsvCell(formatProgram(app.program)),
         sanitizeCsvCell(app.yearLevel),
         sanitizeCsvCell(app.section),
         sanitizeCsvCell(app.academicYear),
@@ -240,7 +241,7 @@ export function generateApplicationDetailCsv(
       lines.push([
         sanitizeCsvCell(app.studentNumber),
         sanitizeCsvCell(app.studentName),
-        sanitizeCsvCell(app.program),
+        sanitizeCsvCell(formatProgram(app.program)),
         sanitizeCsvCell(app.yearLevel),
         sanitizeCsvCell(app.section),
         sanitizeCsvCell(app.academicYear),
