@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { fetchStudentDashboardAction } from '@/app/actions/clearance';
 import { normalizeSemester } from '@/lib/academic-term';
 import ApplicationForm from '@/components/student/ApplicationForm';
@@ -173,6 +174,13 @@ export default function StudentDashboardPage() {
             {/* Printable Content */}
             <div id="printable-clearance-area" className="bg-white text-slate-900 p-8 font-serif leading-relaxed text-sm rounded-xl border border-slate-200 shadow-sm">
               <div className="text-center space-y-1 mb-8">
+                <Image
+                  src="/pkmlogo.png"
+                  alt="Pambayang Kolehiyo ng Mauban seal"
+                  width={88}
+                  height={88}
+                  className="h-16 w-16 object-contain mx-auto mb-3"
+                />
                 <h2 className="text-xl font-bold uppercase tracking-wide">Pambayang Kolehiyo ng Mauban</h2>
                 <p className="text-xs italic text-slate-600">Mauban, Quezon</p>
                 <p className="text-xs font-semibold mt-4 uppercase">Automated Student Clearance System (ASCS)</p>

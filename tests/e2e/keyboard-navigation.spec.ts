@@ -207,6 +207,7 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     await page.waitForURL('**/student/dashboard');
 
     await expect(page.getByRole('button', { name: /notifications/i })).toBeVisible();
+    await expect(page.locator('header img[src*="pkmlogo.png"]')).toBeVisible();
     await expect(page.getByRole('button', { name: /change theme/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /logout/i })).toBeVisible();
     await page.getByRole('button', { name: /logout/i }).click();

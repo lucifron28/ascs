@@ -3,8 +3,9 @@
 import { normalizeSemester } from '@/lib/academic-term';
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { fetchClearanceCertificateAction } from '@/app/actions/clearance';
-import { Printer, Shield, ArrowLeft, CheckCircle2, AlertCircle, FileCheck } from 'lucide-react';
+import { Printer, ArrowLeft, CheckCircle2, AlertCircle, FileCheck } from 'lucide-react';
 
 interface ClearanceCertificateProps {
   applicationId: string;
@@ -158,7 +159,13 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
       >
         <header className="text-center space-y-2 border-b-2 border-slate-900 pb-5">
           <div className="flex items-center justify-center gap-2 text-indigo-950 font-sans">
-            <Shield className="w-7 h-7 text-indigo-950 shrink-0" aria-hidden="true" />
+            <Image
+              src="/pkmlogo.png"
+              alt="Pambayang Kolehiyo ng Mauban seal"
+              width={56}
+              height={56}
+              className="h-10 w-10 shrink-0 object-contain"
+            />
             <span className="font-black text-lg tracking-[0.18em] uppercase">Pambayang Kolehiyo ng Mauban</span>
           </div>
           <p className="text-[11px] tracking-[0.16em] uppercase font-sans text-slate-600 font-semibold">

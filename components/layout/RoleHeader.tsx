@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Shield, LogOut, Menu, X, Info } from 'lucide-react';
+import { LogOut, Menu, X, Info } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import SkipLink from './SkipLink';
 import ThemeSelector from '@/components/ui/ThemeSelector';
@@ -85,7 +86,14 @@ export default function RoleHeader({
             className="font-extrabold text-base md:text-lg tracking-wider text-primary flex items-center gap-1.5 rounded-lg px-1 cursor-default select-none"
             aria-label={`ASCS PKM ${roleTitle}`}
           >
-            <Shield className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
+            <Image
+              src="/pkmlogo.png"
+              alt=""
+              aria-hidden="true"
+              width={44}
+              height={44}
+              className="h-9 w-9 shrink-0 object-contain"
+            />
             <span className="truncate">ASCS PKM</span>
           </div>
 

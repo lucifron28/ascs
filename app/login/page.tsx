@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useForm } from '@tanstack/react-form';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { firebaseAuth as auth } from '@/lib/firebase/client';
@@ -127,7 +128,15 @@ export default function LoginPage() {
       {/* Main Content Area */}
       <main id="main-content" className="relative w-full max-w-md p-4 z-10">
         {/* Title / Logo Header */}
-        <div className="text-center mb-8">
+        <div className="flex flex-col items-center text-center mb-8">
+          <Image
+            src="/pkmlogo.png"
+            alt="Pamantasan ng Kolehiyo ng Mauban seal"
+            width={96}
+            height={96}
+            preload
+            className="h-20 w-20 object-contain mb-3"
+          />
           <h1 className="text-3xl font-extrabold tracking-tight text-primary">
             ASCS PKM
           </h1>
