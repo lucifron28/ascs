@@ -179,7 +179,7 @@ Execute before commencing the live capstone presentation:
 - [ ] Student G live workflow ready (for live 9-step clearance submission)
 - [ ] Pre-approved Student A available as fallback for printable clearance
 - [ ] Report pages verified (`/admin/reports` and `/dean/reports`)
-- [ ] Presentation theme selected (e.g. `Corporate Light` or `Dark Mode`)
+- [ ] Presentation theme selected (`ASCS Light` or `ASCS Dark`)
 
 ---
 
