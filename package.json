@@ -11,7 +11,7 @@
     "test:integration": "tsx -r ./scripts/load-local-env.cjs -r ./tests/helpers/mock-server-only.cjs --test --test-concurrency=1 tests/integration/account-lifecycle.test.ts tests/integration/password-change.test.ts tests/integration/clearance-submission.test.ts tests/integration/signatory-workflow.test.ts tests/integration/financial-workflow.test.ts tests/integration/dean-visibility.test.ts tests/integration/clearance-completion.test.ts tests/integration/reports.test.ts tests/rules/security-boundaries.test.ts",
     "test:rules": "tsx --test tests/rules/security-boundaries.test.ts",
     "test:e2e": "playwright test",
-    "test:ux": "playwright test tests/e2e/accessibility.spec.ts tests/e2e/responsive-layout.spec.ts tests/e2e/keyboard-navigation.spec.ts tests/e2e/print-clearance.spec.ts tests/e2e/theme-contract.spec.ts tests/e2e/demo-account-picker.spec.ts",
+    "test:ux": "playwright test tests/e2e/accessibility.spec.ts tests/e2e/responsive-layout.spec.ts tests/e2e/keyboard-navigation.spec.ts tests/e2e/print-clearance.spec.ts tests/e2e/theme-contract.spec.ts tests/e2e/demo-account-picker.spec.ts tests/e2e/registration-password-visibility.spec.ts",
     "test:acceptance": "tsx scripts/run-acceptance.ts",
     "emulators": "firebase emulators:start --only auth,firestore",
     "emulators:exec": "firebase emulators:exec --only auth,firestore",

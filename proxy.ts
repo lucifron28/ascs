@@ -19,7 +19,8 @@ export async function proxy(request: NextRequest) {
   const session = request.cookies.get(sessionCookieName)?.value;
   const url = request.nextUrl.clone();
 
-  const isAuthRoute = url.pathname.startsWith('/login');
+  const isAuthRoute =
+    url.pathname.startsWith('/login') || url.pathname.startsWith('/register');
   const isApiRoute = url.pathname.startsWith('/api/');
   const isPublicRoute = url.pathname === '/' || isAuthRoute || isApiRoute;
 

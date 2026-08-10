@@ -13,6 +13,11 @@ export interface StudentAccountInput {
   temporaryPassword?: string;
 }
 
+export interface StudentRegistrationInput extends Omit<StudentAccountInput, 'temporaryPassword'> {
+  password: string;
+  confirmPassword: string;
+}
+
 export interface StaffAccountInput {
   email: string;
   fullName: string;
@@ -77,6 +82,14 @@ export function validateTemporaryPassword(password: unknown): string {
   return password;
 }
 
+/** Validate a password chosen during self-registration. */
+export function validateRegistrationPassword(password: unknown): string {
+  if (typeof password !== 'string' || password.length < 8) {
+    throw new Error('Password must be at least 8 characters long.');
+  }
+  return password;
+}
+
 /** Validate system role. */
 export function validateRole(role: unknown, allowedRoles: UserRole[] = VALID_ROLES): UserRole {
   if (typeof role !== 'string' || !allowedRoles.includes(role as UserRole)) {
@@ -130,6 +143,36 @@ export function validateStudentInput(input: Partial<StudentAccountInput>): {
     section: input.section.trim(),
     contactNumber: input.contactNumber?.trim() || null,
     temporaryPassword,
+  };
+}
+
+/** Validate the public student registration form without accepting any role fields. */
+export function validateStudentRegistrationInput(input: Partial<StudentRegistrationInput>): {
+  email: string;
+  studentNumber: string;
+  fullName: string;
+  program: string;
+  yearLevel: string;
+  section: string;
+  contactNumber: string | null;
+  password: string;
+} {
+  const student = validateStudentInput(input);
+  const password = validateRegistrationPassword(input.password);
+
+  if (password !== input.confirmPassword) {
+    throw new Error('Passwords do not match.');
+  }
+
+  return {
+    email: student.email,
+    studentNumber: student.studentNumber,
+    fullName: student.fullName,
+    program: student.program,
+    yearLevel: student.yearLevel,
+    section: student.section,
+    contactNumber: student.contactNumber,
+    password,
   };
 }
 
@@ -305,6 +348,19 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
     lowerMsg.includes('disabled for safety') ||
     lowerMsg.includes('fallback') ||
     lowerMsg.includes('already registered to another student')
+  ) {
+    return message;
+  }
+  if (
+    lowerMsg.includes('passwords do not match') ||
+    lowerMsg.includes('email address is required') ||
+    lowerMsg.includes('invalid email address') ||
+    lowerMsg.includes('student number is required') ||
+    lowerMsg.includes('full name is required') ||
+    lowerMsg.includes('program is required') ||
+    lowerMsg.includes('invalid program code') ||
+    lowerMsg.includes('year level is required') ||
+    lowerMsg.includes('section is required')
   ) {
     return message;
   }
