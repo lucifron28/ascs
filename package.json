@@ -19,6 +19,7 @@
     "reset:emulator": "tsx -r ./scripts/load-local-env.cjs -r ./tests/helpers/mock-server-only.cjs scripts/reset-emulator.ts",
     "demo:reset": "tsx -r ./scripts/load-local-env.cjs -r ./tests/helpers/mock-server-only.cjs scripts/reset-emulator.ts",
     "demo:prepare": "tsx -r ./scripts/load-local-env.cjs scripts/demo-prepare.ts",
+    "migrate:adviser-to-dean": "tsx -r ./scripts/load-local-env.cjs scripts/migrate-adviser-to-dean.ts",
     "docs:diagrams": "tsx scripts/render-diagrams.ts",
     "docs:screenshots": "tsx scripts/capture-documentation-screenshots.ts",
     "verify:docs": "tsx scripts/verify-documentation-assets.ts",

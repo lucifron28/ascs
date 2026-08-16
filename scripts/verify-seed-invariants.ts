@@ -74,11 +74,17 @@ export async function verifySeedInvariants(): Promise<boolean> {
   }
 
   // 3. Check clearance requirements
+  const activeRequirementRoles: string[] = [];
   for (const req of DEMO_REQUIREMENTS_FIXTURE) {
     const reqDoc = await firestore.collection('clearanceRequirements').doc(req.id).get();
     if (!reqDoc.exists) {
       throw new Error(`INVARIANT FAILED: Clearance requirement missing for ${req.id}`);
     }
+    if (reqDoc.data()?.isActive !== false) activeRequirementRoles.push(String(reqDoc.data()?.role));
+  }
+  const expectedActiveRoles = ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'dean'];
+  if (activeRequirementRoles.sort().join('|') !== expectedActiveRoles.sort().join('|')) {
+    throw new Error(`INVARIANT FAILED: Active requirement roles must be exactly ${expectedActiveRoles.join(', ')}.`);
   }
 
   // 4. Verify Student A (Fully Approved)
@@ -94,6 +100,14 @@ export async function verifySeedInvariants(): Promise<boolean> {
     appAData?.program !== 'BSAIS'
   ) {
     throw new Error(`INVARIANT FAILED: Student A state incorrect. Got: ${JSON.stringify(appAData)}`);
+  }
+  if (typeof appAData?.deanApproved !== 'boolean') {
+    throw new Error('INVARIANT FAILED: Student A must contain deanApproved.');
+  }
+  const appAApprovals = await appA.ref.collection('approvals').get();
+  const appARoles = appAApprovals.docs.map((doc) => doc.data().signatoryRole);
+  if (appAApprovals.size !== 5 || appARoles.includes('adviser') || !appARoles.includes('dean')) {
+    throw new Error('INVARIANT FAILED: Student A approval rows must contain the five active roles and no Adviser row.');
   }
 
   // 5. Verify Student B (Pending)
