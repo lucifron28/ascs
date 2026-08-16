@@ -3,7 +3,7 @@
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { normalizeSemester, getApplicationTermDocumentIds } from '@/lib/academic-term';
 import { getAuthenticatedUser } from '@/lib/auth/session';
-import { getClearanceStatusSummary } from '@/lib/clearance/status';
+import { getClearanceStatusSummary, REQUIRED_SIGNATORY_ROLES } from '@/lib/clearance/status';
 import type { QueryDocumentSnapshot, Transaction, DocumentData } from 'firebase-admin/firestore';
 
 // 1. Submit Clearance Application (Student)
@@ -66,7 +66,7 @@ export async function submitApplicationAction(data: {
             assignedSignatoryName: (reqData.assignedSignatoryName as string | null) || null,
           };
         })
-        .filter((req) => req.role !== 'accountant');
+        .filter((req) => (REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(req.role));
 
       if (activeReqs.length === 0) {
         throw new Error('No active clearance signatory requirements are configured.');
@@ -119,7 +119,7 @@ export async function submitApplicationAction(data: {
         financialRemarks: null,
         financialUpdatedBy: null,
         financialUpdatedByName: null,
-        adviserApproved: false,
+        deanApproved: false,
         printableAvailable: false,
         pendingCount: activeReqs.length,
         approvedCount: 0,
@@ -388,8 +388,8 @@ export async function signClearanceAction(data: {
         signatoryRole: doc.id === data.approvalId ? approvalData.signatoryRole : doc.data().signatoryRole,
       }));
       const summary = getClearanceStatusSummary(approvalStatuses, appData.financialStatus);
-      const adviserApproved = approvalStatuses.some(
-        (approval) => approval.signatoryRole === 'adviser' && approval.status === 'approved',
+      const deanApproved = approvalStatuses.some(
+        (approval) => approval.signatoryRole === 'dean' && approval.status === 'approved',
       );
       const now = new Date().toISOString();
 
@@ -422,7 +422,7 @@ export async function signClearanceAction(data: {
         pendingCount: summary.pendingCount,
         approvedCount: summary.approvedCount,
         notApprovedCount: summary.notApprovedCount,
-        adviserApproved,
+        deanApproved,
         printableAvailable: summary.printableAvailable,
         updatedAt: now,
       });
@@ -590,7 +590,7 @@ export async function updateFinancialStatusAction(data: {
   }
 }
 
-// 7. Fetch Dean Clearance Applications Queue (restricted to adviserApproved === true)
+// 7. Fetch Dean Clearance Applications Queue (legacy read endpoint)
 export async function fetchDeanApplicationsAction() {
   try {
     const { user } = await getAuthenticatedUser();
@@ -601,7 +601,7 @@ export async function fetchDeanApplicationsAction() {
 
     const firestore = getAdminFirestore();
     const appsQuery = await firestore.collection('clearanceApplications')
-      .where('adviserApproved', '==', true)
+      .where('deanApproved', '==', true)
       .orderBy('submittedAt', 'desc')
       .get();
 

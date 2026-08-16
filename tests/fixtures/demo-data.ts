@@ -24,7 +24,7 @@ export const DEMO_REQUIREMENTS_FIXTURE = [
   { id: 'osa_coordinator', role: 'osa_coordinator' as const, label: 'OSA Coordinator Clearance', displayOrder: 2, isActive: true },
   { id: 'guidance_counselor', role: 'guidance_counselor' as const, label: 'Guidance Counselor Clearance', displayOrder: 3, isActive: true },
   { id: 'area_chair', role: 'area_chair' as const, label: 'Area Chair Clearance', displayOrder: 4, isActive: true },
-  { id: 'adviser', role: 'adviser' as const, label: 'Adviser Clearance', displayOrder: 5, isActive: true },
+  { id: 'dean', role: 'dean' as const, label: 'Dean Clearance', displayOrder: 5, isActive: true },
 ];
 
 type DemoUserOverrides = Omit<Partial<DemoUserFixture>, 'uid' | 'email' | 'password' | 'role' | 'fullName'>;
@@ -52,7 +52,6 @@ export const DEMO_STAFF_FIXTURES: DemoUserFixture[] = [
   buildDemoUser('osa-coordinator'),
   buildDemoUser('guidance-counselor'),
   buildDemoUser('area-chair'),
-  buildDemoUser('adviser'),
 ];
 
 export const DEMO_STUDENT_FIXTURES: DemoUserFixture[] = [
@@ -139,7 +138,7 @@ export interface DemoApplicationFixture {
   overallStatus: ClearanceStatus;
   financialStatus: FinancialStatus;
   financialRemarks: string | null;
-  adviserApproved: boolean;
+  deanApproved: boolean;
   printableAvailable: boolean;
   pendingCount: number;
   approvedCount: number;
@@ -167,7 +166,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     overallStatus: 'approved',
     financialStatus: 'paid',
     financialRemarks: 'Fully paid tuition balance.',
-    adviserApproved: true,
+    deanApproved: true,
     printableAvailable: true,
     pendingCount: 0,
     approvedCount: 5,
@@ -177,7 +176,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
       osa_coordinator: { status: 'approved', remarksLatest: null },
       guidance_counselor: { status: 'approved', remarksLatest: null },
       area_chair: { status: 'approved', remarksLatest: null },
-      adviser: { status: 'approved', remarksLatest: null },
+      dean: { status: 'approved', remarksLatest: null },
     },
   },
   // Student B: 2 approved, 3 pending + paid -> overall pending, printable false
@@ -196,7 +195,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     overallStatus: 'pending',
     financialStatus: 'paid',
     financialRemarks: null,
-    adviserApproved: false,
+    deanApproved: false,
     printableAvailable: false,
     pendingCount: 3,
     approvedCount: 2,
@@ -206,7 +205,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
       osa_coordinator: { status: 'approved', remarksLatest: null },
       guidance_counselor: { status: 'pending', remarksLatest: null },
       area_chair: { status: 'pending', remarksLatest: null },
-      adviser: { status: 'pending', remarksLatest: null },
+      dean: { status: 'pending', remarksLatest: null },
     },
   },
   // Student C: 1 not_approved with remarks + paid -> overall not_approved, printable false
@@ -225,7 +224,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     overallStatus: 'not_approved',
     financialStatus: 'paid',
     financialRemarks: null,
-    adviserApproved: false,
+    deanApproved: false,
     printableAvailable: false,
     pendingCount: 3,
     approvedCount: 1,
@@ -235,7 +234,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
       osa_coordinator: { status: 'approved', remarksLatest: null },
       guidance_counselor: { status: 'pending', remarksLatest: null },
       area_chair: { status: 'pending', remarksLatest: null },
-      adviser: { status: 'pending', remarksLatest: null },
+      dean: { status: 'pending', remarksLatest: null },
     },
   },
   // Student D: All 5 signatories approved + unpaid -> overall not_approved, printable false
@@ -254,7 +253,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     overallStatus: 'not_approved',
     financialStatus: 'unpaid',
     financialRemarks: 'Unpaid tuition balance PHP 5,000.',
-    adviserApproved: true,
+    deanApproved: true,
     printableAvailable: false,
     pendingCount: 0,
     approvedCount: 5,
@@ -264,7 +263,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
       osa_coordinator: { status: 'approved', remarksLatest: null },
       guidance_counselor: { status: 'approved', remarksLatest: null },
       area_chair: { status: 'approved', remarksLatest: null },
-      adviser: { status: 'approved', remarksLatest: null },
+      dean: { status: 'approved', remarksLatest: null },
     },
   },
 ];

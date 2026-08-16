@@ -5,6 +5,7 @@ import {
   fetchAdminUsersAction,
   updateUserRoleAction,
   fetchClearanceRequirementsAction,
+  fetchSignatoryCandidatesAction,
   updateRequirementAssignmentAction,
   fetchActivityLogsAction,
 } from '@/app/actions/admin';
@@ -82,7 +83,6 @@ const ROLES_LIST: { id: UserRole; label: string }[] = [
   { id: 'osa_coordinator', label: 'OSA Coordinator' },
   { id: 'guidance_counselor', label: 'Guidance Counselor' },
   { id: 'area_chair', label: 'Area Chair' },
-  { id: 'adviser', label: 'Adviser' },
   { id: 'dean', label: 'Dean' },
   { id: 'admin', label: 'System Admin' },
 ];
@@ -156,6 +156,7 @@ export default function AdminDashboard() {
   const [reqModalLoading, setReqModalLoading] = useState(false);
   const [reqModalError, setReqModalError] = useState<string | null>(null);
   const [reqModalSuccess, setReqModalSuccess] = useState(false);
+  const [signatoryCandidates, setSignatoryCandidates] = useState<UserRecord[]>([]);
 
   const isMounted = useRef(true);
 
@@ -230,7 +231,7 @@ export default function AdminDashboard() {
           role: 'student',
           temporaryPassword: res.temporaryPassword,
         });
-        loadData();
+        await loadData();
       } else {
         setModalError(res.error || 'Failed to create student account.');
       }
@@ -264,7 +265,7 @@ export default function AdminDashboard() {
           role: res.user.role,
           temporaryPassword: res.temporaryPassword,
         });
-        loadData();
+        await loadData();
       } else {
         setModalError(res.error || 'Failed to create staff account.');
       }
@@ -396,6 +397,24 @@ export default function AdminDashboard() {
     setReqModalSuccess(false);
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedReq) {
+      setSignatoryCandidates([]);
+      return;
+    }
+    fetchSignatoryCandidatesAction(selectedReq.role).then((res) => {
+      if (!cancelled) {
+        setSignatoryCandidates(res.success ? (res.candidates as UserRecord[]) : []);
+      }
+    }).catch(() => {
+      if (!cancelled) setSignatoryCandidates([]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedReq]);
+
   const handleUpdateRequirement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedReq) return;
@@ -441,10 +460,8 @@ export default function AdminDashboard() {
   });
 
   // Eligible signatories for assignment modal (users with non-student role matching requirement role)
-  const eligibleSignatories = users.filter(
+  const eligibleSignatories = signatoryCandidates.filter(
     (u) =>
-      selectedReq &&
-      u.role === selectedReq.role &&
       (u.fullName.toLowerCase().includes(signatorySearch.toLowerCase()) ||
         u.email.toLowerCase().includes(signatorySearch.toLowerCase()))
   );
@@ -636,7 +653,7 @@ export default function AdminDashboard() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-base-content/50 text-xs">
+                    <td colSpan={7} className="text-center py-8 text-base-content/60 text-xs">
                       No matching user accounts found.
                     </td>
                   </tr>
@@ -872,6 +889,11 @@ export default function AdminDashboard() {
                 onChange={(e) => setSelectedRole(e.target.value as UserRole)}
                 className="select select-bordered w-full bg-base-200 border-base-content/10 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
+                {selectedUser.role === 'adviser' && (
+                  <option value="adviser" disabled>
+                    Legacy Adviser (read-only)
+                  </option>
+                )}
                 {ROLES_LIST.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.label}

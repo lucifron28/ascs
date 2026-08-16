@@ -7,18 +7,22 @@ test.describe('Emulator-only demo account picker', () => {
     const picker = page.getByLabel('Demo account');
     await expect(picker).toBeVisible();
     await expect(picker.locator('optgroup')).toHaveCount(4);
-    await expect(picker.locator('option')).toHaveCount(16);
+    await expect(picker.locator('option')).toHaveCount(15);
     await expect(picker.locator('option')).toContainText([
       'Select a demo account...',
       'Student A — Approved',
+      'Student B — Pending',
+      'Student C — Not Approved',
+      'Student D — Unpaid Hold',
+      'Student E — Temporary Password',
+      'Student F — Inactive',
       'Student G — Live Journey',
       'Librarian',
       'OSA Coordinator',
       'Guidance Counselor',
       'Area Chair',
-      'Adviser',
-      'Accountant',
       'Dean',
+      'Accountant',
       'System Administrator',
     ]);
 
@@ -30,7 +34,7 @@ test.describe('Emulator-only demo account picker', () => {
 
     await page.getByRole('button', { name: 'Fill Demo Credentials' }).click();
     await expect(page.getByLabel(/email address/i)).toHaveValue('student.g@example.test');
-    await expect(page.getByLabel(/password/i)).toHaveValue('password123');
+    await expect(page.getByRole('textbox', { name: 'Password' })).toHaveValue('password123');
     await expect(page).toHaveURL(/\/login$/);
   });
 

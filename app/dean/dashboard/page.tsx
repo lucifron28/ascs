@@ -2,12 +2,12 @@
 
 import React from 'react';
 import RoleHeader from '@/components/layout/RoleHeader';
-import DeanDashboard from '@/components/dean/DeanDashboard';
-import { Eye, BarChart3 } from 'lucide-react';
+import SignatoryDashboard from '@/components/signatory/SignatoryDashboard';
+import { ClipboardCheck, BarChart3 } from 'lucide-react';
 
 export default function DashboardPage() {
   const deanNavLinks = [
-    { label: 'Oversight', href: '/dean/dashboard', icon: <Eye className="w-3.5 h-3.5" />, active: true },
+    { label: 'Clearance Queue', href: '/dean/dashboard', icon: <ClipboardCheck className="w-3.5 h-3.5" />, active: true },
     { label: 'Reports', href: '/dean/reports', icon: <BarChart3 className="w-3.5 h-3.5" /> },
   ];
 
@@ -19,13 +19,13 @@ export default function DashboardPage() {
       <main id="main-content" className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl w-full mx-auto space-y-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight text-base-content">
-            Dean Clearance Oversight
+            Dean Clearance Queue
           </h1>
           <p className="text-base-content/70 text-sm mt-1 font-medium">
-            Read-only tracking of students cleared by academic advisers.
+            Review and approve the final Dean Clearance requirement for each student.
           </p>
         </div>
-        <DeanDashboard />
+        <SignatoryDashboard />
       </main>
     </div>
   );

@@ -4,7 +4,7 @@ test.describe('Printable Clearance Record QA', () => {
   test('Student A can view and print the prototype clearance record', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('student.a@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/student/dashboard');
@@ -42,10 +42,10 @@ test.describe('Printable Clearance Record QA', () => {
     await expect(record.getByText(/osa coordinator/i).first()).toBeVisible();
     await expect(record.getByText(/guidance counselor/i).first()).toBeVisible();
     await expect(record.getByText(/area chair/i).first()).toBeVisible();
-    await expect(record.getByText(/adviser/i).first()).toBeVisible();
+    await expect(record.getByText(/dean clearance/i).first()).toBeVisible();
     await expect(record.getByText(/accountant review is a separate financial gate/i)).toBeVisible();
     await expect(record.getByText(/not an official institutional clearance certificate/i)).toBeVisible();
-    await expect(record.getByText(/dean/i)).toHaveCount(0);
+    await expect(record.getByText(/adviser/i)).toHaveCount(0);
     await expect(record.getByText(/signed on|institution seal placeholder/i)).toHaveCount(0);
 
     await page.emulateMedia({ media: 'print' });

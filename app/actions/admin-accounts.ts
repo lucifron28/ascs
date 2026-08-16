@@ -290,6 +290,25 @@ export async function createStaffAccountAction(
       });
 
       await batch.commit();
+
+      // Verify the three identity surfaces before reporting success. A staff
+      // account is only usable as a signatory when Auth, users, and publicUsers
+      // all carry the same role and active state.
+      const [authRecord, userProfileSnap, publicProfileSnap] = await Promise.all([
+        auth.getUser(uid),
+        firestore.collection('users').doc(uid).get(),
+        firestore.collection('publicUsers').doc(uid).get(),
+      ]);
+      const expectedRole = input.role;
+      if (
+        authRecord.customClaims?.role !== expectedRole ||
+        userProfileSnap.data()?.role !== expectedRole ||
+        publicProfileSnap.data()?.role !== expectedRole ||
+        userProfileSnap.data()?.accountStatus !== 'active' ||
+        userProfileSnap.data()?.isActive === false
+      ) {
+        throw new Error('Staff account synchronization verification failed across Auth, users, and publicUsers.');
+      }
     } catch (dbErr: unknown) {
       let deleted = false;
       try {

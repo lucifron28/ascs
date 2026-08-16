@@ -4,7 +4,7 @@ test.describe('Admin and Dean Reports E2E Acceptance', () => {
   test('Admin can view reports dashboard with financial summary', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('admin@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await expect(page).toHaveURL(/admin\/dashboard/);
@@ -18,7 +18,7 @@ test.describe('Admin and Dean Reports E2E Acceptance', () => {
   test('Dean can view academic reports dashboard with financial summary excluded', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('dean@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await expect(page).toHaveURL(/dean\/dashboard/);

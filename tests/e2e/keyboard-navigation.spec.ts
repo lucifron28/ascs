@@ -52,7 +52,7 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
   test('3. NotificationDropdown opens and closes via keyboard with focus restoration', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('admin@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/admin/dashboard');
@@ -78,7 +78,7 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
   test('4. Signatory evaluation modal traps focus, wraps Tab/Shift+Tab, and restores focus', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('guidance@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/guidance_counselor/dashboard');
@@ -146,7 +146,7 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
   test('5. Accountant financial modal traps focus and restores focus to Update trigger', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('accountant@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/accountant/dashboard');
@@ -172,7 +172,7 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
   test('6. Admin account modal traps focus and restores focus on close', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('admin@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/admin/dashboard');
@@ -202,7 +202,7 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
   test('7. RoleHeader exposes Notifications, ThemeSelector, and Logout across roles at desktop', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('student.a@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
     await page.waitForURL('**/student/dashboard');
 
@@ -211,10 +211,10 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     await expect(page.getByRole('button', { name: /change theme/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /logout/i })).toBeVisible();
     await page.getByRole('button', { name: /logout/i }).click();
-    await page.waitForURL('**/login');
+    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
 
     await page.getByLabel(/email address/i).fill('admin@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
     await page.waitForURL('**/admin/dashboard');
 
@@ -229,7 +229,7 @@ test.describe('Keyboard Accessibility & Modal Navigation', () => {
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('admin@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/admin/dashboard');

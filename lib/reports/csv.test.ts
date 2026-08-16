@@ -80,14 +80,14 @@ test('6. Dean export excludes Admin-only financial details and user management m
       semester: '1st Semester',
       overallStatus: 'approved',
       financialStatus: 'paid',
-      adviserApproved: true,
+      deanApproved: true,
       submittedAt: '2026-08-01',
     },
   ];
 
   const csv = generateApplicationDetailCsv(applications, mockDeanSummary);
   assert.match(csv, /# ASCS Clearance DEAN Report/);
-  assert.match(csv, /"Adviser Approved"/);
+  assert.match(csv, /"Dean Approved"/);
   assert.doesNotMatch(csv, /"Financial Status"/, 'Dean CSV should not contain Financial Status column header');
 });
 test('7. generateRequirementBreakdownCsv and generateProgramBreakdownCsv output valid CSV headers and rows', () => {

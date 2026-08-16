@@ -26,10 +26,10 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto('/login');
       await page.getByLabel(/email address/i).fill('student.a@example.test');
-      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('textbox', { name: 'Password' }).fill('password123');
       await page.getByRole('button', { name: /log in/i }).click();
 
-      await page.waitForURL('**/student/dashboard');
+      await expect(page).toHaveURL(/\/student\/dashboard/, { timeout: 10_000 });
       await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
 
       const hasHorizontalOverflow = await page.evaluate(
@@ -42,10 +42,10 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto('/login');
       await page.getByLabel(/email address/i).fill('guidance@example.test');
-      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('textbox', { name: 'Password' }).fill('password123');
       await page.getByRole('button', { name: /log in/i }).click();
 
-      await page.waitForURL('**/guidance_counselor/dashboard');
+      await expect(page).toHaveURL(/\/guidance_counselor\/dashboard/, { timeout: 10_000 });
       await expect(page.getByRole('heading', { name: /pending evaluation queue/i })).toBeVisible();
 
       const hasSigOverflow = await page.evaluate(
@@ -61,13 +61,13 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
       const logoutBtn = page.getByRole('button', { name: /logout/i });
       await expect(logoutBtn).toBeVisible();
       await logoutBtn.click();
-      await page.waitForURL('**/login');
+      await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
 
       await page.getByLabel(/email address/i).fill('accountant@example.test');
-      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('textbox', { name: 'Password' }).fill('password123');
       await page.getByRole('button', { name: /log in/i }).click();
 
-      await page.waitForURL('**/accountant/dashboard');
+      await expect(page).toHaveURL(/\/accountant\/dashboard/, { timeout: 10_000 });
       await expect(page.getByRole('heading', { name: /financial accountability management/i })).toBeVisible();
 
       const hasAccOverflow = await page.evaluate(
@@ -80,18 +80,18 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto('/login');
       await page.getByLabel(/email address/i).fill('dean@example.test');
-      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('textbox', { name: 'Password' }).fill('password123');
       await page.getByRole('button', { name: /log in/i }).click();
 
-      await page.waitForURL('**/dean/dashboard');
-      await expect(page.getByRole('heading', { name: /dean clearance oversight/i })).toBeVisible();
+      await expect(page).toHaveURL(/\/dean\/dashboard/, { timeout: 10_000 });
+      await expect(page.getByRole('heading', { name: /dean clearance queue/i })).toBeVisible();
       const hasDeanOverflow = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
       );
       expect(hasDeanOverflow).toBe(false);
 
       await page.goto('/dean/reports');
-      await page.waitForURL('**/dean/reports');
+      await expect(page).toHaveURL(/\/dean\/reports/, { timeout: 10_000 });
       await expect(page.getByRole('heading', { name: /academic clearance reports/i })).toBeVisible();
       const hasReportsOverflow = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -103,17 +103,17 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto('/login');
       await page.getByLabel(/email address/i).fill('admin@example.test');
-      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('textbox', { name: 'Password' }).fill('password123');
       await page.getByRole('button', { name: /log in/i }).click();
 
-      await page.waitForURL('**/admin/dashboard');
+      await expect(page).toHaveURL(/\/admin\/dashboard/, { timeout: 10_000 });
       const hasOverflowDashboard = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
       );
       expect(hasOverflowDashboard).toBe(false);
 
       await page.goto('/admin/reports');
-      await page.waitForURL('**/admin/reports');
+      await expect(page).toHaveURL(/\/admin\/reports/, { timeout: 10_000 });
       const hasOverflowReports = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth
       );
@@ -125,10 +125,10 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('guidance@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
-    await page.waitForURL('**/guidance_counselor/dashboard');
+    await expect(page).toHaveURL(/\/guidance_counselor\/dashboard/, { timeout: 10_000 });
     await expect(page.getByRole('heading', { name: /pending evaluation queue/i })).toBeVisible();
 
     const reviewBtn = page.locator('button', { hasText: 'Review' }).first();

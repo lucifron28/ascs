@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { LogOut, Menu, X, Info } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import SkipLink from './SkipLink';
@@ -31,7 +30,6 @@ export default function RoleHeader({
   userDisplayName,
   onLogout,
 }: RoleHeaderProps) {
-  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Keep the safety banner visible for both local emulator demos and the
   // explicitly configured remote fictional-data demo deployment.
@@ -41,13 +39,14 @@ export default function RoleHeader({
 
   const defaultLogout = async () => {
     try {
+      // Finish the client-side session transition before the next login can
+      // start, then clear the HTTP-only server cookie.
+      await signOut(firebaseAuth).catch(() => undefined);
       const res = await fetch('/api/auth/logout', { method: 'POST' });
       if (res.ok) {
-        // Clear the browser Firebase session as well as the HTTP-only server
-        // cookie so a subsequent login in the same tab starts cleanly.
-        await signOut(firebaseAuth).catch(() => undefined);
-        router.replace('/login');
-        router.refresh();
+        // Use a full navigation after the server cookie is cleared so a
+        // pending client render cannot strand the user on a protected route.
+        window.location.assign('/login');
       }
     } catch (err) {
       console.error('Logout error:', err);

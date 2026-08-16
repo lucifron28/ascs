@@ -12,6 +12,7 @@ import {
   reactivateUserAccountAction,
   resetUserTemporaryPasswordAction,
 } from '@/app/actions/admin-accounts';
+import { fetchSignatoryCandidatesAction } from '@/app/actions/admin';
 
 describe('Account Lifecycle Integration Tests', () => {
   let adminSession: string;
@@ -80,6 +81,16 @@ describe('Account Lifecycle Integration Tests', () => {
 
     const userDoc = await getAdminFirestore().collection('users').doc(uid).get();
     assert.equal(userDoc.data()?.role, 'librarian');
+
+    const publicDoc = await getAdminFirestore().collection('publicUsers').doc(uid).get();
+    assert.equal(publicDoc.exists, true);
+    assert.equal(publicDoc.data()?.role, 'librarian');
+
+    const candidates = await fetchSignatoryCandidatesAction('librarian');
+    assert.equal(candidates.success, true);
+    if (candidates.success) {
+      assert.ok((candidates.candidates || []).some((candidate) => candidate.uid === uid));
+    }
 
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.exists, false);

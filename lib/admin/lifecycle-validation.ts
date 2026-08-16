@@ -44,7 +44,6 @@ export const VALID_STAFF_ROLES: UserRole[] = [
   'osa_coordinator',
   'guidance_counselor',
   'area_chair',
-  'adviser',
   'dean',
   'admin',
 ];

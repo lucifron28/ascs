@@ -5,7 +5,7 @@ test.describe('Normal Clearance Journey', () => {
     // 1. Student A logs in
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('student.a@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     // 2. Redirect to dashboard
@@ -20,7 +20,7 @@ test.describe('Normal Clearance Journey', () => {
     // Student B logs in
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('student.b@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/student/dashboard');

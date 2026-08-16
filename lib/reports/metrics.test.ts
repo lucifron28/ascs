@@ -59,9 +59,9 @@ test('3. calculateFinancialMetrics accurately counts paid, unpaid, and pending f
 
 test('4. deduplicateApplicationsById prevents double counting and throws on contradictory duplicates across all fields', () => {
   const duplicates: RawApplicationData[] = [
-    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSAIS', yearLevel: '1', section: 'A', adviserApproved: true },
-    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSAIS', yearLevel: '1', section: 'A', adviserApproved: true },
-    { id: 'app-2', overallStatus: 'pending', financialStatus: 'pending', program: 'BSMA', yearLevel: '2', section: 'B', adviserApproved: false },
+    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSAIS', yearLevel: '1', section: 'A', deanApproved: true },
+    { id: 'app-1', overallStatus: 'approved', financialStatus: 'paid', program: 'BSAIS', yearLevel: '1', section: 'A', deanApproved: true },
+    { id: 'app-2', overallStatus: 'pending', financialStatus: 'pending', program: 'BSMA', yearLevel: '2', section: 'B', deanApproved: false },
   ];
 
   const deduplicated = deduplicateApplicationsById(duplicates);
@@ -112,11 +112,11 @@ test('4. deduplicateApplicationsById prevents double counting and throws on cont
     /Contradictory records found for duplicate application ID/
   );
 
-  // Adviser approval conflict
+  // Dean approval conflict
   assert.throws(
     () => deduplicateApplicationsById([
-      { id: 'a1', adviserApproved: true },
-      { id: 'a1', adviserApproved: false },
+      { id: 'a1', deanApproved: true },
+      { id: 'a1', deanApproved: false },
     ]),
     /Contradictory records found for duplicate application ID/
   );

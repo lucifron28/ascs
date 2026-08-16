@@ -112,7 +112,7 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
         program: d.program,
         yearLevel: d.yearLevel,
         section: d.section,
-        adviserApproved: d.adviserApproved,
+        deanApproved: d.deanApproved ?? d.adviserApproved,
       };
     });
 
@@ -163,7 +163,7 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
   }
 }
 
-/** Fetch Dean academic clearance report summary (restricted to adviser-approved / Dean oversight scope). */
+/** Fetch Dean academic clearance report summary (restricted to Dean-approved scope). */
 export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportFilters>) {
   let deanUid: string | undefined;
   try {
@@ -175,10 +175,10 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
     const filters = parseReportFilters(inputFilters, 'dean');
     const firestore = getAdminFirestore();
 
-    // 1. Build application query enforcing Dean oversight scope (adviserApproved === true) with limit guard
+    // 1. Build application query enforcing Dean scope (deanApproved === true) with limit guard
     let query: Query = firestore
       .collection('clearanceApplications')
-      .where('adviserApproved', '==', true)
+      .where('deanApproved', '==', true)
       .where('academicYear', '==', filters.academicYear)
       .where('semester', 'in', getSemesterStorageAliases(filters.semester));
 
@@ -199,7 +199,7 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
         program: d.program,
         yearLevel: d.yearLevel,
         section: d.section,
-        adviserApproved: d.adviserApproved,
+        deanApproved: d.deanApproved ?? d.adviserApproved,
       };
     });
 
@@ -277,7 +277,7 @@ export async function fetchReportFilterOptionsAction(inputScope: unknown) {
     // Build scope-aware application query
     let appsQuery: Query = firestore.collection('clearanceApplications');
     if (scope === 'dean') {
-      appsQuery = appsQuery.where('adviserApproved', '==', true);
+      appsQuery = appsQuery.where('deanApproved', '==', true);
     }
 
     const appsSnap = await appsQuery.limit(MAX_REPORT_APPLICATIONS + 1).get();
@@ -446,7 +446,7 @@ export async function exportDeanReportCsvAction(
     } else if (exportType === 'application-detail') {
       let query: Query = firestore
         .collection('clearanceApplications')
-        .where('adviserApproved', '==', true)
+        .where('deanApproved', '==', true)
         .where('academicYear', '==', filters.academicYear)
         .where('semester', 'in', getSemesterStorageAliases(filters.semester));
 
@@ -461,8 +461,8 @@ export async function exportDeanReportCsvAction(
       const rows: ApplicationDetailRow[] = appSnap.docs.map((doc) => {
         const d = doc.data();
         const overallStatus = parseApplicationStatus(d.overallStatus);
-        if (d.adviserApproved !== true) {
-          throw new Error('Report data integrity error: Dean export encountered an application without adviser approval.');
+        if (d.deanApproved !== true) {
+          throw new Error('Report data integrity error: Dean export encountered an application without Dean approval.');
         }
 
         return {
@@ -474,7 +474,7 @@ export async function exportDeanReportCsvAction(
           academicYear: (d.academicYear as string) || '',
           semester: normalizeSemester(d.semester),
           overallStatus,
-          adviserApproved: true,
+          deanApproved: true,
           submittedAt: (d.submittedAt as string) || '',
         };
       });

@@ -19,7 +19,7 @@ export const REQUIRED_SIGNATORY_ROLES = [
   'osa_coordinator',
   'guidance_counselor',
   'area_chair',
-  'adviser',
+  'dean',
 ] as const;
 const REQUIRED_SIGNATORY_ROLE_SET = new Set<string>(REQUIRED_SIGNATORY_ROLES);
 
@@ -46,8 +46,8 @@ export function getClearanceStatusSummary(
   approvals: readonly ClearanceApprovalStatus[],
   financialStatus: FinancialStatus | string | null | undefined,
 ): ClearanceStatusSummary {
-  // Count only the five required signatory rows. Accountant and Dean are
-  // intentionally excluded because they are financial-gate and oversight roles.
+  // Count only the five active required signatory rows. The Accountant remains
+  // a separate financial gate; legacy Adviser rows are ignored during migration.
   const validApprovals = approvals.filter(
     (approval) => REQUIRED_SIGNATORY_ROLE_SET.has(approval.signatoryRole || '')
   );
