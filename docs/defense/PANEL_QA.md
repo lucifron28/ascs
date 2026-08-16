@@ -85,9 +85,9 @@ institutional deployment or certification.
     The output is an A4 PKM-slip-inspired digital prototype with a separate
     `FINANCIAL ACCOUNTABILITY REVIEW`; it contains no reproduced signatures and
     is not an official certificate.
-25. **Why does Adviser approval affect the Dean?** It is the academic handoff
-    gate: `adviserApproved` filters Dean queues and reports without making the
-    Dean another required signatory.
+25. **Why does the Dean act on the fifth step?** The Academic Dean is the
+    final active signatory. A Dean decision writes `deanApproved` and updates
+    the application counters; Dean reports remain separately scoped.
 26. **How are duplicate applications prevented?** Submission uses a
     deterministic student/academic-year/semester identity and rejects an
     existing application for the same term.
@@ -108,14 +108,14 @@ institutional deployment or certification.
      a nonofficial prototype record.
 27d. **Where are Accountant and Dean responsibilities shown?** Accountant
      verification appears in the separate Financial Accountability Review. Dean
-     access is an Adviser-approved oversight path, so Dean is not one of the five
-     required signatory rows.
+     access is a separate report scope, while Dean Clearance is the fifth
+     required signatory row.
 
 ## Reports and data integrity
 
 28. **What is different about Admin and Dean reports?** Admin reports are
     institution-wide and include financial summaries. Dean reports are limited
-    to Adviser-approved applications and exclude financial summaries/details.
+    to Dean-approved applications and exclude financial summaries/details.
 29. **How do you prevent corrupted records from silently changing totals?**
     Status allowlists, duplicate-ID contradiction checks, bounded queries, and
     explicit integrity errors protect metrics.

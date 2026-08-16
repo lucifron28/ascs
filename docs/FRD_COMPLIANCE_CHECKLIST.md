@@ -25,7 +25,7 @@
 | **Financial Status Indicator** | `Implemented` | Dedicated `financialStatus` badge (`pending`, `paid`, `unpaid`) with accountant verification timestamp and financial remarks (ASCS tracks financial status and remarks, not an itemized dues ledger). |
 | **Automated Notifications** | `Implemented` | In-app `NotificationDropdown.tsx` displays real-time notification items for student submissions (confirming to student and alerting assigned or role-wide signatories), signatory evaluations, and financial updates. |
 | **Printable Clearance Document** | `Implemented` | `ClearanceCertificate.tsx` renders an A4-oriented PKM-slip-inspired digital prototype accessible exclusively when `overallStatus === 'approved'`, with five required signatory rows, a separate Accountant financial review, no reproduced signatures, and an explicit non-official-output disclaimer. |
-| **Reports** | `Implemented` | `app/admin/reports/page.tsx` and `app/dean/reports/page.tsx` render role-scoped analytical dashboards, requirement bottleneck tables (`Highest Unresolved Requirements`), program/year-level/section breakdowns, completion rate metrics, and secure CSV exports (`exportAdminReportCsvAction`, `exportDeanReportCsvAction`) with activity audit logging. Enforces `assertReportScope` runtime scope allowlists, `parseReportFilterScope` scope validation, `assertReportDatasetWithinLimit` (5,000-application dataset guard), `fetchApprovalsInBatches` (`APPROVAL_BATCH_SIZE = 25`), strict status parsers (`parseApplicationStatus`), `deduplicateApplicationsById` conflict checks, Dean scope isolation (`adviserApproved === true`, no `financialSummary`), and CSV formula injection protection. |
+| **Reports** | `Implemented` | `app/admin/reports/page.tsx` and `app/dean/reports/page.tsx` render role-scoped analytical dashboards, requirement bottleneck tables (`Highest Unresolved Requirements`), program/year-level/section breakdowns, completion rate metrics, and secure CSV exports (`exportAdminReportCsvAction`, `exportDeanReportCsvAction`) with activity audit logging. Enforces `assertReportScope` runtime scope allowlists, `parseReportFilterScope` scope validation, `assertReportDatasetWithinLimit` (5,000-application dataset guard), `fetchApprovalsInBatches` (`APPROVAL_BATCH_SIZE = 25`), strict status parsers (`parseApplicationStatus`), `deduplicateApplicationsById` conflict checks, Dean scope isolation (`deanApproved === true`, no `financialSummary`), and CSV formula injection protection. |
 
 ### Details for Non-Implemented Outputs:
 - None. All 7 Output requirements are fully implemented.
@@ -41,8 +41,8 @@
 | **OSA Coordinator** | `Implemented` | Accesses role-scoped queue for Office of Student Affairs clearance sign-off. |
 | **Guidance Counselor** | `Implemented` | Accesses role-scoped queue for guidance department clearance sign-off. |
 | **Area Chair** | `Implemented` | Accesses role-scoped queue for academic program clearance sign-off. |
-| **Adviser** | `Implemented` | Reviews section/class clearance requirements; approval unlocks application visibility for the Academic Dean. |
-| **Dean** | `Implemented` | Accesses adviser-approved applications queue (`adviserApproved === true`) for high-level academic clearance oversight. |
+| **Adviser (legacy)** | `Compatibility only` | Historical Adviser accounts and approval rows remain readable but cannot be newly created or assigned. |
+| **Dean** | `Implemented` | Reviews and approves the fifth Dean Clearance row in the actionable signatory queue. |
 | **System Administrator** | `Implemented` | Manages system user roles, assigns requirement signatories, seeds demo accounts, and inspects activity audit logs. |
 
 ---
@@ -61,8 +61,8 @@
 | **Required remarks** | `Implemented` | Server action enforces non-empty remarks when setting status to `pending` or `not_approved`. |
 | **Accountant paid / unpaid verification** | `Implemented` | `updateFinancialStatusAction` updates direct application fields `financialStatus` and `financialVerifiedAt`. |
 | **Unpaid blocks approval** | `Implemented` | `lib/clearance/status.ts` forces overall status to `not_approved` whenever `financialStatus === 'unpaid'`. |
-| **Adviser unlocks Dean visibility** | `Implemented` | Dean queue query filters `adviserApproved == true`; setting adviser away from `approved` revokes Dean visibility. |
-| **Dean is not a required signatory** | `Implemented` | Dean review is an oversight layer and is not included as a required approval row in the clearance matrix. |
+| **Dean approves final clearance** | `Implemented` | Dean acts on the fifth approval row; the server writes `deanApproved` and recomputes application counters/status. |
+| **Adviser legacy compatibility** | `Implemented` | Adviser is excluded from active requirements, staff creation, assignment candidates, and new demo data; historical rows remain preserved. |
 | **Printable clearance after full approval** | `Implemented` | `fetchClearanceCertificateAction` blocks certificate generation unless `printableAvailable === true`. |
 | **Notifications** | `Implemented` | Submissions, signatory actions, and financial updates write to `notifications` collection and appear in UI dropdown. |
 | **Activity logging** | `Implemented` | Server actions write audit events in atomic Firestore batches and sanitize sensitive credential metadata via `sanitizeAuditMetadata`. |
@@ -81,7 +81,7 @@ verification evidence, not new requirements:
 
 - `tests/integration/` runs real server actions against the Auth + Firestore emulators and
   asserts persisted state for account lifecycle, mandatory password change, clearance
-  submission, signatory workflow, the accountant financial gate, Adviser→Dean visibility,
+  submission, signatory workflow, the accountant financial gate, Dean signatory approval,
   final approval/printability, reports, and CSV export audit logging.
 - `tests/rules/security-boundaries.test.ts` verifies Firestore Rules with authenticated
   client SDKs (own-record reads allowed; cross-student reads and all privileged client

@@ -39,13 +39,13 @@
 | OSA Coordinator | Review Office of Student Affairs clearance |
 | Guidance Counselor | Review guidance clearance |
 | Area Chair | Review area/department clearance |
-| Adviser | Review adviser clearance and unlock Dean visibility after approval |
-| Dean | View adviser-approved applications for academic review and academic clearance reports |
+| Adviser (legacy) | Historical compatibility only; not available for new assignments |
+| Dean | Approve Dean Clearance and access Dean-scoped reports |
 | Admin | Manage profiles, roles, requirement assignments, activity logs, and institution clearance reports |
 ## Workflow and status rules
 
 1. A student submits one application for an academic year/semester using canonical semester representation ('1st Semester', '2nd Semester', 'Summer Semester'). Legacy records using short-form semester values ('1st', '2nd', 'Summer') are preserved and supported via storage aliases.
-2. The server creates the application, approval rows (5 default required signatories: Librarian, OSA Coordinator, Guidance Counselor, Area Chair, Adviser), student submission confirmation notification, signatory action notifications for assigned or role-wide signatories, and activity log in a Firestore transaction.
+2. The server creates the application, approval rows (5 default required signatories: Librarian, OSA Coordinator, Guidance Counselor, Area Chair, Dean), student submission confirmation notification, signatory action notifications for assigned or role-wide signatories, and activity log in a Firestore transaction.
 3. The Accountant acts as a financial gate only via `financialStatus: 'pending' | 'paid' | 'unpaid'`. The Accountant does not have a duplicate signatory approval row.
 4. Signatories act on their own role queue. An assigned approval can only be acted on by its assigned user; an unassigned row is a role-wide queue item.
 5. Remarks are required for `pending` and `not_approved` decisions and are visible to the student.
@@ -61,7 +61,7 @@
    - Otherwise, overall status is `pending`.
 8. Printable clearance (`printableAvailable`) is true and available only when overall status is `approved`.
    The print view is a prototype/MVP record and makes no official institutional approval claim.
-9. The Dean sees applications only after the Adviser approval is `approved`.
+9. The Dean receives the fifth approval row directly; successful Dean approval writes `deanApproved` and updates the application counters.
 
 ## Data model
 
@@ -71,7 +71,7 @@
 - `clearanceRequirements/{requirementId}`: active role/label/order and optional
   signatory assignment.
 - `clearanceApplications/{applicationId}`: student snapshot, term/purpose,
-  status counters, financial fields, and adviser/print flags.
+  status counters, financial fields, and Dean/print flags.
 - `clearanceApplications/{id}/approvals/{approvalId}`: role, assignment,
   status, latest remark, actor, and timestamps.
 - `clearanceApplications/{id}/remarks/{remarkId}`: immutable remark history.
@@ -96,7 +96,7 @@ Newly created and reset accounts must complete a mandatory password change at `/
 accessing normal dashboards.
 System Administrators and the Academic Dean have access to role-scoped clearance reports and CSV exports:
 - `/admin/reports`: Institution-wide clearance metrics, financial summaries (Paid / Unpaid / Pending), requirement bottlenecks (`Highest Unresolved Requirements`), program/year-level/section breakdowns, and safe CSV data exports.
-- `/dean/reports`: Academic clearance progress for adviser-approved applications (`adviserApproved === true`), program breakdowns, requirement bottlenecks, and role-scoped Dean CSV exports. Financial summaries are excluded from Dean scope.
+- `/dean/reports`: Academic clearance progress for Dean-approved applications (`deanApproved === true`), program breakdowns, requirement bottlenecks, and role-scoped Dean CSV exports. Financial summaries are excluded from Dean scope.
 - **Reporting Architecture & Scaling Guards**:
   * Submitted clearance applications within scope serve as the denominator for completion rates.
   * Dataset Limit Guard: Report queries are bounded to `MAX_REPORT_APPLICATIONS = 5000`. Requests exceeding 5,000 documents throw an explicit error requiring filter narrowing.
@@ -120,7 +120,7 @@ Emulator Suite with a deterministic fictional dataset (`tests/fixtures/demo-data
 - **Integration tests** (`tests/integration/`) execute real server actions and service
   functions against the emulators and assert persisted state: account lifecycle, mandatory
   password change, clearance submission, signatory workflow, accountant financial gate,
-  Adviser→Dean visibility, final approval/printability, reports, and CSV export audit logs.
+  Dean approval, final printability, reports, and CSV export audit logs.
 - **Firestore Rules tests** (`tests/rules/security-boundaries.test.ts`) use the Firebase client
   SDK with authenticated emulator users to prove Rules boundaries (Admin SDK bypasses Rules,
   so these are separate): own-record reads allowed, cross-student reads denied, all

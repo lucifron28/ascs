@@ -37,7 +37,7 @@ Talking points:
 
 - Digitize submission and role-scoped review.
 - Integrate an Accountant financial gate.
-- Provide Adviser-gated Dean oversight and scoped reports.
+- Provide a Dean final approval queue and scoped reports.
 - Preserve a prototype print record for approved cases.
 
 Visual: `05-clearance-workflow.svg`.
@@ -51,8 +51,8 @@ Talking points:
 
 - Student and five clearance signatories.
 - Accountant as a financial gate, not a duplicate signatory.
-- Adviser approval unlocks Dean visibility.
-- Dean is academic oversight, not a required approval row.
+- Dean approves the fifth required clearance row.
+- Dean reports remain a separate privacy-scoped surface.
 - Admin owns account, requirement, log, and report administration.
 
 Visual: `04-role-rbac.svg`.
@@ -106,15 +106,15 @@ Visual: `08-accountant-financial-dialog.png`.
 Speaker notes: Explain why a separate gate avoids treating financial checking as
 a duplicate signatory row.
 
-## Slide 9 - Adviser and Dean oversight
+## Slide 9 - Dean final approval and reports
 
 Talking points:
 
-- Adviser approval sets `adviserApproved`.
-- Dean queue and Dean reports filter to adviser-approved applications.
+- Dean approval sets `deanApproved`.
+- Dean queue is actionable; Dean reports use the Dean-approved scope.
 - Dean reports exclude financial summaries and financial detail.
 
-Visual: `09-adviser-dashboard.png`, `10-dean-dashboard.png`,
+Visual: `09-dean-clearance-queue.png`, `10-dean-review-dialog.png`,
 `14-dean-reports.png`.
 
 ## Slide 10 - Admin functions and reports

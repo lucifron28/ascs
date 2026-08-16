@@ -51,8 +51,8 @@ ASCS operates on nine core collections and subcollections:
 4. **OSA Coordinator:** Reviews Office of Student Affairs clearance requirements.
 5. **Guidance Counselor:** Reviews guidance department clearance requirements.
 6. **Area Chair:** Reviews academic program / department clearance requirements.
-7. **Adviser:** Reviews section/class adviser clearance requirements. Approval unlocks application visibility for the Dean.
-8. **Dean:** Provides read-only academic oversight for adviser-approved clearance applications and Dean-scoped reports; the Dean is not a required signatory.
+7. **Dean:** Reviews and approves the fifth Dean Clearance requirement in the signatory queue.
+8. **Reports:** Dean reports remain available separately and are scoped to Dean-approved applications.
 9. **System Administrator:** Provisions student and staff accounts, manages user roles, deactivates/reactivates accounts, issues temporary passwords, assigns requirement signatories, and inspects activity logs.
 
 ---

@@ -19,7 +19,7 @@ async function login(page: Page, email: string, route: string) {
   await page.goto(`${baseUrl}/login`, { waitUntil: 'networkidle' });
   await page.getByRole('heading', { name: 'Sign In' }).waitFor();
   await page.getByLabel(/email address/i).fill(email);
-  await page.getByLabel(/password/i).fill('password123');
+  await page.getByRole('textbox', { name: 'Password' }).fill('password123');
   await page.getByRole('button', { name: /log in/i }).click();
   await page.waitForURL(`**/${route}`, { timeout: 30_000 });
   await setAscsLightTheme(page);
@@ -96,15 +96,13 @@ async function main() {
     await logout(page);
     ({ context, page } = await replaceContext(browser, context));
 
-    await login(page, 'adviser@example.test', 'adviser/dashboard');
-    await page.getByRole('heading', { name: /pending evaluation queue/i }).waitFor();
-    await capture(page, '09-adviser-dashboard.png');
-    await logout(page);
-    ({ context, page } = await replaceContext(browser, context));
-
     await login(page, 'dean@example.test', 'dean/dashboard');
-    await page.getByRole('heading', { name: /dean clearance oversight/i }).waitFor();
-    await capture(page, '10-dean-dashboard.png');
+    await page.getByRole('heading', { name: /dean clearance queue/i }).waitFor();
+    await capture(page, '09-dean-clearance-queue.png');
+    await page.getByRole('button', { name: /review clearance/i }).first().click();
+    await page.getByRole('dialog', { name: /evaluate clearance requirement/i }).waitFor();
+    await capture(page, '10-dean-review-dialog.png', false);
+    await page.getByRole('dialog').getByRole('button', { name: /close dialog/i }).click();
     await page.goto(`${baseUrl}/dean/reports`, { waitUntil: 'networkidle' });
     await page.getByRole('heading', { name: /academic clearance reports/i }).waitFor();
     await capture(page, '14-dean-reports.png');

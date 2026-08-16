@@ -32,7 +32,7 @@ entity "clearanceApplications/{id}" as Applications {
   academicYear / semester
   overallStatus
   financialStatus
-  adviserApproved
+  deanApproved
   printableAvailable
 }
 entity "approvals/{id}" as Approvals {

@@ -96,27 +96,27 @@ Theme: Corporate
 Viewport: 1440x900
 Purpose: Shows the separate paid/unpaid gate.
 
-## Adviser Dashboard
+## Dean Clearance Queue
 
-![Adviser Dashboard](screenshots/09-adviser-dashboard.png)
-
-Route: `/adviser/dashboard`
-Role: Adviser
-Fixture: pending evaluation queue
-Theme: Corporate
-Viewport: 1440x900
-Purpose: Shows the Adviser-to-Dean visibility gate.
-
-## Dean Dashboard
-
-![Dean Dashboard](screenshots/10-dean-dashboard.png)
+![Dean Clearance Queue](screenshots/09-dean-clearance-queue.png)
 
 Route: `/dean/dashboard`
 Role: Dean
-Fixture: adviser-approved records
+Fixture: pending Dean approval queue
 Theme: Corporate
 Viewport: 1440x900
-Purpose: Shows academic oversight without a signatory action row.
+Purpose: Shows the actionable fifth signatory queue.
+
+## Dean Review Dialog
+
+![Dean Review Dialog](screenshots/10-dean-review-dialog.png)
+
+Route: `/dean/dashboard`
+Role: Dean
+Fixture: Dean Clearance review dialog
+Theme: Corporate
+Viewport: 1440x900
+Purpose: Shows Dean approve/pending/not-approved actions.
 
 ## Admin Overview
 
@@ -158,7 +158,7 @@ financial summaries.
 
 Route: `/dean/reports`
 Role: Dean
-Fixture: Adviser-approved scope
+Fixture: Dean-approved scope
 Theme: Corporate
 Viewport: 1440x900
 Purpose: Shows normalized PKM program labels with the academic financial

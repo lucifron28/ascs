@@ -45,8 +45,8 @@ password or revert a workflow state. Determinism comes from
 Fixtures live in `tests/fixtures/demo-data.ts` (fictional `@example.test`
 accounts; no real student or institutional data). Seeded state:
 
-- 8 staff accounts: Admin, Dean, Librarian, Accountant, OSA Coordinator,
-  Guidance Counselor, Area Chair, Adviser
+- 7 active staff accounts: Admin, Dean, Librarian, Accountant, OSA Coordinator,
+  Guidance Counselor, Area Chair; legacy Adviser accounts are not seeded
 - 7 students A–G:
   - **A** — all 5 signatory approvals approved, `paid`, `approved`,
     `printableAvailable = true`
@@ -57,7 +57,7 @@ accounts; no real student or institutional data). Seeded state:
   - **F** — `inactive`, `isActive = false`, Auth user disabled
   - **G** — `mustChangePassword = false`, active student for live E2E submission
 - 5 clearance requirements (Librarian, OSA Coordinator, Guidance Counselor,
-  Area Chair, Adviser) with deterministic IDs and assigned signatories; no
+  Area Chair, Dean) with deterministic IDs and assigned signatories; no
   Accountant approval row
 - 4 clearance applications with approvals, remarks, notifications, and
   activity logs for the seeded term (2026-2027, 1st Semester)
@@ -126,9 +126,9 @@ runs a global setup (`scripts/prepare-e2e.ts`) that resets and seeds before the 
 - `financial-workflow.test.ts` — Accountant-only gate, valid/invalid values,
   unpaid-requires-remarks, paid/unpaid status derivation, activity log,
   notification, no Accountant approval row
-- `dean-visibility.test.ts` — hidden before Adviser approval, visible after,
-  revocation on revert, Dean not a signatory, Dean cannot run Admin actions,
-  Dean report scope + no financial summary
+- `dean-visibility.test.ts` — Dean queue visibility, Dean approval state and
+  counters, Adviser exclusion, Dean cannot run Admin actions, Dean report
+  scope + no financial summary
 - `clearance-completion.test.ts` — approved+paid → printable; approved+unpaid →
   not printable; pending → not printable; not_approved → not printable;
   certificate action refuses when not printable
@@ -148,8 +148,8 @@ Authenticated client-SDK tests against the emulator:
 
 ### Browser acceptance (`tests/e2e/`)
 
-- `live-clearance-journey.spec.ts` — full 9-step multi-role browser clearance journey
-  (Student G submission → 5 signatories -> Accountant -> Adviser -> Dean oversight -> Student approved status & print control enabled)
+- `live-clearance-journey.spec.ts` — full multi-role browser clearance journey
+  (Student G submission → 5 signatories -> Accountant -> Dean approval -> Student approved status & print control enabled)
 - `password-change.spec.ts` — mandatory password journey (login → forced
   change → direct dashboard nav rejected → wrong password error → change →
   re-login with new password → dashboard)

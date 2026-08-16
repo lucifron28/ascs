@@ -39,7 +39,7 @@ status pending.
 ### 1:30 - Signatory review
 
 Log in as `guidance@example.test` (or use the assigned Librarian, OSA, Chair,
-or Adviser account). Open the pending queue and the Review dialog. Show the
+or Dean account). Open the pending queue and the Review dialog. Show the
 requirement context, remarks field, and the Approved/Pending/Not Approved
 actions. Approve the selected requirement.
 
@@ -52,16 +52,16 @@ Log in as `accountant@example.test`. Open the financial queue and select the
 application. In the Update Financial Account dialog, mark it Paid. Explain that
 the financial state is stored directly on the application.
 
-### 3:30 - Adviser unlock
+### 3:30 - Dean approval
 
-Log in as `adviser@example.test`, approve the Adviser requirement, and explain
-that this sets `adviserApproved`. If the live submission is taking too long,
-switch to Student D or the pre-seeded Adviser-approved records.
+Log in as `dean@example.test`, approve the Dean Clearance requirement, and
+explain that this sets `deanApproved` and recomputes the application status. If
+the live submission is taking too long, switch to the pre-seeded Dean queue.
 
-### 4:30 - Dean visibility
+### 4:30 - Dean reports
 
-Log in as `dean@example.test`. Show that the Dean queue contains only
-adviser-approved applications. Open `/dean/reports` and point out that the
+Log in as `dean@example.test`. Show the actionable Dean queue and open
+`/dean/reports`; point out that the
 financial summary is intentionally absent.
 
 ### 5:30 - Final student state and print prototype

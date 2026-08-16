@@ -24,17 +24,16 @@ NotApproved --> [*] : print blocked; remarks visible
 
 state "Five required signatory rows" as Signatories
 state "Accountant financial gate" as Financial
-state "Adviser approved" as AdviserGate
-state "Dean visibility" as DeanView
+state "Dean approved" as DeanGate
+state "Dean reports" as DeanReports
 
 Pending --> Signatories : evaluate rows
 Pending --> Financial : update paid / unpaid
-Signatories --> AdviserGate : Adviser approved
-AdviserGate --> DeanView : filter Dean queue/reports
+Signatories --> DeanGate : Dean approves fifth row
+DeanGate --> DeanReports : reports remain separately scoped
 
-note right of DeanView
-Academic oversight only;
-not a required signatory row.
+note right of DeanReports
+Dean reports exclude financial details.
 end note
 
 note right of Approved
