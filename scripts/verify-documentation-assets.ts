@@ -26,6 +26,9 @@ const screenshots = [
 ];
 
 const fullPageScreenshots = new Set([
+  '02-student-dashboard-approved.png',
+  '13-admin-reports.png',
+  '14-dean-reports.png',
   '15-printable-clearance-prototype.png',
   '16-not-approved-student-view.png',
 ]);
