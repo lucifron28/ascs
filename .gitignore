@@ -28,6 +28,7 @@
 .DS_Store
 *.pem
 /clearance.jpg
+/outputs/
 
 # debug
 npm-debug.log*
