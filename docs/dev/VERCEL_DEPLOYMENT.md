@@ -45,11 +45,14 @@ unprotected/custom-domain deployment, or for a run supplied with an approved
 temporary SSO bypass and demo credentials. No bypass secret or credentials are
 stored in this repository.
 
-The authenticated Student/Admin browser smoke portion of
-`npm run verify:vercel` could not run because the Production project has no
-`VERCEL_DEMO_*` credential variables and Vercel SSO remains enabled. No
-authenticated success is claimed here; a client-provided test account or
-approved temporary bypass is required for that final browser check.
+The authenticated `npm run verify:vercel` smoke passed against the aliased
+Production deployment using the fictional Student, Librarian, Dean, and Admin
+accounts with the test password supplied out-of-band. It exercised the
+Student dashboard/logout, the Librarian pending queue, the actionable Dean
+queue and review dialog, Admin Reports/logout, the demo banner, and confirmed
+that no browser request targeted `127.0.0.1:8080` or `127.0.0.1:9099`. The
+credential values were process-only and are not stored in Vercel or the
+repository.
 
 The current local development and screenshot environment uses Firebase Emulator
 Suite project `ascs11` on Auth `127.0.0.1:9099` and Firestore
@@ -135,17 +138,14 @@ The procedure used for the verified deployment was:
 ## Verification checklist
 
 - [x] `GET /` and `GET /login` load successfully.
-- [ ] Fictional Student can log in, reach the Student Dashboard, and log out
-      (blocked by missing approved remote test credentials/SSO access).
-- [ ] Fictional Admin can log in, open Admin Reports, and log out (blocked by
-      missing approved remote test credentials/SSO access).
-- [ ] An authenticated Server Action succeeds using session verification,
-      Firebase Admin SDK, and Firestore (requires the same access).
-- [ ] Admin Reports load remotely (requires the same access).
-- [ ] Authenticated browser behavior shows no request to `127.0.0.1:8080` or
-      `127.0.0.1:9099` (the public checks do not exercise authenticated routes).
-- [ ] Demo/Fictional Data banner is visible on an authenticated dashboard
-      (requires the same access).
+- [x] Fictional Student can log in, reach the Student Dashboard, and log out.
+- [x] Fictional Admin can log in, open Admin Reports, and log out.
+- [x] An authenticated Server Action succeeds using session verification,
+      Firebase Admin SDK, and Firestore.
+- [x] Admin Reports load remotely.
+- [x] Authenticated browser behavior shows no request to `127.0.0.1:8080` or
+      `127.0.0.1:9099`.
+- [x] Demo/Fictional Data banner is visible on an authenticated dashboard.
 - [x] Firestore indexes are deployed, including the `approvals` collection-group
       `status` index and `deanApproved` application indexes.
 - [x] Guarded Adviser-to-Dean migration applied and verified against `ascs11`.
