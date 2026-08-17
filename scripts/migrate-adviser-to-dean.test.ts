@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDeanApprovalData } from './migrate-adviser-to-dean';
+import { assertNoFabricatedDeanDecision, buildDeanApprovalData } from './migrate-adviser-to-dean';
 
 const baseInput = {
   deanUid: 'dean-uid',
@@ -97,4 +97,32 @@ test('an existing Dean row is reused on a second run rather than duplicated', ()
   assert.equal(second.actedAt, null);
   assert.equal(second.signatoryRole, 'dean');
   assert.equal(second.requirementId, 'dean');
+});
+
+test('migration verification rejects a fabricated decision on an Adviser-derived Dean row', () => {
+  assert.throws(
+    () => assertNoFabricatedDeanDecision({
+      legacyAdviserApproval: { status: 'approved', legacyRetained: true, legacyMigratedTo: 'dean' },
+      deanApproval: {
+        status: 'approved',
+        migratedFromLegacyAdviser: true,
+        actedById: 'adviser-uid',
+      },
+    }),
+    /fabricated a Dean decision/i,
+  );
+});
+
+test('migration verification accepts an Adviser-derived Dean row only while it is pending and action-free', () => {
+  assert.doesNotThrow(() => assertNoFabricatedDeanDecision({
+    legacyAdviserApproval: { status: 'approved', legacyRetained: true, legacyMigratedTo: 'dean' },
+    deanApproval: {
+      status: 'pending',
+      migratedFromLegacyAdviser: true,
+      remarksLatest: null,
+      actedById: null,
+      actedByName: null,
+      actedAt: null,
+    },
+  }));
 });

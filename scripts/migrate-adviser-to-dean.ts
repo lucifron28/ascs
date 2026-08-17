@@ -79,6 +79,35 @@ export interface DeanApprovalMigrationInput {
 }
 
 /**
+ * Validate the audit marker used for a Dean row created from legacy Adviser
+ * history. The marker is intentionally strict: a migrated Adviser-only row
+ * may not carry a decision, remarks, timestamp, or actor identity. Once a
+ * real Dean signs the row, signClearanceAction clears the marker.
+ */
+export function assertNoFabricatedDeanDecision(input: {
+  deanApproval: Record<string, unknown>;
+  legacyAdviserApproval: Record<string, unknown> | null;
+}): void {
+  if (input.deanApproval.migratedFromLegacyAdviser !== true) return;
+
+  if (!input.legacyAdviserApproval) {
+    throw new Error('Verification failed: a migrated Dean row has no retained legacy Adviser source row.');
+  }
+
+  const actionFields = ['remarksLatest', 'actedById', 'actedByName', 'actedAt'] as const;
+  const copiedActionField = actionFields.find((field) => {
+    const value = input.deanApproval[field];
+    return value !== null && value !== undefined && value !== '';
+  });
+
+  if (input.deanApproval.status !== 'pending' || copiedActionField) {
+    throw new Error(
+      `Verification failed: Adviser-only migration fabricated a Dean decision${copiedActionField ? ` via ${copiedActionField}` : ''}.`,
+    );
+  }
+}
+
+/**
  * Build the Dean row without ever treating a legacy Adviser decision as a
  * Dean decision. Existing genuine Dean actions are preserved field-for-field
  * where possible; an Adviser-only migration always starts pending.
@@ -144,14 +173,25 @@ export async function verifyMigrationState(): Promise<void> {
   const activeRoles = activeRequirements.map((doc) => String(doc.data().role));
   const uniqueActiveRoles = new Set(activeRoles);
 
-  if (uniqueActiveRoles.size !== REQUIRED_SIGNATORY_ROLES.length || !REQUIRED_SIGNATORY_ROLES.every((role) => uniqueActiveRoles.has(role))) {
+  if (
+    activeRequirements.length !== REQUIRED_SIGNATORY_ROLES.length ||
+    uniqueActiveRoles.size !== REQUIRED_SIGNATORY_ROLES.length ||
+    !REQUIRED_SIGNATORY_ROLES.every((role) => uniqueActiveRoles.has(role))
+  ) {
     throw new Error(`Verification failed: expected exactly five active roles (${REQUIRED_SIGNATORY_ROLES.join(', ')}), got ${activeRoles.join(', ')}.`);
   }
   if (activeRoles.includes('adviser')) {
     throw new Error('Verification failed: Adviser requirement is still active.');
   }
 
-  const deanRequirement = requirementsSnap.docs.find((doc) => doc.data().role === 'dean');
+  const orderedActiveRoles = [...activeRequirements]
+    .sort((a, b) => Number(a.data().displayOrder || 999) - Number(b.data().displayOrder || 999))
+    .map((doc) => String(doc.data().role));
+  if (orderedActiveRoles.join('|') !== REQUIRED_SIGNATORY_ROLES.join('|')) {
+    throw new Error(`Verification failed: active requirement order is ${orderedActiveRoles.join(', ')}.`);
+  }
+
+  const deanRequirement = activeRequirements.find((doc) => doc.data().role === 'dean');
   if (!deanRequirement || deanRequirement.data().label !== 'Dean Clearance') {
     throw new Error('Verification failed: Dean Clearance requirement is missing or mislabeled.');
   }
@@ -173,6 +213,20 @@ export async function verifyMigrationState(): Promise<void> {
 
     const deanApproval = activeApprovals.find((doc) => doc.data().signatoryRole === 'dean');
     if (!deanApproval) throw new Error(`Verification failed: application ${app.id} is missing its Dean approval.`);
+
+    const legacyAdviserApproval = approvalsSnap.docs.find((doc) =>
+      doc.id === 'adviser' || doc.data().signatoryRole === 'adviser',
+    );
+    assertNoFabricatedDeanDecision({
+      deanApproval: deanApproval.data(),
+      legacyAdviserApproval: legacyAdviserApproval?.data() || null,
+    });
+    if (legacyAdviserApproval && (
+      legacyAdviserApproval.data().legacyRetained !== true ||
+      legacyAdviserApproval.data().legacyMigratedTo !== 'dean'
+    )) {
+      throw new Error(`Verification failed: application ${app.id} did not retain its legacy Adviser approval markers.`);
+    }
 
     const appData = app.data();
     const expectedDeanApproved = deanApproval.data().status === 'approved';
@@ -240,7 +294,7 @@ export async function migrateAdviserToDean(options: MigrationOptions): Promise<M
 
   const requirementsSnap = await firestore.collection('clearanceRequirements').get();
   const deanRequirement = requirementsSnap.docs.find((doc) => doc.data().role === 'dean');
-  const adviserRequirement = requirementsSnap.docs.find((doc) => doc.data().role === 'adviser');
+  const adviserRequirements = requirementsSnap.docs.filter((doc) => doc.data().role === 'adviser');
   const deanRequirementRef = deanRequirement?.ref || firestore.collection('clearanceRequirements').doc('dean');
   const deanRequirementData = deanRequirement?.data() || {};
 
@@ -256,7 +310,7 @@ export async function migrateAdviserToDean(options: MigrationOptions): Promise<M
   }, { merge: true }));
   report.requirementsUpdated++;
 
-  if (adviserRequirement) {
+  for (const adviserRequirement of adviserRequirements) {
     await queueWrite((current) => current.update(adviserRequirement.ref, {
       isActive: false,
       legacyOnly: true,

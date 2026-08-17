@@ -402,6 +402,9 @@ export async function signClearanceAction(data: {
       transaction.update(approvalRef, {
         status: data.status,
         remarksLatest: data.remarks || null,
+        // A real Dean action supersedes the migration marker that records
+        // the row was initially created from legacy Adviser history.
+        migratedFromLegacyAdviser: false,
         // Unassigned approvals remain role-wide queue items. The actor is
         // recorded separately rather than silently converting a queue item
         // into an assignment.
