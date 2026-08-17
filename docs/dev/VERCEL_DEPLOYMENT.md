@@ -40,6 +40,14 @@ unprotected/custom-domain deployment; the verified run used a temporary local
 Playwright verifier with the project’s existing protection-bypass secret. That
 verifier and all credentials were removed from the repository after the run.
 
+That verification applies to the recorded deployment SHA `86f55b5`. The
+Dean-flow repair branch is currently at `129fdef` and has not been promoted to
+this Vercel deployment. Its guarded Adviser-to-Dean migration and a remote
+Librarian/Dean smoke test therefore remain pending. The authenticated Vercel
+project currently exposes empty `FIREBASE_PROJECT_ID`,
+`FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` values; the migration must
+remain blocked until real service-account credentials are configured securely.
+
 The current local development and screenshot environment uses Firebase Emulator
 Suite project `ascs11` on Auth `127.0.0.1:9099` and Firestore
 `127.0.0.1:8080`. Those emulator settings must never be configured on Vercel.
