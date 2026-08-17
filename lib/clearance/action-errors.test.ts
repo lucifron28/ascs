@@ -25,4 +25,8 @@ test('clearance business validation errors remain specific', () => {
     mapClearanceActionError('signClearance', new Error('Unauthorized: This approval is assigned to another signatory.')),
     'Unauthorized: This approval is assigned to another signatory.',
   );
+  assert.equal(
+    mapClearanceActionError('fetchStudentDashboard', new Error('Password change required before accessing this operation.')),
+    'Password change required before accessing this operation.',
+  );
 });

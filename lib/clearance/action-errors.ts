@@ -21,6 +21,7 @@ const SAFE_BUSINESS_MESSAGES = [
   /^(?:remarks are required when marking a student as 'unpaid'\.)$/i,
   /^(?:clearance application not found\.)$/i,
   /^(?:student profile record not found\. please contact administration\.)$/i,
+  /^(?:password change required before accessing this operation\.)$/i,
 ];
 
 function getErrorMessage(error: unknown): string {
