@@ -15,38 +15,41 @@ the normal Firebase login form and no remote password is exposed client-side.
 | --- | --- |
 | Vercel project | `ron-cada-projects/ascs` |
 | Deployment URL | <https://ascs-one.vercel.app> |
-| Latest production deployment | <https://ascs-544rgd0u4-ron-cada-projects.vercel.app> |
-| Deployment ID | `dpl_HDvVDTyzcBBCTxLaT1wPHHinQMJs` |
-| Deployment date | 2026-08-10 |
-| Deployed Git SHA | `86f55b5` |
+| Latest production deployment | <https://ascs-hqa4eu7u9-ron-cada-projects.vercel.app> |
+| Deployment ID | `dpl_6fH8ddsKDMfXStwxR7PkW63x4qua` |
+| Deployment date | 2026-08-17 |
+| Deployed Git SHA | `f58904ed90a005c55f6197c5184a960b6d54b420` (local `main` at deployment time) |
 | Firebase demo project | `ascs11` (fictional demo data) |
 | Firestore database | `(default)` in `asia-southeast1` |
 | Demo mode | `NEXT_PUBLIC_DEMO_MODE=true` |
 | Emulator mode | `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=false` |
-| Deployment protection | Vercel SSO remains enabled; protected smoke test used the project bypass secret |
+| Deployment protection | Vercel SSO remains enabled; no bypass secret or demo credentials are stored in the repository |
 
 ### Verification result
 
-The production deployment is verified against the dedicated fictional Firebase
-project `ascs11`. Firebase Authentication email/password sign-in, the Admin
-session-cookie route, Firestore profile reads, the Student dashboard, Admin
-Reports, logout, and the remote demo banner were exercised successfully. The
-browser smoke test also confirmed that no request targeted the local emulator
-hosts `127.0.0.1:8080` or `127.0.0.1:9099`.
+The production deployment is connected to the dedicated fictional Firebase
+project `ascs11`. Public checks for `/` and `/login` returned HTTP 200. The
+Production Firebase Admin variables are configured as encrypted Vercel
+variables, and emulator host variables are absent.
+
+The post-merge Firestore verification confirmed five ordered active roles
+(Librarian, OSA Coordinator, Guidance Counselor, Area Chair, and Dean), an
+inactive legacy Adviser requirement, five migrated applications with five
+active approval roles each, retained legacy Adviser rows, Dean/Auth role
+alignment, zero active `users`/`publicUsers` role mismatches, and a successful
+`approvals.status == pending` collection-group query.
 
 Vercel SSO protection is intentionally still enabled. The public
 `npm run verify:vercel` command therefore remains suitable only for an
-unprotected/custom-domain deployment; the verified run used a temporary local
-Playwright verifier with the project’s existing protection-bypass secret. That
-verifier and all credentials were removed from the repository after the run.
+unprotected/custom-domain deployment, or for a run supplied with an approved
+temporary SSO bypass and demo credentials. No bypass secret or credentials are
+stored in this repository.
 
-That verification applies to the recorded deployment SHA `86f55b5`. The
-Dean-flow repair branch is currently at `129fdef` and has not been promoted to
-this Vercel deployment. Its guarded Adviser-to-Dean migration and a remote
-Librarian/Dean smoke test therefore remain pending. The authenticated Vercel
-project currently exposes empty `FIREBASE_PROJECT_ID`,
-`FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` values; the migration must
-remain blocked until real service-account credentials are configured securely.
+The authenticated Student/Admin browser smoke portion of
+`npm run verify:vercel` could not run because the Production project has no
+`VERCEL_DEMO_*` credential variables and Vercel SSO remains enabled. No
+authenticated success is claimed here; a client-provided test account or
+approved temporary bypass is required for that final browser check.
 
 The current local development and screenshot environment uses Firebase Emulator
 Suite project `ascs11` on Auth `127.0.0.1:9099` and Firestore
@@ -115,10 +118,12 @@ The procedure used for the verified deployment was:
 2. Configure the client variables, `NEXT_PUBLIC_DEMO_MODE=true`,
    `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=false`, and the protected Firebase Admin
    variables in Vercel Production. Emulator host variables were not configured.
-3. Deploy the pushed Git SHA using the authenticated Vercel CLI.
+3. Deploy the merged `main` SHA using the authenticated Vercel CLI and record
+   the resulting deployment ID and alias.
 4. Deploy `firestore.rules` and `firestore.indexes.json` to the `(default)`
    Firestore database and wait for all indexes to reach `READY`.
-5. Run the remote smoke test without starting the local Playwright web server:
+5. Run the remote smoke test without starting the local Playwright web server
+   when approved demo credentials or a temporary SSO bypass are available:
 
    ```bash
    VERCEL_BASE_URL=https://<verified-hostname> npm run verify:vercel
@@ -130,13 +135,20 @@ The procedure used for the verified deployment was:
 ## Verification checklist
 
 - [x] `GET /` and `GET /login` load successfully.
-- [x] Fictional Student can log in, reach the Student Dashboard, and log out.
-- [x] Fictional Admin can log in, open Admin Reports, and log out.
-- [x] At least one authenticated Server Action succeeds using session
-      verification, Firebase Admin SDK, and Firestore.
-- [x] Admin Reports load remotely.
-- [x] Browser behavior shows no request to `127.0.0.1:8080` or `127.0.0.1:9099`.
-- [x] Demo/Fictional Data banner is visible.
+- [ ] Fictional Student can log in, reach the Student Dashboard, and log out
+      (blocked by missing approved remote test credentials/SSO access).
+- [ ] Fictional Admin can log in, open Admin Reports, and log out (blocked by
+      missing approved remote test credentials/SSO access).
+- [ ] An authenticated Server Action succeeds using session verification,
+      Firebase Admin SDK, and Firestore (requires the same access).
+- [ ] Admin Reports load remotely (requires the same access).
+- [ ] Authenticated browser behavior shows no request to `127.0.0.1:8080` or
+      `127.0.0.1:9099` (the public checks do not exercise authenticated routes).
+- [ ] Demo/Fictional Data banner is visible on an authenticated dashboard
+      (requires the same access).
+- [x] Firestore indexes are deployed, including the `approvals` collection-group
+      `status` index and `deanApproved` application indexes.
+- [x] Guarded Adviser-to-Dean migration applied and verified against `ascs11`.
 - [x] Remote demo credentials are not present in the repository or public
       documentation.
 
