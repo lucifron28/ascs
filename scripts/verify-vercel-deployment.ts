@@ -15,7 +15,7 @@ async function login(
 ) {
   await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
   await page.getByLabel(/email address/i).fill(email);
-  await page.getByLabel(/password/i).fill(password);
+  await page.getByRole('textbox', { name: 'Password' }).fill(password);
   await page.getByRole('button', { name: /log in/i }).click();
   await page.waitForURL(`**/${route}`, { timeout: 30_000 });
 }

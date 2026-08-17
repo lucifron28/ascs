@@ -183,7 +183,7 @@ export interface ApplicationDetailRow {
   semester: string;
   overallStatus: string;
   financialStatus?: string;
-  adviserApproved?: boolean;
+  deanApproved?: boolean;
   submittedAt?: string;
 }
 
@@ -233,7 +233,7 @@ export function generateApplicationDetailCsv(
       sanitizeCsvCell('Academic Year'),
       sanitizeCsvCell('Semester'),
       sanitizeCsvCell('Overall Status'),
-      sanitizeCsvCell('Adviser Approved'),
+      sanitizeCsvCell('Dean Approved'),
       sanitizeCsvCell('Submitted At'),
     ].join(','));
 
@@ -247,7 +247,7 @@ export function generateApplicationDetailCsv(
         sanitizeCsvCell(app.academicYear),
         sanitizeCsvCell(app.semester),
         sanitizeCsvCell(app.overallStatus),
-        sanitizeCsvCell(app.adviserApproved ? 'Yes' : 'No'),
+        sanitizeCsvCell(app.deanApproved ? 'Yes' : 'No'),
         sanitizeCsvCell(app.submittedAt || ''),
       ].join(','));
     }

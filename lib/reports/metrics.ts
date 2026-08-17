@@ -44,6 +44,8 @@ export interface RawApplicationData {
   program?: string;
   yearLevel?: string | number;
   section?: string;
+  deanApproved?: boolean;
+  /** @deprecated Read-only compatibility for pre-migration report rows. */
   adviserApproved?: boolean;
 }
 
@@ -57,7 +59,7 @@ export interface RawApprovalData {
 /**
  * Deduplicates applications by ID.
  * Throws a report data-integrity error if duplicate IDs contain contradictory reporting fields
- * (overallStatus, financialStatus, program, yearLevel, section, or adviserApproved).
+ * (overallStatus, financialStatus, program, yearLevel, section, or deanApproved).
  */
 export function deduplicateApplicationsById(
   applications: RawApplicationData[]
@@ -74,7 +76,7 @@ export function deduplicateApplicationsById(
         (existing.program || '').trim() !== (app.program || '').trim() ||
         String(existing.yearLevel || '').trim() !== String(app.yearLevel || '').trim() ||
         (existing.section || '').trim() !== (app.section || '').trim() ||
-        Boolean(existing.adviserApproved) !== Boolean(app.adviserApproved);
+        Boolean(existing.deanApproved) !== Boolean(app.deanApproved);
 
       if (isContradictory) {
         throw new Error(

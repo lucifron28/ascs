@@ -3,7 +3,7 @@
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { normalizeSemester, getApplicationTermDocumentIds } from '@/lib/academic-term';
 import { getAuthenticatedUser } from '@/lib/auth/session';
-import { getClearanceStatusSummary } from '@/lib/clearance/status';
+import { getClearanceStatusSummary, REQUIRED_SIGNATORY_ROLES } from '@/lib/clearance/status';
 import type { QueryDocumentSnapshot, Transaction, DocumentData } from 'firebase-admin/firestore';
 
 // 1. Submit Clearance Application (Student)
@@ -66,7 +66,7 @@ export async function submitApplicationAction(data: {
             assignedSignatoryName: (reqData.assignedSignatoryName as string | null) || null,
           };
         })
-        .filter((req) => req.role !== 'accountant');
+        .filter((req) => (REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(req.role));
 
       if (activeReqs.length === 0) {
         throw new Error('No active clearance signatory requirements are configured.');
@@ -119,7 +119,7 @@ export async function submitApplicationAction(data: {
         financialRemarks: null,
         financialUpdatedBy: null,
         financialUpdatedByName: null,
-        adviserApproved: false,
+        deanApproved: false,
         printableAvailable: false,
         pendingCount: activeReqs.length,
         approvedCount: 0,
@@ -237,7 +237,11 @@ export async function fetchStudentDashboardAction() {
       reqsMap.set(doc.id, doc.data());
     });
 
-    const approvals = approvalsQuery.docs.map(doc => {
+    const activeRoleSet = new Set<string>(REQUIRED_SIGNATORY_ROLES);
+    const approvals = approvalsQuery.docs.filter((doc) => {
+      const role = doc.data().signatoryRole;
+      return typeof role === 'string' && activeRoleSet.has(role);
+    }).map(doc => {
       const data = doc.data();
       const req = reqsMap.get(data.requirementId);
       return {
@@ -290,8 +294,8 @@ export async function fetchPendingApprovalsAction() {
     const { uid: userId, user } = await getAuthenticatedUser();
     const role = user.role;
 
-    if (!role || role === 'student') {
-      throw new Error('Unauthorized: Student role cannot access evaluator queues.');
+    if (!(REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(role)) {
+      throw new Error('Unauthorized: Only active clearance signatories can access evaluator queues.');
     }
 
     const firestore = getAdminFirestore();
@@ -346,6 +350,9 @@ export async function signClearanceAction(data: {
 }) {
   try {
     const { uid: signatoryId, user } = await getAuthenticatedUser();
+    if (!(REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(user.role)) {
+      throw new Error('Unauthorized: This account is not an active clearance signatory.');
+    }
     if (!data.applicationId || !data.approvalId) {
       throw new Error('Application and approval identifiers are required.');
     }
@@ -388,14 +395,16 @@ export async function signClearanceAction(data: {
         signatoryRole: doc.id === data.approvalId ? approvalData.signatoryRole : doc.data().signatoryRole,
       }));
       const summary = getClearanceStatusSummary(approvalStatuses, appData.financialStatus);
-      const adviserApproved = approvalStatuses.some(
-        (approval) => approval.signatoryRole === 'adviser' && approval.status === 'approved',
-      );
+      const deanRows = approvalStatuses.filter((approval) => approval.signatoryRole === 'dean');
+      const deanApproved = deanRows.length > 0 && deanRows.every((approval) => approval.status === 'approved');
       const now = new Date().toISOString();
 
       transaction.update(approvalRef, {
         status: data.status,
         remarksLatest: data.remarks || null,
+        // A real Dean action supersedes the migration marker that records
+        // the row was initially created from legacy Adviser history.
+        migratedFromLegacyAdviser: false,
         // Unassigned approvals remain role-wide queue items. The actor is
         // recorded separately rather than silently converting a queue item
         // into an assignment.
@@ -422,7 +431,7 @@ export async function signClearanceAction(data: {
         pendingCount: summary.pendingCount,
         approvedCount: summary.approvedCount,
         notApprovedCount: summary.notApprovedCount,
-        adviserApproved,
+        deanApproved,
         printableAvailable: summary.printableAvailable,
         updatedAt: now,
       });
@@ -590,7 +599,7 @@ export async function updateFinancialStatusAction(data: {
   }
 }
 
-// 7. Fetch Dean Clearance Applications Queue (restricted to adviserApproved === true)
+// 7. Fetch Dean Clearance Applications Queue (legacy read endpoint)
 export async function fetchDeanApplicationsAction() {
   try {
     const { user } = await getAuthenticatedUser();
@@ -601,7 +610,7 @@ export async function fetchDeanApplicationsAction() {
 
     const firestore = getAdminFirestore();
     const appsQuery = await firestore.collection('clearanceApplications')
-      .where('adviserApproved', '==', true)
+      .where('deanApproved', '==', true)
       .orderBy('submittedAt', 'desc')
       .get();
 
@@ -676,7 +685,9 @@ export async function fetchClearanceCertificateAction(applicationId: string) {
     const reqsMap = new Map();
     reqsQuery.forEach((doc) => reqsMap.set(doc.id, doc.data()));
 
+    const activeRoleSet = new Set<string>(REQUIRED_SIGNATORY_ROLES);
     const approvals = approvalsQuery.docs
+      .filter((doc) => activeRoleSet.has(String(doc.data().signatoryRole || '')))
       .map((doc) => {
         const data = doc.data();
         const req = reqsMap.get(data.requirementId);

@@ -129,6 +129,15 @@ export default function SignatoryDashboard() {
     return str.replace('_', ' ').toUpperCase();
   };
 
+  const formatSemester = (value: unknown) => {
+    if (typeof value !== 'string' || !value.trim()) return 'Unspecified semester';
+    try {
+      return normalizeSemester(value);
+    } catch {
+      return value;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-base-content">
@@ -191,7 +200,7 @@ export default function SignatoryDashboard() {
               </thead>
               <tbody>
                 {queue.map((app) => (
-                  <tr key={app.approval_id} className="bg-base-200/50 hover:bg-base-200 border border-base-content/10 rounded-xl transition-all">
+                  <tr key={`${app.application_id}-${app.approval_id}`} className="bg-base-200/50 hover:bg-base-200 border border-base-content/10 rounded-xl transition-all">
                     <td className="font-semibold text-base-content py-4 rounded-l-xl pl-4 flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-base-300 flex items-center justify-center">
                         <User className="w-4 h-4 text-base-content/60" aria-hidden="true" />
@@ -200,7 +209,7 @@ export default function SignatoryDashboard() {
                     </td>
                     <td className="text-base-content/80 py-4 font-mono text-xs">{app.student_id_number}</td>
                     <td className="text-base-content/80 py-4">
-                      {app.academic_year} • {normalizeSemester(app.semester)}
+                      {app.academic_year} • {formatSemester(app.semester)}
                     </td>
                     <td className="text-base-content/80 py-4">
                       <span className="badge badge-sm border border-base-content/10 bg-base-300 text-base-content rounded-md font-medium px-2 py-0.5">
@@ -269,7 +278,7 @@ export default function SignatoryDashboard() {
               <div>
                 <span className="text-base-content/60 font-medium">Academic Term:</span>{' '}
                 <span className="text-base-content">
-                  {selectedApp.academic_year} • {normalizeSemester(selectedApp.semester)}
+                  {selectedApp.academic_year} • {formatSemester(selectedApp.semester)}
                 </span>
               </div>
               <div>

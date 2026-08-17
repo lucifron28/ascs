@@ -142,16 +142,6 @@ export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] = [
     description: 'Reviews the Academic Department clearance requirement.',
   },
   {
-    id: 'adviser',
-    uid: 'demo-adviser-uid',
-    email: 'adviser@example.test',
-    label: 'Adviser',
-    fullName: 'Class Adviser',
-    role: 'adviser',
-    group: 'Clearance Signatories',
-    description: 'Reviews the Adviser requirement. Approval unlocks Dean visibility.',
-  },
-  {
     id: 'accountant',
     uid: 'demo-accountant-uid',
     email: 'accountant@example.test',
@@ -168,8 +158,8 @@ export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] = [
     label: 'Dean',
     fullName: 'Academic Dean',
     role: 'dean',
-    group: 'Financial / Oversight',
-    description: 'Provides read-only academic oversight after Adviser approval.',
+    group: 'Clearance Signatories',
+    description: 'Reviews and approves the Dean Clearance requirement.',
   },
   {
     id: 'admin',

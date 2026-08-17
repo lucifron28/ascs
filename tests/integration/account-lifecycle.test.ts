@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-auth';
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
-import { updateUserRoleAction } from '@/app/actions/admin';
+import { updateRequirementAssignmentAction, updateUserRoleAction } from '@/app/actions/admin';
 import { registerStudentAccountAction } from '@/app/actions/registration';
 import {
   createStudentAccountAction,
@@ -12,6 +12,7 @@ import {
   reactivateUserAccountAction,
   resetUserTemporaryPasswordAction,
 } from '@/app/actions/admin-accounts';
+import { fetchSignatoryCandidatesAction } from '@/app/actions/admin';
 
 describe('Account Lifecycle Integration Tests', () => {
   let adminSession: string;
@@ -81,8 +82,138 @@ describe('Account Lifecycle Integration Tests', () => {
     const userDoc = await getAdminFirestore().collection('users').doc(uid).get();
     assert.equal(userDoc.data()?.role, 'librarian');
 
+    const publicDoc = await getAdminFirestore().collection('publicUsers').doc(uid).get();
+    assert.equal(publicDoc.exists, true);
+    assert.equal(publicDoc.data()?.role, 'librarian');
+
+    const candidates = await fetchSignatoryCandidatesAction('librarian');
+    assert.equal(candidates.success, true);
+    if (candidates.success) {
+      assert.ok((candidates.candidates || []).some((candidate) => candidate.uid === uid));
+    }
+
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.exists, false);
+  });
+
+  it('2b. Every active signatory role synchronizes and appears in candidates immediately', async () => {
+    const roles = [
+      'librarian',
+      'osa_coordinator',
+      'guidance_counselor',
+      'area_chair',
+      'dean',
+    ] as const;
+    const createdUids = new Map<(typeof roles)[number], string>();
+
+    for (const role of roles) {
+      const res = await createStaffAccountAction({
+        email: `new-${role.replace('_', '-')}-coverage@example.test`,
+        fullName: `Coverage ${role}`,
+        role,
+        contactNumber: '09123456789',
+      });
+      assert.equal(res.success, true, `createStaffAccountAction should create ${role}`);
+      if (!res.success) continue;
+
+      const uid = res.user.uid;
+      createdUids.set(role, uid);
+      const authUser = await getAdminAuth().getUser(uid);
+      assert.equal(authUser.customClaims?.role, role);
+
+      const userDoc = await getAdminFirestore().collection('users').doc(uid).get();
+      assert.equal(userDoc.data()?.role, role);
+      assert.equal(userDoc.data()?.accountStatus, 'active');
+      assert.equal(userDoc.data()?.isActive, true);
+
+      const publicDoc = await getAdminFirestore().collection('publicUsers').doc(uid).get();
+      assert.equal(publicDoc.data()?.role, role);
+
+      const candidates = await fetchSignatoryCandidatesAction(role);
+      assert.equal(candidates.success, true);
+      if (candidates.success) assert.ok(candidates.candidates.some((candidate) => candidate.uid === uid));
+    }
+
+    const librarianUid = createdUids.get('librarian');
+    assert.ok(librarianUid);
+    if (!librarianUid) return;
+
+    const deactivated = await deactivateUserAccountAction({ userId: librarianUid });
+    assert.equal(deactivated.success, true);
+    const afterDeactivate = await fetchSignatoryCandidatesAction('librarian');
+    assert.equal(afterDeactivate.success, true);
+    if (afterDeactivate.success) assert.equal(afterDeactivate.candidates.some((candidate) => candidate.uid === librarianUid), false);
+
+    const reactivated = await reactivateUserAccountAction({ userId: librarianUid });
+    assert.equal(reactivated.success, true);
+    const afterReactivate = await fetchSignatoryCandidatesAction('librarian');
+    assert.equal(afterReactivate.success, true);
+    if (afterReactivate.success) assert.equal(afterReactivate.candidates.some((candidate) => candidate.uid === librarianUid), true);
+
+    const changed = await updateUserRoleAction({ userId: librarianUid, newRole: 'guidance_counselor' });
+    assert.equal(changed.success, true);
+    const librarianCandidates = await fetchSignatoryCandidatesAction('librarian');
+    const guidanceCandidates = await fetchSignatoryCandidatesAction('guidance_counselor');
+    if (librarianCandidates.success) assert.equal(librarianCandidates.candidates.some((candidate) => candidate.uid === librarianUid), false);
+    if (guidanceCandidates.success) assert.equal(guidanceCandidates.candidates.some((candidate) => candidate.uid === librarianUid), true);
+  });
+
+  it('2c. Failed staff synchronization cannot leave an active assignable phantom', async () => {
+    const email = 'forced-failure-staff@example.test';
+    process.env.ASCS_TEST_FORCE_STAFF_SYNC_FAILURE = 'true';
+    let result;
+    try {
+      result = await createStaffAccountAction({
+        email,
+        fullName: 'Forced Failure Staff',
+        role: 'area_chair',
+        contactNumber: '09123456789',
+      });
+    } finally {
+      delete process.env.ASCS_TEST_FORCE_STAFF_SYNC_FAILURE;
+    }
+
+    assert.equal(result.success, false);
+    const authUser = await getAdminAuth().getUserByEmail(email).catch(() => null);
+    assert.equal(authUser, null);
+    const profiles = await getAdminFirestore().collection('users').where('email', '==', email).get();
+    for (const profile of profiles.docs) {
+      assert.notEqual(profile.data().accountStatus, 'active');
+      assert.notEqual(profile.data().isActive, true);
+    }
+    const candidates = await fetchSignatoryCandidatesAction('area_chair');
+    assert.equal(candidates.success, true);
+    if (candidates.success) assert.equal(candidates.candidates.some((candidate) => candidate.email === email), false);
+  });
+
+  it('2d. Adviser cannot be newly created, assigned, or selected as an active role', async () => {
+    const created = await createStaffAccountAction({
+      email: 'new-adviser@example.test',
+      fullName: 'New Adviser Attempt',
+      role: 'adviser',
+    });
+    assert.equal(created.success, false);
+
+    const adviserCandidates = await fetchSignatoryCandidatesAction('adviser');
+    assert.equal(adviserCandidates.success, false);
+
+    const roleUpdate = await updateUserRoleAction({ userId: 'demo-librarian-uid', newRole: 'adviser' });
+    assert.equal(roleUpdate.success, false);
+
+    await getAdminFirestore().collection('users').doc('legacy-adviser-assignment-uid').set({
+      uid: 'legacy-adviser-assignment-uid',
+      email: 'legacy-adviser-assignment@example.test',
+      fullName: 'Legacy Adviser Assignment',
+      role: 'adviser',
+      accountStatus: 'active',
+      isActive: true,
+    });
+    const assignment = await updateRequirementAssignmentAction({
+      requirementId: 'dean',
+      assignedSignatoryId: 'legacy-adviser-assignment-uid',
+      assignedSignatoryName: 'Legacy Adviser Assignment',
+    });
+    assert.equal(assignment.success, false);
   });
 
   it('3. Student can self-register with a fixed student role and synchronized profile', async () => {

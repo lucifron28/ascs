@@ -8,7 +8,7 @@ test.describe('Mandatory Password Change Journey', () => {
 
     // 2. Sign in as Student E with emulator temporary credentials
     await page.getByLabel(/email address/i).fill('student.e@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     // 3. Confirm redirect to /change-password
@@ -38,7 +38,7 @@ test.describe('Mandatory Password Change Journey', () => {
 
     // 8. Sign in with the new password
     await page.getByLabel(/email address/i).fill('student.e@example.test');
-    await page.getByLabel(/password/i).fill('NewPassword456!');
+    await page.getByRole('textbox', { name: 'Password' }).fill('NewPassword456!');
     await page.getByRole('button', { name: /log in/i }).click();
 
     // 9. Confirm student dashboard loads

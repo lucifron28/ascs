@@ -18,7 +18,7 @@ const REQUIRED_SIGNATORY_ROLES = new Set([
   'osa_coordinator',
   'guidance_counselor',
   'area_chair',
-  'adviser',
+  'dean',
 ]);
 
 export default function StudentDashboardPage() {

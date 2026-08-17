@@ -17,7 +17,7 @@ const REQUIRED_SIGNATORY_ROLES = [
   { role: 'osa_coordinator', fallbackLabel: 'OSA Coordinator' },
   { role: 'guidance_counselor', fallbackLabel: 'Guidance Counselor' },
   { role: 'area_chair', fallbackLabel: 'Area Chair' },
-  { role: 'adviser', fallbackLabel: 'Adviser' },
+  { role: 'dean', fallbackLabel: 'Dean Clearance' },
 ] as const;
 
 export default function ClearanceCertificate({ applicationId }: ClearanceCertificateProps) {

@@ -96,9 +96,8 @@ local emulator and are intentionally fictional.
 | Clearance Signatories / OSA Coordinator | `osa@example.test` | `password123` | Reviews the Office of Student Affairs requirement |
 | Clearance Signatories / Guidance Counselor | `guidance@example.test` | `password123` | Reviews the Guidance requirement |
 | Clearance Signatories / Area Chair | `chair@example.test` | `password123` | Reviews the Academic Department requirement |
-| Clearance Signatories / Adviser | `adviser@example.test` | `password123` | Reviews Adviser requirement and unlocks Dean visibility |
+| Clearance Signatories / Dean | `dean@example.test` | `password123` | Reviews and approves Dean Clearance |
 | Financial / Oversight / Accountant | `accountant@example.test` | `password123` | Separate financial accountability gate |
-| Financial / Oversight / Dean | `dean@example.test` | `password123` | Read-only academic oversight after Adviser approval |
 | Administration / System Administrator | `admin@example.test` | `password123` | User lifecycle, assignments, logs, reports |
 
 The remaining supported catalog entries are `FILIPINO` (Bachelor of Arts in
@@ -132,17 +131,17 @@ npm run demo:reset   # or: npm run demo:prepare
 2. **Student pending application** — log in as `student.b@example.test`;
    show the pending signatory checklist (Librarian + OSA approved, 3 pending).
 3. **Signatory approval** — log in as `guidance@example.test` (or
-   `chair@example.test` / `adviser@example.test`) and approve the pending
+   `chair@example.test` / `dean@example.test`) and approve the pending
    requirement; switch back to Student B to show the updated counters.
    For a remark path, mark one requirement `not approved` with remarks and
    show the student-visible remarks log.
 4. **Accountant financial verification** — log in as
    `accountant@example.test`; show the financial queue, mark Student D
    `paid` (or flip Student A to `unpaid` with remarks to show the hold).
-5. **Adviser unlock** — as `adviser@example.test`, approve Student B's
-   adviser requirement; the Dean queue now includes Student B.
-6. **Dean visibility** — log in as `dean@example.test`; show only
-   adviser-approved records (A, B, D), no financial data.
+5. **Dean approval** — as `dean@example.test`, approve Student B's
+   Dean Clearance requirement in the actionable queue.
+6. **Dean reports** — open `/dean/reports`; show Dean-scoped records with no
+   financial data.
 7. **Final approved student** — finish the remaining signatories for
    Student B and confirm `overallStatus = approved`.
 8. **Printable clearance preview** — as Student B, open the print/preview
@@ -150,7 +149,7 @@ npm run demo:reset   # or: npm run demo:prepare
 9. **Admin reports** — as `admin@example.test`, open `/admin/reports`;
    verify fixture totals, financial summary, bottleneck table, CSV export.
 10. **Dean report privacy boundary** — as `dean@example.test`, open
-    `/dean/reports`; confirm no financial summary and only adviser-approved
+    `/dean/reports`; confirm no financial summary and only Dean-approved
     data; export the Dean CSV (no financial columns).
 
 **Optional security beat (mandatory password change):** log in as

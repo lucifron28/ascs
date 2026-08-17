@@ -35,7 +35,7 @@
 - [ ] State that demo records are fictional.
 - [ ] State that Vercel, if used, is a demonstration deployment, not official
       institutional production infrastructure.
-- [ ] Explain Accountant financial gate and Adviser-to-Dean visibility.
+- [ ] Explain the Accountant financial gate and Dean final signatory approval.
 - [ ] Do not use real student data.
 - [ ] Do not expose passwords, private keys, tokens, service accounts, or
       Firebase console credentials.

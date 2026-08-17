@@ -29,7 +29,7 @@
       "collectionGroup": "clearanceApplications",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "adviserApproved", "order": "ASCENDING" },
+        { "fieldPath": "deanApproved", "order": "ASCENDING" },
         { "fieldPath": "academicYear", "order": "ASCENDING" },
         { "fieldPath": "semester", "order": "ASCENDING" },
         { "fieldPath": "submittedAt", "order": "DESCENDING" }
@@ -54,5 +54,13 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "approvals",
+      "fieldPath": "status",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
 }

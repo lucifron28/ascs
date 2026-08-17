@@ -21,7 +21,7 @@ test('demo account directory exposes every required student and staff identity',
     'Financial / Oversight',
     'Administration',
   ]);
-  assert.equal(DEMO_ACCOUNT_DEFINITIONS.length, 15);
+  assert.equal(DEMO_ACCOUNT_DEFINITIONS.length, 14);
 
   const labels = DEMO_ACCOUNT_DEFINITIONS.map((account) => account.label);
   for (const label of [
@@ -36,7 +36,6 @@ test('demo account directory exposes every required student and staff identity',
     'OSA Coordinator',
     'Guidance Counselor',
     'Area Chair',
-    'Adviser',
     'Accountant',
     'Dean',
     'System Administrator',

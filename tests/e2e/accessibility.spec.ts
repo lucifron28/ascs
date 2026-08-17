@@ -18,7 +18,7 @@ async function setTheme(page: Page, theme: (typeof REPRESENTATIVE_THEMES)[number
 async function loginAs(page: Page, email: string, route: string) {
   await page.goto('/login');
   await page.getByLabel(/email address/i).fill(email);
-  await page.getByLabel(/password/i).fill('password123');
+  await page.getByRole('textbox', { name: 'Password' }).fill('password123');
   await page.getByRole('button', { name: /log in/i }).click();
   await page.waitForURL(`**/${route}`);
 }
@@ -38,7 +38,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
     await assertZeroSevereViolations(page);
 
     await page.getByLabel(/email address/i).fill('student.e@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/change-password');
@@ -49,7 +49,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
   test('2. Student Dashboard & Printable Clearance route have 0 critical/serious axe violations', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('student.a@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/student/dashboard');
@@ -64,7 +64,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
   test('3. Signatory Dashboard & Review Modal have 0 critical/serious axe violations', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('guidance@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/guidance_counselor/dashboard');
@@ -83,7 +83,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
   test('4. Accountant Dashboard & Update Modal have 0 critical/serious axe violations', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('accountant@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/accountant/dashboard');
@@ -102,11 +102,11 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
   test('5. Dean Dashboard & Reports have 0 critical/serious axe violations', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('dean@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/dean/dashboard');
-    await expect(page.getByRole('heading', { name: /dean clearance oversight/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /dean clearance queue/i })).toBeVisible();
     await assertZeroSevereViolations(page);
 
     await page.goto('/dean/reports');
@@ -119,7 +119,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
   test('6. Admin Dashboard, Modal, Reports & Multi-Theme have 0 critical/serious axe violations', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email address/i).fill('admin@example.test');
-    await page.getByLabel(/password/i).fill('password123');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/admin/dashboard');

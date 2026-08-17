@@ -3,6 +3,7 @@
 import { getAdminFirestore, getAdminAuth } from '@/lib/firebase/admin';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { UserRole } from '@/lib/types/roles';
+import { REQUIRED_SIGNATORY_ROLES } from '@/lib/clearance/status';
 import {
   checkRoleConversion,
   checkFinalActiveAdmin,
@@ -95,7 +96,6 @@ export async function updateUserRoleAction(data: { userId: string; newRole: User
       'osa_coordinator',
       'guidance_counselor',
       'area_chair',
-      'adviser',
       'dean',
       'admin',
     ];
@@ -218,6 +218,42 @@ export async function fetchClearanceRequirementsAction() {
   }
 }
 
+/**
+ * Return active candidates from the canonical users collection for a current
+ * signatory requirement. This keeps assignment lists synchronized with the
+ * server-side role/account status instead of relying on stale client state.
+ */
+export async function fetchSignatoryCandidatesAction(role: string) {
+  try {
+    await getAuthenticatedAdmin();
+    if (!(REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(role)) {
+      throw new Error('Only active clearance signatory roles can be assigned.');
+    }
+
+    const firestore = getAdminFirestore();
+    const usersSnap = await firestore.collection('users').where('role', '==', role).get();
+    const candidates = usersSnap.docs
+      .map((doc) => {
+        const data = doc.data();
+        return {
+          uid: doc.id,
+          email: String(data.email || ''),
+          fullName: String(data.fullName || data.displayName || data.email || 'Unnamed signatory'),
+          role: String(data.role || role),
+          accountStatus: String(data.accountStatus || (data.isActive === false ? 'inactive' : 'active')),
+          isActive: data.isActive !== false && data.accountStatus !== 'inactive',
+        };
+      })
+      .filter((candidate) => candidate.isActive)
+      .sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+    return { success: true, candidates };
+  } catch (error: unknown) {
+    logSafeAuthError('fetch_signatory_candidates', error, role);
+    return { success: false, error: mapLifecycleError(error, 'Fetch signatory candidates error.') };
+  }
+}
+
 // 4. Update Clearance Requirement Signatory Assignment
 export async function updateRequirementAssignmentAction(data: {
   requirementId: string;
@@ -234,6 +270,10 @@ export async function updateRequirementAssignmentAction(data: {
     }
 
     const reqData = reqSnap.data()!;
+
+    if (!(REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(String(reqData.role))) {
+      throw new Error('Legacy or inactive clearance requirements cannot receive new signatory assignments.');
+    }
 
     let derivedSignatoryName: string | null = null;
     if (data.assignedSignatoryId) {

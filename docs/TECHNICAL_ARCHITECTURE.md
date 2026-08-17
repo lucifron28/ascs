@@ -105,9 +105,9 @@ The nine implemented roles are:
 | OSA Coordinator | Review the Office of Student Affairs requirement queue. |
 | Guidance Counselor | Review the guidance requirement queue. |
 | Area Chair | Review the program/area requirement queue. |
-| Adviser | Review the adviser requirement and unlock Dean visibility after approval. |
+| Adviser (legacy) | Preserved for historical records only; cannot be newly created or assigned. |
 | Accountant | Verify `financialStatus`; this is a financial gate, not a duplicate approval row. |
-| Dean | Academic oversight for adviser-approved applications and Dean-scoped reports; not a required signatory. |
+| Dean | Review and approve the fifth Dean Clearance requirement; access Dean-scoped reports separately. |
 | System Administrator | Manage accounts, roles, requirement assignments, activity logs, and institution-wide reports. |
 
 `UserRole` is defined in `lib/types/roles.ts`. Role-specific routing is
@@ -142,13 +142,14 @@ signatory approval rows and `financialStatus`:
   A4-oriented digital prototype record with five required signatory rows and
   explicit Office / Requirement, Status, Assigned Signatory, Remarks, and Date
   Reviewed columns, followed by a separate Accountant financial review with
-  Status, Verified By, Remarks, and Date Reviewed. The Dean remains
-  oversight-only and is not printed as a signatory. No handwritten or electronic
+  Status, Verified By, Remarks, and Date Reviewed. Dean Clearance is printed
+  as the fifth signatory row. No handwritten or electronic
   signatures are reproduced.
 
-The Dean is not inserted into the five-row required signatory matrix. Adviser
-approval sets `adviserApproved`, which is the visibility gate used by Dean
-queues and Dean reports.
+The Dean is the fifth row in the active required signatory matrix. A successful
+Dean action writes `deanApproved`, recomputes the application counters, and
+keeps Dean reports separately scoped. Historical Adviser rows and the optional
+`adviserApproved` field remain readable during migration but are not counted.
 
 ## 6. Firestore data model
 
@@ -167,7 +168,7 @@ The active collections are:
 | `activityLogs/{logId}` | Server-written audit events. |
 
 Important application fields include `studentUid`, `academicYear`, `semester`,
-`overallStatus`, `financialStatus`, `adviserApproved`, and
+`overallStatus`, `financialStatus`, `deanApproved`, and
 `printableAvailable`. These are denormalized references and logical
 relationships; Firestore does not enforce relational foreign keys.
 
@@ -177,7 +178,7 @@ relationships; Firestore does not enforce relational foreign keys.
 
 - Admin reports query institution-wide applications and may include financial
   summaries and financial detail columns.
-- Dean reports require `adviserApproved === true` and intentionally exclude
+- Dean reports require `deanApproved === true` and intentionally exclude
   the Admin financial summary and financial detail columns.
 - `lib/reports/filters.ts` canonicalizes academic year and semester values while
   supporting legacy semester aliases.

@@ -40,7 +40,7 @@ export interface StudentProfile {
 }
 
 export interface ClearanceRequirement {
-  role: Exclude<UserRole, 'student' | 'admin' | 'dean' | 'accountant'>;
+  role: Exclude<UserRole, 'student' | 'admin' | 'accountant' | 'adviser'> | 'adviser';
   label: string;
   displayOrder: number;
   isActive: boolean;
@@ -72,7 +72,9 @@ export interface ClearanceApplication {
   financialUpdatedByName: string | null;
 
   // Counters & Flags
-  adviserApproved: boolean;
+  deanApproved: boolean;
+  /** @deprecated Retained only for historical Adviser records during migration. */
+  adviserApproved?: boolean;
   printableAvailable: boolean;
   pendingCount: number;
   approvedCount: number;

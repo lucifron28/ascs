@@ -154,7 +154,7 @@ export async function seedEmulator(): Promise<void> {
       financialRemarks: appFixture.financialRemarks,
       financialUpdatedBy: appFixture.financialStatus !== 'pending' ? 'demo-accountant-uid' : null,
       financialUpdatedByName: appFixture.financialStatus !== 'pending' ? 'Accountant Officer' : null,
-      adviserApproved: appFixture.adviserApproved,
+      deanApproved: appFixture.deanApproved,
       printableAvailable: appFixture.printableAvailable,
       pendingCount: appFixture.pendingCount,
       approvedCount: appFixture.approvedCount,

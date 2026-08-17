@@ -18,7 +18,7 @@ term, identity block, office checklist, remarks, dates, and closing note; the
 digital system restructures those fields into readable status data rather than
 reproducing handwritten signatures or personal paper details. It provides a
 single workflow for student submission, role-scoped signatory decisions, a
-separate Accountant financial gate, Adviser-to-Dean visibility, notifications,
+  separate Accountant financial gate, Dean signatory approval, notifications,
 audit logs, and scoped reports.
 
 Evidence: `app/actions/clearance.ts`, `components/student/`,
@@ -27,8 +27,8 @@ Evidence: `app/actions/clearance.ts`, `components/student/`,
 ## 3. System scope
 
 The MVP covers student clearance submission and tracking, five required
-signatory requirements, Accountant financial verification, Adviser-gated Dean
-oversight, Admin account/requirement management, Admin and Dean reports, CSV
+signatory requirements, Accountant financial verification, Dean final approval,
+Admin account/requirement management, Admin and Dean reports, CSV
 exports, in-app notifications, activity logs, and a print-friendly prototype
 record. It is a capstone demonstration system using fictional data.
 
@@ -45,9 +45,9 @@ production readiness.
 | OSA Coordinator | OSA requirement review. |
 | Guidance Counselor | Guidance requirement review. |
 | Area Chair | Academic area requirement review. |
-| Adviser | Adviser requirement review and Dean visibility gate. |
+| Adviser (legacy) | Historical compatibility only; excluded from new flow. |
 | Accountant | Financial gate (`pending`, `paid`, `unpaid`), not a duplicate approval row. |
-| Dean | Adviser-approved academic oversight and Dean reports; not a required signatory. |
+| Dean | Dean Clearance approval and Dean reports. |
 | System Administrator | Account lifecycle, roles, assignments, logs, and institution reports. |
 
 Evidence: `lib/types/roles.ts`, `tests/fixtures/demo-data.ts`,
@@ -79,7 +79,7 @@ The FRD checklist records 33 implemented requirements and one deferred item:
 Bulk CSV Account Import. The implemented requirements include account creation,
 deactivation/reactivation, mandatory password change, submission,
 duplicate-term prevention, signatory decisions with required remarks,
-Accountant financial updates, Adviser-to-Dean visibility, notifications,
+  Accountant financial updates, Dean approval, notifications,
 activity logs, reporting, and CSV exports.
 
 Evidence: `docs/FRD_COMPLIANCE_CHECKLIST.md`, `app/actions/`,
@@ -120,7 +120,7 @@ The active collections are `users`, `publicUsers`, `students`,
 `clearanceRequirements`, `clearanceApplications`, `notifications`, and
 `activityLogs`. Applications contain logical references to approval and remark
 subcollections. Important fields include `studentUid`, `academicYear`,
-`semester`, `overallStatus`, `financialStatus`, `adviserApproved`, and
+`semester`, `overallStatus`, `financialStatus`, `deanApproved`, and
 `printableAvailable`. Firestore is document-oriented and does not provide
 relational foreign-key enforcement.
 
@@ -143,9 +143,9 @@ Evidence: `lib/auth/session.ts`, `lib/auth/edge-session.ts`, `proxy.ts`,
 
 The student submits one application per academic year/semester. The server
 creates five required signatory rows: Librarian, OSA Coordinator, Guidance
-Counselor, Area Chair, and Adviser. The Accountant is not a sixth signatory;
-financial status is stored directly on the application. Adviser approval sets
-the Dean visibility flag.
+Counselor, Area Chair, and Dean. The Accountant is not a sixth signatory;
+financial status is stored directly on the application. Dean approval writes
+the `deanApproved` flag.
 
 Evidence: `app/actions/clearance.ts`, `lib/clearance/status.ts`,
 `tests/integration/clearance-submission.test.ts`,
@@ -165,7 +165,7 @@ Evidence: `components/accountant/AccountantDashboard.tsx`,
 ## 13. Reporting and analytics
 
 Admin reports are institution-wide and include financial summaries. Dean
-reports are limited to Adviser-approved applications and intentionally omit
+reports are limited to Dean-approved applications and intentionally omit
 financial summaries and financial detail columns. Filters canonicalize
 academic terms, reject invalid statuses, enforce role scope, limit datasets to
 5,000 applications, deduplicate contradictory records, and emit safe CSV.
@@ -190,7 +190,7 @@ Evidence: `app/actions/notifications.ts`, `components/ui/NotificationDropdown.ts
 prototype record only when the derived overall status is `approved`. Its identity
 block includes the academic term, student number, program, year, section, and
 purpose. The record renders exactly five signatory rows (Librarian, OSA
-Coordinator, Guidance Counselor, Area Chair, and Adviser) with explicit Office /
+Coordinator, Guidance Counselor, Area Chair, and Dean) with explicit Office /
 Requirement, Status, Assigned Signatory, Remarks, and Date Reviewed columns,
 followed by a separate `FINANCIAL ACCOUNTABILITY REVIEW` containing Status,
 Verified By, Remarks, and Date Reviewed for the Accountant gate. The Dean is an
@@ -267,7 +267,7 @@ certified."
 | Manuscript claim | Source evidence | Test evidence | Diagram / visual evidence |
 | --- | --- | --- | --- |
 | Accountant is the financial gate | `app/actions/clearance.ts`, `components/accountant/AccountantDashboard.tsx` | `tests/integration/financial-workflow.test.ts` | `07-accountant-dashboard.png`, `08-accountant-financial-dialog.png`, `05-clearance-workflow.svg` |
-| Adviser approval unlocks Dean visibility | `app/actions/clearance.ts`, `app/actions/reports.ts` | `tests/integration/dean-visibility.test.ts` | `09-adviser-dashboard.png`, `10-dean-dashboard.png`, `05-clearance-workflow.svg` |
+| Dean approval writes the final signatory state | `app/actions/clearance.ts`, `app/actions/reports.ts` | `tests/integration/dean-visibility.test.ts` | `09-dean-clearance-queue.png`, `10-dean-review-dialog.png`, `05-clearance-workflow.svg` |
 | Dean reports exclude financial summary | `app/actions/reports.ts`, `app/dean/reports/page.tsx` | `tests/integration/reports.test.ts`, `tests/e2e/reports.spec.ts` | `14-dean-reports.png`, `08-reporting-data-flow.svg` |
 | Session and role checks are server-side | `lib/auth/session.ts`, `proxy.ts`, `app/actions/` | `lib/auth/*test.ts`, `tests/rules/security-boundaries.test.ts` | `06-auth-session-sequence.svg` |
 | Print output is a prototype record | `app/student/clearance/[id]/print/page.tsx` | `tests/e2e/print-clearance.spec.ts` | `15-printable-clearance-prototype.png` |

@@ -64,7 +64,7 @@ describe('Reports & CSV Export Integration Tests', () => {
     assert.ok(res.summary.requirementBreakdown.length > 0);
   });
 
-  it('8. Dean report includes only adviser-approved & 9. Excludes financial summary', async () => {
+  it('8. Dean report includes only Dean-approved & 9. Excludes financial summary', async () => {
     process.env.TEST_SESSION_COOKIE = deanSession;
     const res = await fetchDeanReportSummaryAction({
       academicYear: '2026-2027',
@@ -154,7 +154,7 @@ describe('Reports & CSV Export Integration Tests', () => {
       purpose: 'Enrollment',
       overallStatus: 'approved',
       financialStatus: 'paid',
-      adviserApproved: true,
+      deanApproved: true,
       submittedAt: new Date().toISOString(),
     });
 
@@ -171,7 +171,7 @@ describe('Reports & CSV Export Integration Tests', () => {
       purpose: 'Enrollment',
       overallStatus: 'pending',
       financialStatus: 'pending',
-      adviserApproved: true,
+      deanApproved: true,
       submittedAt: new Date().toISOString(),
     });
 

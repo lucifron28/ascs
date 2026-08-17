@@ -159,7 +159,7 @@ export default function DeanReportsPage() {
                 {/* Program Breakdown Table */}
                 <BreakdownTable
                   title="Academic Clearance Progress by Program"
-                  description="Adviser-approved clearance application status totals and completion rates per program"
+                  description="Dean-approved clearance application status totals and completion rates per program"
                   typeLabel="Academic Program"
                   items={summary.programBreakdown}
                 />
@@ -167,7 +167,7 @@ export default function DeanReportsPage() {
                 {/* Year Level Breakdown Table */}
                 <BreakdownTable
                   title="Academic Clearance Progress by Year Level"
-                  description="Adviser-approved clearance application status totals per year level"
+                  description="Dean-approved clearance application status totals per year level"
                   typeLabel="Year Level"
                   items={summary.yearLevelBreakdown}
                 />
@@ -175,7 +175,7 @@ export default function DeanReportsPage() {
                 {/* Section Breakdown Table */}
                 <BreakdownTable
                   title="Academic Clearance Progress by Class Section"
-                  description="Adviser-approved clearance application status totals per class section"
+                  description="Dean-approved clearance application status totals per class section"
                   typeLabel="Section"
                   items={summary.sectionBreakdown}
                 />

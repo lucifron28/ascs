@@ -24,7 +24,7 @@ Metrics --> UI
 Metrics --> CSV
 
 rectangle "Admin scope\ninstitution-wide + financial summary" as AdminScope #FEE2E2
-rectangle "Dean scope\nadviserApproved = true\nno financial summary" as DeanScope #F3E8FF
+rectangle "Dean scope\ndeanApproved = true\nno financial summary" as DeanScope #F3E8FF
 Filters --> AdminScope
 Filters --> DeanScope
 AdminScope --> Authz

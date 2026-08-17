@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useForm } from '@tanstack/react-form';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { firebaseAuth as auth } from '@/lib/firebase/client';
 import { LogIn, Mail, Lock, ShieldAlert, Check } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
@@ -56,6 +56,12 @@ export default function LoginPage() {
       try {
         // Seeding is an explicit prerequisite (npm run demo:reset). The emulator
         // dataset is deterministic; the login flow never mutates demo accounts.
+
+        // Clear any stale client-side identity left by a previous demo
+        // account before authenticating the requested account.
+        if (auth.currentUser) {
+          await signOut(auth).catch(() => undefined);
+        }
 
         // 1. Authenticate with Firebase Auth Client SDK
         const userCredential = await signInWithEmailAndPassword(

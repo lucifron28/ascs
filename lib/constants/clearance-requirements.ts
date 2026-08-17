@@ -1,7 +1,7 @@
 import { UserRole } from '../types/roles';
 
 export interface DefaultClearanceRequirement {
-  role: Exclude<UserRole, 'student' | 'admin' | 'dean' | 'accountant'>;
+  role: Exclude<UserRole, 'student' | 'admin' | 'accountant' | 'adviser'>;
   label: string;
   displayOrder: number;
 }
@@ -28,8 +28,8 @@ export const DEFAULT_CLEARANCE_REQUIREMENTS: DefaultClearanceRequirement[] = [
     displayOrder: 4,
   },
   {
-    role: 'adviser',
-    label: 'Adviser Review',
+    role: 'dean',
+    label: 'Dean Clearance',
     displayOrder: 5,
   },
 ];
