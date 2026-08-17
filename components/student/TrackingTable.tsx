@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Calendar, UserCheck, MessageSquare, Clock } from 'lucide-react';
+import { REQUIRED_SIGNATORY_ROLES } from '@/lib/clearance/status';
 
 interface ApprovalRow {
   id: string;
@@ -31,9 +32,12 @@ interface TrackingTableProps {
 }
 
 export default function TrackingTable({ approvals, remarks }: TrackingTableProps) {
-  // Filter out legacy Accountant approval rows (Accountant is represented in Financial Status section)
+  // Render only the canonical five active signatory roles. Accountant is
+  // represented in the Financial Status section; retained Adviser/unknown
+  // rows are historical audit data and are not active checklist steps.
+  const activeRoleSet = new Set<string>(REQUIRED_SIGNATORY_ROLES);
   const filteredApprovals = (approvals || []).filter(
-    (app) => app.signatory_role !== 'accountant'
+    (app) => activeRoleSet.has(app.signatory_role)
   );
   const formatTime = (timeStr: string | null) => {
     if (!timeStr) return '--';

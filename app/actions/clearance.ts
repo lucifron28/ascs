@@ -237,7 +237,11 @@ export async function fetchStudentDashboardAction() {
       reqsMap.set(doc.id, doc.data());
     });
 
-    const approvals = approvalsQuery.docs.map(doc => {
+    const activeRoleSet = new Set<string>(REQUIRED_SIGNATORY_ROLES);
+    const approvals = approvalsQuery.docs.filter((doc) => {
+      const role = doc.data().signatoryRole;
+      return typeof role === 'string' && activeRoleSet.has(role);
+    }).map(doc => {
       const data = doc.data();
       const req = reqsMap.get(data.requirementId);
       return {
@@ -290,8 +294,8 @@ export async function fetchPendingApprovalsAction() {
     const { uid: userId, user } = await getAuthenticatedUser();
     const role = user.role;
 
-    if (!role || role === 'student') {
-      throw new Error('Unauthorized: Student role cannot access evaluator queues.');
+    if (!(REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(role)) {
+      throw new Error('Unauthorized: Only active clearance signatories can access evaluator queues.');
     }
 
     const firestore = getAdminFirestore();
@@ -346,6 +350,9 @@ export async function signClearanceAction(data: {
 }) {
   try {
     const { uid: signatoryId, user } = await getAuthenticatedUser();
+    if (!(REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(user.role)) {
+      throw new Error('Unauthorized: This account is not an active clearance signatory.');
+    }
     if (!data.applicationId || !data.approvalId) {
       throw new Error('Application and approval identifiers are required.');
     }
@@ -388,9 +395,8 @@ export async function signClearanceAction(data: {
         signatoryRole: doc.id === data.approvalId ? approvalData.signatoryRole : doc.data().signatoryRole,
       }));
       const summary = getClearanceStatusSummary(approvalStatuses, appData.financialStatus);
-      const deanApproved = approvalStatuses.some(
-        (approval) => approval.signatoryRole === 'dean' && approval.status === 'approved',
-      );
+      const deanRows = approvalStatuses.filter((approval) => approval.signatoryRole === 'dean');
+      const deanApproved = deanRows.length > 0 && deanRows.every((approval) => approval.status === 'approved');
       const now = new Date().toISOString();
 
       transaction.update(approvalRef, {
@@ -676,7 +682,9 @@ export async function fetchClearanceCertificateAction(applicationId: string) {
     const reqsMap = new Map();
     reqsQuery.forEach((doc) => reqsMap.set(doc.id, doc.data()));
 
+    const activeRoleSet = new Set<string>(REQUIRED_SIGNATORY_ROLES);
     const approvals = approvalsQuery.docs
+      .filter((doc) => activeRoleSet.has(String(doc.data().signatoryRole || '')))
       .map((doc) => {
         const data = doc.data();
         const req = reqsMap.get(data.requirementId);

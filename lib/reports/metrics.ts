@@ -76,7 +76,7 @@ export function deduplicateApplicationsById(
         (existing.program || '').trim() !== (app.program || '').trim() ||
         String(existing.yearLevel || '').trim() !== String(app.yearLevel || '').trim() ||
         (existing.section || '').trim() !== (app.section || '').trim() ||
-        Boolean(existing.deanApproved ?? existing.adviserApproved) !== Boolean(app.deanApproved ?? app.adviserApproved);
+        Boolean(existing.deanApproved) !== Boolean(app.deanApproved);
 
       if (isContradictory) {
         throw new Error(

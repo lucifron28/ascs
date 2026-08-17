@@ -548,7 +548,7 @@ export default function AdminDashboard() {
               </div>
               <div className="stat-title text-xs font-semibold uppercase tracking-wider">Total System Users</div>
               <div className="stat-value text-3xl font-black text-primary">{users.length}</div>
-              <div className="stat-desc text-xs mt-1">Across 9 role types</div>
+              <div className="stat-desc text-xs mt-1">Across {ROLES_LIST.length} active role types</div>
             </div>
 
             <div className="stat bg-base-100 border border-base-content/15 rounded-xl shadow-sm">

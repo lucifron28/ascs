@@ -46,20 +46,40 @@ export function getClearanceStatusSummary(
   approvals: readonly ClearanceApprovalStatus[],
   financialStatus: FinancialStatus | string | null | undefined,
 ): ClearanceStatusSummary {
-  // Count only the five active required signatory rows. The Accountant remains
-  // a separate financial gate; legacy Adviser rows are ignored during migration.
-  const validApprovals = approvals.filter(
-    (approval) => REQUIRED_SIGNATORY_ROLE_SET.has(approval.signatoryRole || '')
-  );
+  // Model one effective status for each of the five active roles. Missing,
+  // malformed, or conflicting rows are conservative: pending wins over
+  // approved, and not_approved wins over every other status. Accountant and
+  // legacy Adviser rows remain outside the active signatory workflow.
+  const effectiveStatuses = new Map<string, 'approved' | 'pending' | 'not_approved'>();
+  const seenRoles = new Set<string>();
+  for (const role of REQUIRED_SIGNATORY_ROLES) {
+    effectiveStatuses.set(role, 'pending');
+  }
 
-  const pendingCount = validApprovals.filter((approval) => approval.status !== 'approved' && approval.status !== 'not_approved').length;
-  const approvedCount = validApprovals.filter((approval) => approval.status === 'approved').length;
-  const notApprovedCount = validApprovals.filter((approval) => approval.status === 'not_approved').length;
+  const precedence = { approved: 1, pending: 2, not_approved: 3 } as const;
+  for (const approval of approvals) {
+    const role = approval.signatoryRole || '';
+    if (!REQUIRED_SIGNATORY_ROLE_SET.has(role)) continue;
+
+    const normalizedStatus = validateApprovalStatus(String(approval.status))
+      ? (approval.status as 'approved' | 'pending' | 'not_approved')
+      : 'pending';
+    const currentStatus = effectiveStatuses.get(role) || 'pending';
+    if (!seenRoles.has(role) || precedence[normalizedStatus] > precedence[currentStatus]) {
+      effectiveStatuses.set(role, normalizedStatus);
+      seenRoles.add(role);
+    }
+  }
+
+  const effective = Array.from(effectiveStatuses.values());
+  const pendingCount = effective.filter((status) => status === 'pending').length;
+  const approvedCount = effective.filter((status) => status === 'approved').length;
+  const notApprovedCount = effective.filter((status) => status === 'not_approved').length;
 
   let overallStatus: ClearanceStatus = 'pending';
   if (notApprovedCount > 0) {
     overallStatus = 'not_approved';
-  } else if (validApprovals.length > 0 && pendingCount === 0) {
+  } else if (pendingCount === 0) {
     if (financialStatus === 'paid') {
       overallStatus = 'approved';
     } else if (financialStatus === 'unpaid') {

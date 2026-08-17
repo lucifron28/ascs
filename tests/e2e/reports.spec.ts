@@ -12,7 +12,7 @@ test.describe('Admin and Dean Reports E2E Acceptance', () => {
     await page.goto('/admin/reports');
     await expect(page.getByRole('heading', { name: /institution clearance/i })).toBeVisible();
     await expect(page.getByText(/financial verification summary/i)).toBeVisible();
-    await expect(page.getByText(/BSAIS.*Accounting Information System/i)).toBeVisible();
+    await expect(page.getByRole('cell', { name: /BSAIS.*Accounting Information System/i })).toBeVisible();
   });
 
   test('Dean can view academic reports dashboard with financial summary excluded', async ({ page }) => {
@@ -27,6 +27,6 @@ test.describe('Admin and Dean Reports E2E Acceptance', () => {
     await expect(page.getByRole('heading', { name: /academic clearance reports/i })).toBeVisible();
 
     await expect(page.getByText(/financial verification summary/i)).not.toBeVisible();
-    await expect(page.getByText(/BSAIS.*Accounting Information System/i)).toBeVisible();
+    await expect(page.getByRole('cell', { name: /BSAIS.*Accounting Information System/i })).toBeVisible();
   });
 });

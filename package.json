@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx -r ./tests/helpers/mock-server-only.cjs --test lib/academic-term.test.ts lib/academic-programs.test.ts lib/demo/demo-accounts.test.ts lib/clearance/status.test.ts lib/admin/lifecycle.test.ts lib/auth/edge-session.test.ts lib/auth/password-transition.test.ts lib/auth/session-override.test.ts lib/reports/metrics.test.ts lib/reports/filters.test.ts lib/reports/csv.test.ts lib/reports/authorization.test.ts lib/reports/acceptance-manifest.test.ts",
+    "test": "tsx -r ./tests/helpers/mock-server-only.cjs --test lib/academic-term.test.ts lib/academic-programs.test.ts lib/demo/demo-accounts.test.ts lib/clearance/status.test.ts lib/admin/lifecycle.test.ts lib/auth/edge-session.test.ts lib/auth/password-transition.test.ts lib/auth/session-override.test.ts lib/reports/metrics.test.ts lib/reports/filters.test.ts lib/reports/csv.test.ts lib/reports/authorization.test.ts lib/reports/acceptance-manifest.test.ts scripts/migrate-adviser-to-dean.test.ts",
     "test:integration": "tsx -r ./scripts/load-local-env.cjs -r ./tests/helpers/mock-server-only.cjs --test --test-concurrency=1 tests/integration/account-lifecycle.test.ts tests/integration/password-change.test.ts tests/integration/clearance-submission.test.ts tests/integration/signatory-workflow.test.ts tests/integration/financial-workflow.test.ts tests/integration/dean-visibility.test.ts tests/integration/clearance-completion.test.ts tests/integration/reports.test.ts tests/rules/security-boundaries.test.ts",
     "test:rules": "tsx --test tests/rules/security-boundaries.test.ts",
     "test:e2e": "playwright test",

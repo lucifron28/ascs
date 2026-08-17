@@ -25,6 +25,118 @@ async function getAuthenticatedAdmin() {
   return authenticated;
 }
 
+interface StaffCreationCompensationResult {
+  authDeleted: boolean;
+  authDisabled: boolean;
+  profilesCleaned: boolean;
+  profilesDisabled: boolean;
+  compensationSucceeded: boolean;
+  manualInterventionRequired: boolean;
+}
+
+/**
+ * Remove or disable every identity surface after a staff creation failure.
+ * The fallback disable path is intentional: an Auth deletion failure must
+ * never leave an active Firestore candidate that can be assigned signatory work.
+ */
+async function compensateStaffCreation(input: {
+  auth: ReturnType<typeof getAdminAuth>;
+  firestore: ReturnType<typeof getAdminFirestore>;
+  uid: string;
+  email: string;
+  role: UserRole;
+  adminUid: string;
+  reason: string;
+}): Promise<StaffCreationCompensationResult> {
+  let authDeleted = false;
+  let authDisabled = false;
+  try {
+    await input.auth.deleteUser(input.uid);
+    authDeleted = true;
+  } catch (error: unknown) {
+    if ((error as { code?: string }).code === 'auth/user-not-found') {
+      authDeleted = true;
+    } else {
+      try {
+        await input.auth.updateUser(input.uid, { disabled: true });
+        authDisabled = true;
+      } catch {
+        // Keep the profile-disable fallback, but report manual intervention
+        // when Auth could not be deleted or disabled.
+      }
+    }
+  }
+
+  const userRef = input.firestore.collection('users').doc(input.uid);
+  const publicRef = input.firestore.collection('publicUsers').doc(input.uid);
+  const now = new Date().toISOString();
+  const writeCompensation = async (disableProfiles: boolean) => {
+    const batch = input.firestore.batch();
+    if (disableProfiles) {
+      batch.set(userRef, {
+        accountStatus: 'inactive',
+        isActive: false,
+        deactivatedAt: now,
+        updatedAt: now,
+      }, { merge: true });
+      batch.set(publicRef, {
+        accountStatus: 'inactive',
+        isActive: false,
+        updatedAt: now,
+      }, { merge: true });
+    } else {
+      batch.delete(userRef);
+      batch.delete(publicRef);
+    }
+    batch.set(input.firestore.collection('activityLogs').doc(), {
+      actorId: input.adminUid,
+      actorName: 'System Administrator',
+      actorRole: 'admin',
+      action: 'create_staff_account_compensation',
+      entityType: 'user',
+      entityId: input.uid,
+      metadata: sanitizeAuditMetadata({
+        email: input.email,
+        role: input.role,
+        reason: input.reason,
+        authDeleted,
+        authDisabled,
+        profilesDisabled: disableProfiles,
+      }),
+      createdAt: now,
+    });
+    await batch.commit();
+  };
+
+  let profilesCleaned = false;
+  let profilesDisabled = false;
+  try {
+    await writeCompensation(!authDeleted);
+    profilesCleaned = authDeleted;
+    profilesDisabled = !authDeleted;
+  } catch {
+    // If a delete batch cannot be committed, retry with a safe inactive state.
+    // This keeps candidate queries from exposing a partially-created account.
+    try {
+      await writeCompensation(true);
+      profilesDisabled = true;
+    } catch {
+      // The caller records this as a manual-intervention condition.
+    }
+  }
+
+  return {
+    authDeleted,
+    authDisabled,
+    profilesCleaned,
+    profilesDisabled,
+    compensationSucceeded:
+      (authDeleted && (profilesCleaned || profilesDisabled)) || (authDisabled && profilesDisabled),
+    manualInterventionRequired:
+      !((authDeleted && (profilesCleaned || profilesDisabled)) || (authDisabled && profilesDisabled)),
+  };
+}
+
 // 1. Create Student Account
 export async function createStudentAccountAction(data: StudentAccountInput) {
   try {
@@ -302,20 +414,34 @@ export async function createStaffAccountAction(
       const expectedRole = input.role;
       if (
         authRecord.customClaims?.role !== expectedRole ||
+        authRecord.disabled === true ||
         userProfileSnap.data()?.role !== expectedRole ||
         publicProfileSnap.data()?.role !== expectedRole ||
         userProfileSnap.data()?.accountStatus !== 'active' ||
-        userProfileSnap.data()?.isActive === false
+        userProfileSnap.data()?.isActive === false ||
+        publicProfileSnap.data()?.accountStatus !== 'active' ||
+        publicProfileSnap.data()?.isActive === false
       ) {
         throw new Error('Staff account synchronization verification failed across Auth, users, and publicUsers.');
       }
+      if (process.env.NODE_ENV !== 'production' && process.env.ASCS_TEST_FORCE_STAFF_SYNC_FAILURE === 'true') {
+        throw new Error('Forced staff synchronization failure for compensation testing.');
+      }
     } catch (dbErr: unknown) {
-      let deleted = false;
-      try {
-        await auth.deleteUser(uid);
-        deleted = true;
-      } catch {}
-      const cleanupStatus = deleted ? 'Auth cleanup completed.' : 'Auth cleanup failed (manual intervention required).';
+      const compensation = await compensateStaffCreation({
+        auth,
+        firestore,
+        uid,
+        email: input.email,
+        role: input.role,
+        adminUid,
+        reason: dbErr instanceof Error ? dbErr.message : 'Database profile creation failed.',
+      });
+      const cleanupStatus = compensation.manualInterventionRequired
+        ? 'Compensation failed (manual intervention required).'
+        : compensation.profilesDisabled
+          ? 'Auth/profile compensation disabled the account safely.'
+          : 'Auth/profile cleanup completed.';
       const msg = dbErr instanceof Error ? dbErr.message : 'Database profile creation failed.';
       throw new Error(`Staff creation failed during Firestore write: ${msg}. ${cleanupStatus}`);
     }

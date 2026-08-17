@@ -47,6 +47,50 @@ test('all five active signatories approved plus financial unpaid is not printabl
   assert.equal(summary.printableAvailable, false);
 });
 
+test('all five approved plus pending financial verification remains pending', () => {
+  const summary = getClearanceStatusSummary(
+    REQUIRED_SIGNATORY_ROLES.map((signatoryRole) => ({ status: 'approved', signatoryRole })),
+    'pending',
+  );
+  assert.equal(summary.overallStatus, 'pending');
+  assert.equal(summary.pendingCount, 0);
+  assert.equal(summary.approvedCount, 5);
+  assert.equal(summary.notApprovedCount, 0);
+  assert.equal(summary.printableAvailable, false);
+});
+
+test('four approved plus a missing Dean is pending and keeps five-role counts', () => {
+  const summary = getClearanceStatusSummary(
+    REQUIRED_SIGNATORY_ROLES
+      .filter((role) => role !== 'dean')
+      .map((signatoryRole) => ({ status: 'approved', signatoryRole })),
+    'paid',
+  );
+  assert.deepEqual(summary, {
+    overallStatus: 'pending',
+    pendingCount: 1,
+    approvedCount: 4,
+    notApprovedCount: 0,
+    printableAvailable: false,
+  });
+});
+
+test('Dean not_approved wins over the other four approved roles', () => {
+  const summary = getClearanceStatusSummary(
+    [
+      ...REQUIRED_SIGNATORY_ROLES
+        .filter((role) => role !== 'dean')
+        .map((signatoryRole) => ({ status: 'approved', signatoryRole })),
+      { status: 'not_approved', signatoryRole: 'dean' },
+    ],
+    'paid',
+  );
+  assert.equal(summary.overallStatus, 'not_approved');
+  assert.equal(summary.pendingCount, 0);
+  assert.equal(summary.approvedCount, 4);
+  assert.equal(summary.notApprovedCount, 1);
+});
+
 test('pending signatory or financial verification blocks approval', () => {
   const summary = getClearanceStatusSummary(
     [{ status: 'approved', signatoryRole: 'librarian' }, { status: 'pending', signatoryRole: 'dean' }],
@@ -74,6 +118,47 @@ test('legacy Adviser and Accountant rows are ignored by active status calculatio
   );
   assert.equal(summary.overallStatus, 'approved');
   assert.equal(summary.printableAvailable, true);
+});
+
+test('legacy Adviser approval cannot fill the missing fifth active role', () => {
+  const summary = getClearanceStatusSummary(
+    [
+      ...REQUIRED_SIGNATORY_ROLES
+        .filter((role) => role !== 'dean')
+        .map((signatoryRole) => ({ status: 'approved', signatoryRole })),
+      { status: 'approved', signatoryRole: 'adviser' },
+    ],
+    'paid',
+  );
+  assert.equal(summary.overallStatus, 'pending');
+  assert.equal(summary.approvedCount, 4);
+  assert.equal(summary.pendingCount, 1);
+});
+
+test('duplicate role rows count once and resolve conflicts conservatively', () => {
+  const approvedDuplicate = getClearanceStatusSummary(
+    [
+      ...REQUIRED_SIGNATORY_ROLES.map((signatoryRole) => ({ status: 'approved', signatoryRole })),
+      { status: 'approved', signatoryRole: 'librarian' },
+    ],
+    'paid',
+  );
+  assert.equal(approvedDuplicate.approvedCount, 5);
+  assert.equal(approvedDuplicate.pendingCount, 0);
+  assert.equal(approvedDuplicate.notApprovedCount, 0);
+  assert.equal(approvedDuplicate.overallStatus, 'approved');
+
+  const rejectedDuplicate = getClearanceStatusSummary(
+    [
+      ...REQUIRED_SIGNATORY_ROLES.map((signatoryRole) => ({ status: 'approved', signatoryRole })),
+      { status: 'not_approved', signatoryRole: 'librarian' },
+    ],
+    'paid',
+  );
+  assert.equal(rejectedDuplicate.approvedCount, 4);
+  assert.equal(rejectedDuplicate.pendingCount, 0);
+  assert.equal(rejectedDuplicate.notApprovedCount, 1);
+  assert.equal(rejectedDuplicate.overallStatus, 'not_approved');
 });
 
 test('empty approval list cannot produce approval', () => {

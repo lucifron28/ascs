@@ -3,18 +3,49 @@ import assert from 'node:assert/strict';
 import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-auth';
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminFirestore } from '@/lib/firebase/admin';
-import { fetchDeanApplicationsAction, fetchPendingApprovalsAction, signClearanceAction } from '@/app/actions/clearance';
+import {
+  fetchDeanApplicationsAction,
+  fetchPendingApprovalsAction,
+  fetchStudentDashboardAction,
+  signClearanceAction,
+} from '@/app/actions/clearance';
 import { fetchDeanReportSummaryAction } from '@/app/actions/reports';
 import { deactivateUserAccountAction } from '@/app/actions/admin-accounts';
 
 describe('Dean clearance signatory integration tests', () => {
   let deanSession: string;
+  let studentSession: string;
 
   before(async () => {
     setupTestEnvironment();
     await resetEmulator();
     deanSession = await getSessionCookieForUser('dean@example.test', 'password123');
+    studentSession = await getSessionCookieForUser('student.a@example.test', 'password123');
     process.env.TEST_SESSION_COOKIE = deanSession;
+  });
+
+  it('Student checklist hides retained Adviser and Accountant rows', async () => {
+    await getAdminFirestore()
+      .collection('clearanceApplications')
+      .doc('app-student-a')
+      .collection('approvals')
+      .doc('adviser')
+      .set({ signatoryRole: 'adviser', status: 'approved', requirementId: 'adviser' });
+    await getAdminFirestore()
+      .collection('clearanceApplications')
+      .doc('app-student-a')
+      .collection('approvals')
+      .doc('accountant')
+      .set({ signatoryRole: 'accountant', status: 'approved', requirementId: 'accountant' });
+
+    process.env.TEST_SESSION_COOKIE = studentSession;
+    const result = await fetchStudentDashboardAction();
+    assert.equal(result.success, true);
+    if (!result.success) return;
+    assert.deepEqual(
+      result.approvals.map((approval) => approval.signatory_role).sort(),
+      ['area_chair', 'dean', 'guidance_counselor', 'librarian', 'osa_coordinator'],
+    );
   });
 
   it('Dean report scope uses deanApproved and active applications', async () => {

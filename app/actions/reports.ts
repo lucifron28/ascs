@@ -112,7 +112,7 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
         program: d.program,
         yearLevel: d.yearLevel,
         section: d.section,
-        deanApproved: d.deanApproved ?? d.adviserApproved,
+        deanApproved: d.deanApproved,
       };
     });
 
@@ -199,7 +199,7 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
         program: d.program,
         yearLevel: d.yearLevel,
         section: d.section,
-        deanApproved: d.deanApproved ?? d.adviserApproved,
+        deanApproved: d.deanApproved,
       };
     });
 

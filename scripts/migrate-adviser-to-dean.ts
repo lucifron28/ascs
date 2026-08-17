@@ -1,5 +1,9 @@
 import { getAdminAuth, getAdminFirestore } from '../lib/firebase/admin';
-import { getClearanceStatusSummary, REQUIRED_SIGNATORY_ROLES } from '../lib/clearance/status';
+import {
+  getClearanceStatusSummary,
+  REQUIRED_SIGNATORY_ROLES,
+  VALID_APPROVAL_STATUSES,
+} from '../lib/clearance/status';
 import type { DocumentData, QueryDocumentSnapshot, WriteBatch } from 'firebase-admin/firestore';
 
 const REMOTE_PROJECT_ID = 'ascs11';
@@ -65,6 +69,57 @@ function stringValue(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
 }
 
+export interface DeanApprovalMigrationInput {
+  existingDeanApproval: Record<string, unknown> | null;
+  legacyAdviserApproval: Record<string, unknown> | null;
+  deanUid: string;
+  deanName: string;
+  now: string;
+  legacyApprovalId?: string | null;
+}
+
+/**
+ * Build the Dean row without ever treating a legacy Adviser decision as a
+ * Dean decision. Existing genuine Dean actions are preserved field-for-field
+ * where possible; an Adviser-only migration always starts pending.
+ */
+export function buildDeanApprovalData(input: DeanApprovalMigrationInput): Record<string, unknown> {
+  const existingDean = input.existingDeanApproval;
+  if (existingDean) {
+    const existingStatus = stringValue(existingDean.status, 'pending');
+    return {
+      ...existingDean,
+      requirementId: 'dean',
+      signatoryRole: 'dean',
+      assignedSignatoryId: input.deanUid,
+      assignedSignatoryName: input.deanName,
+      status: (VALID_APPROVAL_STATUSES as readonly string[]).includes(existingStatus) ? existingStatus : 'pending',
+      remarksLatest: existingDean.remarksLatest ?? null,
+      actedById: existingDean.actedById ?? null,
+      actedByName: existingDean.actedByName ?? null,
+      actedAt: existingDean.actedAt ?? null,
+      updatedAt: input.now,
+    };
+  }
+
+  return {
+    requirementId: 'dean',
+    signatoryRole: 'dean',
+    assignedSignatoryId: input.deanUid,
+    assignedSignatoryName: input.deanName,
+    status: 'pending',
+    remarksLatest: null,
+    actedById: null,
+    actedByName: null,
+    actedAt: null,
+    updatedAt: input.now,
+    ...(input.legacyApprovalId ? {
+      legacySourceApprovalId: input.legacyApprovalId,
+      migratedFromLegacyAdviser: true,
+    } : {}),
+  };
+}
+
 function isInactive(data: DocumentData | undefined): boolean {
   return data?.accountStatus === 'inactive' || data?.isActive === false;
 }
@@ -76,6 +131,14 @@ async function flushBatch(batch: WriteBatch | null, pendingWrites: number): Prom
 /** Verify the post-migration invariants without changing data. */
 export async function verifyMigrationState(): Promise<void> {
   const firestore = getAdminFirestore();
+  const auth = getAdminAuth();
+  const deanAuth = await auth.getUserByEmail(DEAN_EMAIL);
+  const deanProfileSnap = await firestore.collection('users').doc(deanAuth.uid).get();
+  const deanProfile = deanProfileSnap.data();
+  if (!deanProfileSnap.exists || deanProfile?.role !== 'dean' || isInactive(deanProfile) || deanAuth.customClaims?.role !== 'dean') {
+    throw new Error('Verification failed: the configured Academic Dean account is missing, inactive, or role-mismatched.');
+  }
+
   const requirementsSnap = await firestore.collection('clearanceRequirements').get();
   const activeRequirements = requirementsSnap.docs.filter((doc) => doc.data().isActive !== false);
   const activeRoles = activeRequirements.map((doc) => String(doc.data().role));
@@ -92,14 +155,44 @@ export async function verifyMigrationState(): Promise<void> {
   if (!deanRequirement || deanRequirement.data().label !== 'Dean Clearance') {
     throw new Error('Verification failed: Dean Clearance requirement is missing or mislabeled.');
   }
+  if (deanRequirement.data().assignedSignatoryId !== deanAuth.uid) {
+    throw new Error('Verification failed: Dean Clearance is not assigned to the active Academic Dean.');
+  }
 
   const applicationsSnap = await firestore.collection('clearanceApplications').get();
-  let missingDeanApproval = 0;
   for (const app of applicationsSnap.docs) {
-    if (typeof app.data().deanApproved !== 'boolean') missingDeanApproval++;
-  }
-  if (missingDeanApproval > 0) {
-    throw new Error(`Verification failed: ${missingDeanApproval} application(s) are missing deanApproved.`);
+    const approvalsSnap = await app.ref.collection('approvals').get();
+    const activeApprovals = approvalsSnap.docs.filter((doc) =>
+      (REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(String(doc.data().signatoryRole || '')),
+    );
+    const activeRoles = activeApprovals.map((doc) => String(doc.data().signatoryRole));
+    const uniqueActiveRoles = new Set(activeRoles);
+    if (activeApprovals.length !== REQUIRED_SIGNATORY_ROLES.length || uniqueActiveRoles.size !== REQUIRED_SIGNATORY_ROLES.length) {
+      throw new Error(`Verification failed: application ${app.id} does not contain exactly five active approval roles.`);
+    }
+
+    const deanApproval = activeApprovals.find((doc) => doc.data().signatoryRole === 'dean');
+    if (!deanApproval) throw new Error(`Verification failed: application ${app.id} is missing its Dean approval.`);
+
+    const appData = app.data();
+    const expectedDeanApproved = deanApproval.data().status === 'approved';
+    if (typeof appData.deanApproved !== 'boolean' || appData.deanApproved !== expectedDeanApproved) {
+      throw new Error(`Verification failed: application ${app.id} has an inconsistent deanApproved flag.`);
+    }
+
+    const summary = getClearanceStatusSummary(
+      activeApprovals.map((doc) => ({ status: doc.data().status, signatoryRole: doc.data().signatoryRole })),
+      appData.financialStatus,
+    );
+    if (
+      appData.overallStatus !== summary.overallStatus ||
+      appData.pendingCount !== summary.pendingCount ||
+      appData.approvedCount !== summary.approvedCount ||
+      appData.notApprovedCount !== summary.notApprovedCount ||
+      appData.printableAvailable !== summary.printableAvailable
+    ) {
+      throw new Error(`Verification failed: application ${app.id} counters or printable status are stale.`);
+    }
   }
 }
 
@@ -180,20 +273,15 @@ export async function migrateAdviserToDean(options: MigrationOptions): Promise<M
     const approvalsSnap = await appDoc.ref.collection('approvals').get();
     const legacyDoc = approvalsSnap.docs.find((doc) => doc.id === 'adviser' || doc.data().signatoryRole === 'adviser');
     const existingDeanDoc = approvalsSnap.docs.find((doc) => doc.id === 'dean' || doc.data().signatoryRole === 'dean');
-    const sourceData = existingDeanDoc?.data() || legacyDoc?.data() || {};
     const deanApprovalRef = existingDeanDoc?.ref || appDoc.ref.collection('approvals').doc('dean');
-    const deanApprovalData = {
-      ...sourceData,
-      requirementId: 'dean',
-      signatoryRole: 'dean',
-      assignedSignatoryId: deanAuth.uid,
-      assignedSignatoryName: deanName,
-      status: stringValue(sourceData.status, 'pending'),
-      remarksLatest: sourceData.remarksLatest ?? null,
-      actedAt: sourceData.actedAt ?? null,
-      updatedAt: now,
-      ...(legacyDoc && !existingDeanDoc ? { legacySourceApprovalId: legacyDoc.id } : {}),
-    };
+    const deanApprovalData = buildDeanApprovalData({
+      existingDeanApproval: existingDeanDoc?.data() || null,
+      legacyAdviserApproval: legacyDoc?.data() || null,
+      deanUid: deanAuth.uid,
+      deanName,
+      now,
+      legacyApprovalId: legacyDoc?.id || null,
+    });
 
     if (existingDeanDoc) report.deanApprovalsUpdated++;
     else report.deanApprovalsCreated++;
