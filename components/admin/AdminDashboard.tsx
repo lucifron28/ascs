@@ -526,7 +526,7 @@ export default function AdminDashboard() {
 
       {/* Error Alert */}
       {error && (
-        <div className="alert alert-error rounded-xl shadow-sm border border-error/30 flex items-center justify-between">
+        <div role="alert" className="alert alert-error rounded-xl shadow-sm border border-error/30 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <span className="text-sm font-medium">{error}</span>
@@ -700,7 +700,7 @@ export default function AdminDashboard() {
                           <button
                             onClick={() => handleOpenRoleModal(u)}
                             disabled={u.uid === currentAdminUid}
-                            className="btn btn-xs btn-primary text-primary-content font-bold rounded-lg flex items-center gap-1"
+                            className="btn btn-sm min-h-11 btn-primary text-primary-content font-bold rounded-lg flex items-center gap-1"
                             title="Change User Role"
                           >
                             <Edit className="w-3.5 h-3.5" />
@@ -714,7 +714,7 @@ export default function AdminDashboard() {
                                 setActionType('reactivate');
                                 setModalError(null);
                               }}
-                              className="btn btn-xs btn-success text-success-content font-bold rounded-lg flex items-center gap-1"
+                              className="btn btn-sm min-h-11 btn-success text-success-content font-bold rounded-lg flex items-center gap-1"
                               title="Reactivate Account"
                             >
                               <UserCheck2 className="w-3.5 h-3.5" />
@@ -728,7 +728,7 @@ export default function AdminDashboard() {
                                 setModalError(null);
                               }}
                               disabled={u.uid === currentAdminUid}
-                              className="btn btn-xs btn-error text-error-content font-bold rounded-lg flex items-center gap-1"
+                              className="btn btn-sm min-h-11 btn-error text-error-content font-bold rounded-lg flex items-center gap-1"
                               title="Deactivate Account"
                             >
                               <UserX className="w-3.5 h-3.5" />
@@ -743,7 +743,7 @@ export default function AdminDashboard() {
                               setModalError(null);
                             }}
                             disabled={u.uid === currentAdminUid}
-                            className="btn btn-xs btn-warning text-warning-content font-bold rounded-lg flex items-center gap-1"
+                            className="btn btn-sm min-h-11 btn-warning text-warning-content font-bold rounded-lg flex items-center gap-1"
                             title="Reset Temporary Password"
                           >
                             <KeyRound className="w-3.5 h-3.5" />

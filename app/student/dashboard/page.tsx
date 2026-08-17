@@ -91,7 +91,7 @@ export default function StudentDashboardPage() {
       <main id="main-content" className="flex-1 overflow-y-auto p-6 md:p-8 max-w-5xl w-full mx-auto space-y-8">
         {/* Error Alert panel */}
         {error && (
-          <div className="alert alert-error bg-error/10 border-error/30 text-error rounded-xl flex items-center gap-2 p-3 text-sm">
+          <div role="alert" className="alert alert-error bg-error/10 border-error/30 text-error rounded-xl flex items-center gap-2 p-3 text-sm">
             <span>Error: {error}</span>
             <button onClick={loadDashboard} className="btn btn-sm min-h-11 btn-outline border-error text-error rounded-lg ml-auto">
               Retry

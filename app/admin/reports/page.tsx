@@ -126,7 +126,7 @@ export default function AdminReportsPage() {
 
         {/* Error Alert */}
         {error && (
-          <div className="alert alert-error text-sm rounded-xl flex items-center gap-2 p-4">
+          <div role="alert" className="alert alert-error text-sm rounded-xl flex items-center gap-2 p-4">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
