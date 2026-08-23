@@ -59,7 +59,7 @@ async function main() {
 
     await login(page, 'student.a@example.test', 'student/dashboard');
     await page.getByRole('heading', { name: /welcome back/i }).waitFor();
-    await capture(page, '02-student-dashboard-approved.png');
+    await capture(page, '02-student-dashboard-approved.png', true);
     await logout(page);
     ({ context, page } = await replaceContext(browser, context));
 
@@ -105,7 +105,7 @@ async function main() {
     await page.getByRole('dialog').getByRole('button', { name: /close dialog/i }).click();
     await page.goto(`${baseUrl}/dean/reports`, { waitUntil: 'networkidle' });
     await page.getByRole('heading', { name: /academic clearance reports/i }).waitFor();
-    await capture(page, '14-dean-reports.png');
+    await capture(page, '14-dean-reports.png', true);
     await logout(page);
     ({ context, page } = await replaceContext(browser, context));
 
@@ -117,7 +117,7 @@ async function main() {
     await capture(page, '12-admin-user-management.png');
     await page.goto(`${baseUrl}/admin/reports`, { waitUntil: 'networkidle' });
     await page.getByRole('heading', { name: /institution clearance.*reports/i }).waitFor();
-    await capture(page, '13-admin-reports.png');
+    await capture(page, '13-admin-reports.png', true);
     await logout(page);
     ({ context, page } = await replaceContext(browser, context));
 

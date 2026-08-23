@@ -4,6 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { fetchFinancialQueueAction, updateFinancialStatusAction } from '@/app/actions/clearance';
 import { CreditCard, CheckCircle2, ShieldAlert, AlertCircle, CircleEllipsis, Search, FileText } from 'lucide-react';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
+import {
+  canSaveFinancialDecision,
+  getFinancialNotesDisplay,
+  getInitialFinancialDecision,
+  type FinancialDecision,
+} from '@/lib/clearance/financial-ui';
 
 interface FinancialRecord {
   id: string;
@@ -31,7 +37,7 @@ export default function AccountantDashboard() {
 
   // Modal State
   const [selectedRecord, setSelectedRecord] = useState<FinancialRecord | null>(null);
-  const [statusInput, setStatusInput] = useState<'paid' | 'unpaid'>('unpaid');
+  const [statusInput, setStatusInput] = useState<FinancialDecision>(null);
   const [notesInput, setNotesInput] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -48,14 +54,13 @@ export default function AccountantDashboard() {
         if (res.success) {
           setRecords(res.financialQueue || []);
         } else {
-          setError(res.error || 'Failed to retrieve financial accounts.');
+          setError(res.error || 'Unable to load financial records. Please try again.');
         }
       }
     } catch (err: unknown) {
       console.error('Error loading records:', err);
       if (isMounted.current) {
-        const message = err instanceof Error ? err.message : 'Connection error.';
-        setError(message);
+        setError('Unable to load financial records. Please try again.');
       }
     } finally {
       if (isMounted.current) {
@@ -74,7 +79,7 @@ export default function AccountantDashboard() {
 
   const handleOpenUpdate = (rec: FinancialRecord) => {
     setSelectedRecord(rec);
-    setStatusInput(rec.status === 'pending' ? 'unpaid' : rec.status);
+    setStatusInput(getInitialFinancialDecision(rec.status));
     setNotesInput(rec.notes || '');
     setModalError(null);
     setModalSuccess(false);
@@ -83,6 +88,10 @@ export default function AccountantDashboard() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRecord) return;
+    if (!canSaveFinancialDecision(statusInput)) {
+      setModalError('Select Paid or Unpaid before saving.');
+      return;
+    }
 
     const confirmation = statusInput === 'unpaid'
       ? 'Mark this application Financially Unpaid? A remark is required and the clearance cannot be approved.'
@@ -111,8 +120,7 @@ export default function AccountantDashboard() {
       }
     } catch (err: unknown) {
       console.error('Error updating status:', err);
-      const message = err instanceof Error ? err.message : 'Connection error.';
-      setModalError(message);
+      setModalError('Unable to update the financial status. Please try again.');
     } finally {
       setModalLoading(false);
     }
@@ -189,7 +197,7 @@ export default function AccountantDashboard() {
       </div>
 
       {error && (
-        <div className="alert alert-error bg-error/10 border-error/20 text-error-content rounded-xl flex items-center gap-2 p-3 text-sm">
+        <div role="alert" className="alert alert-error bg-error/10 border-error/20 text-error-content rounded-xl flex items-center gap-2 p-3 text-sm">
           <span>Error: {error}</span>
           <button onClick={loadRecords} className="btn btn-xs btn-outline border-error/40 text-error-content rounded-lg ml-auto">
             Retry
@@ -304,7 +312,7 @@ export default function AccountantDashboard() {
                       )}
                     </td>
                     <td className="text-base-content/80 py-4 text-xs max-w-xs truncate">
-                      {rec.notes && rec.notes.trim() !== '' ? rec.notes : 'No outstanding balances.'}
+                      {getFinancialNotesDisplay(rec.status, rec.notes)}
                     </td>
                     <td className="text-base-content/70 py-4 text-xs">
                       {rec.verified_at ? new Date(rec.verified_at).toLocaleDateString() : '--'}
@@ -411,6 +419,11 @@ export default function AccountantDashboard() {
                   />
                 </label>
               </div>
+              {statusInput === null && (
+                <p className="text-xs text-base-content/70" id="financial-status-help">
+                  Select Paid or Unpaid before saving.
+                </p>
+              )}
             </fieldset>
 
             {/* Remarks Input */}
@@ -442,7 +455,8 @@ export default function AccountantDashboard() {
               </button>
               <button
                 type="submit"
-                disabled={modalLoading || modalSuccess}
+                disabled={modalLoading || modalSuccess || !canSaveFinancialDecision(statusInput)}
+                aria-describedby={statusInput === null ? 'financial-status-help' : undefined}
                 aria-busy={modalLoading}
                 className="btn btn-sm btn-primary rounded-xl text-xs font-semibold px-5"
               >

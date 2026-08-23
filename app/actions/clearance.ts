@@ -4,6 +4,7 @@ import { getAdminFirestore } from '@/lib/firebase/admin';
 import { normalizeSemester, getApplicationTermDocumentIds } from '@/lib/academic-term';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { getClearanceStatusSummary, REQUIRED_SIGNATORY_ROLES } from '@/lib/clearance/status';
+import { logClearanceActionError, mapClearanceActionError } from '@/lib/clearance/action-errors';
 import type { QueryDocumentSnapshot, Transaction, DocumentData } from 'firebase-admin/firestore';
 
 // 1. Submit Clearance Application (Student)
@@ -282,9 +283,8 @@ export async function fetchStudentDashboardAction() {
       financial
     };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Fetch student dashboard error';
-    console.error('Fetch student dashboard action error:', error);
-    return { success: false, error: message };
+    logClearanceActionError('fetchStudentDashboard', error);
+    return { success: false, error: mapClearanceActionError('fetchStudentDashboard', error) };
   }
 }
 
@@ -335,9 +335,8 @@ export async function fetchPendingApprovalsAction() {
 
     return { success: true, role, pendingQueue };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Fetch pending approvals error';
-    console.error('Fetch pending approvals error:', error);
-    return { success: false, error: message };
+    logClearanceActionError('fetchPendingApprovals', error);
+    return { success: false, error: mapClearanceActionError('fetchPendingApprovals', error) };
   }
 }
 
@@ -461,9 +460,8 @@ export async function signClearanceAction(data: {
 
     return { success: true };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Sign clearance error';
-    console.error('Sign clearance action error:', error);
-    return { success: false, error: message };
+    logClearanceActionError('signClearance', error);
+    return { success: false, error: mapClearanceActionError('signClearance', error) };
   }
 }
 
@@ -502,9 +500,8 @@ export async function fetchFinancialQueueAction() {
 
     return { success: true, financialQueue };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Fetch financial queue error';
-    console.error('Fetch financial queue error:', error);
-    return { success: false, error: message };
+    logClearanceActionError('fetchFinancialQueue', error);
+    return { success: false, error: mapClearanceActionError('fetchFinancialQueue', error) };
   }
 }
 
@@ -593,9 +590,8 @@ export async function updateFinancialStatusAction(data: {
 
     return { success: true };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Update financial status error';
-    console.error('Update financial status error:', error);
-    return { success: false, error: message };
+    logClearanceActionError('updateFinancialStatus', error);
+    return { success: false, error: mapClearanceActionError('updateFinancialStatus', error) };
   }
 }
 
