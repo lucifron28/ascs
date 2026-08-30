@@ -26,24 +26,24 @@ test.describe('Printable Clearance Record QA', () => {
     await expect(record.locator('header')).toContainText('A.Y. 2026-2027');
     await expect(record.locator('header')).toContainText('FIRST SEMESTER');
     await expect(record).toContainText('Accounting Information System (BSAIS)');
-    await expect(record.getByRole('heading', { name: /required signatory clearance/i })).toBeVisible();
-    await expect(record.getByRole('heading', { name: /financial accountability review/i })).toBeVisible();
-    const signatoryTable = record.getByRole('table', { name: /required signatory clearance/i });
+    await expect(record.getByRole('heading', { name: /six-stage clearance workflow/i })).toBeVisible();
+    const signatoryTable = record.getByRole('table', { name: /six-stage clearance workflow/i });
     await expect(signatoryTable.locator('thead th')).toHaveText([
-      'Office / Requirement',
+      'Stage / Office',
+      'Type',
       'Status',
       'Assigned Signatory',
       'Remarks',
       'Date Reviewed',
     ]);
-    await expect(signatoryTable.locator('tbody tr')).toHaveCount(5);
-    await expect(signatoryTable.getByText(/accountant/i)).toHaveCount(0);
+    await expect(signatoryTable.locator('tbody tr')).toHaveCount(6);
+    await expect(signatoryTable.getByText(/accountant clearance/i)).toBeVisible();
     await expect(record.getByText(/librarian/i).first()).toBeVisible();
     await expect(record.getByText(/osa coordinator/i).first()).toBeVisible();
     await expect(record.getByText(/guidance counselor/i).first()).toBeVisible();
     await expect(record.getByText(/area chair/i).first()).toBeVisible();
     await expect(record.getByText(/dean clearance/i).first()).toBeVisible();
-    await expect(record.getByText(/accountant review is a separate financial gate/i)).toBeVisible();
+    await expect(record.getByText(/accountant clearance is step 2 of 6 and is represented by financial status/i)).toBeVisible();
     await expect(record.getByText(/not an official institutional clearance certificate/i)).toBeVisible();
     await expect(record.getByText(/adviser/i)).toHaveCount(0);
     await expect(record.getByText(/signed on|institution seal placeholder/i)).toHaveCount(0);

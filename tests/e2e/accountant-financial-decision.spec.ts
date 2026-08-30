@@ -44,11 +44,13 @@ test.describe('Accountant financial decision state', () => {
       await expect(save).toBeEnabled();
       await dialog.getByRole('button', { name: /close dialog/i }).click();
 
+      await page.getByRole('button', { name: /completed history/i }).click();
       const paidRow = page.locator('tr', { hasText: 'STUD-2026-0001' });
       await paidRow.getByRole('button', { name: /update financial status/i }).click();
       await expect(page.getByRole('dialog').getByLabel(/mark financially paid/i)).toBeChecked();
       await page.getByRole('dialog').getByRole('button', { name: /close dialog/i }).click();
 
+      await page.getByRole('button', { name: /back to action queue/i }).click();
       const unpaidRow = page.locator('tr', { hasText: 'STUD-2026-0004' });
       await unpaidRow.getByRole('button', { name: /update financial status/i }).click();
       await expect(page.getByRole('dialog').getByLabel(/mark unpaid dues/i)).toBeChecked();

@@ -4,7 +4,7 @@ import { assertNoFabricatedDeanDecision, buildDeanApprovalData } from './migrate
 
 const baseInput = {
   deanUid: 'dean-uid',
-  deanName: 'Academic Dean',
+  deanName: 'Dean of Business Program',
   now: '2026-08-17T00:00:00.000Z',
 };
 
@@ -59,7 +59,7 @@ test('a genuine Dean decision is preserved and wins over legacy Adviser history'
       assignedSignatoryName: 'Former Dean',
       remarksLatest: 'Dean reviewed the record',
       actedById: 'real-dean-actor',
-      actedByName: 'Academic Dean',
+      actedByName: 'Dean of Business Program',
       actedAt: '2026-08-16T12:00:00.000Z',
     },
     legacyAdviserApproval: {
@@ -72,10 +72,10 @@ test('a genuine Dean decision is preserved and wins over legacy Adviser history'
   assert.equal(dean.status, 'approved');
   assert.equal(dean.remarksLatest, 'Dean reviewed the record');
   assert.equal(dean.actedById, 'real-dean-actor');
-  assert.equal(dean.actedByName, 'Academic Dean');
+  assert.equal(dean.actedByName, 'Dean of Business Program');
   assert.equal(dean.actedAt, '2026-08-16T12:00:00.000Z');
   assert.equal(dean.assignedSignatoryId, 'dean-uid');
-  assert.equal(dean.assignedSignatoryName, 'Academic Dean');
+  assert.equal(dean.assignedSignatoryName, 'Dean of Business Program');
 });
 
 test('an existing Dean row is reused on a second run rather than duplicated', () => {

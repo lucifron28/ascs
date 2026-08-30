@@ -6,6 +6,7 @@ import {
   DEMO_REQUIREMENTS_FIXTURE,
 } from '../tests/fixtures/demo-data';
 import { isAcademicProgramCode } from '../lib/academic-programs';
+import { CLEARANCE_WORKFLOW_STAGES } from '../lib/clearance/workflow';
 
 export async function verifySeedInvariants(): Promise<boolean> {
   assertEmulatorEnvironment();
@@ -82,9 +83,24 @@ export async function verifySeedInvariants(): Promise<boolean> {
     }
     if (reqDoc.data()?.isActive !== false) activeRequirementRoles.push(String(reqDoc.data()?.role));
   }
-  const expectedActiveRoles = ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'dean'];
-  if (activeRequirementRoles.sort().join('|') !== expectedActiveRoles.sort().join('|')) {
+  const expectedActiveStages = CLEARANCE_WORKFLOW_STAGES.filter((stage) => stage.kind === 'approval');
+  const expectedActiveRoles = expectedActiveStages.map((stage) => stage.role);
+  const actualActiveRoles = [...activeRequirementRoles].sort();
+  if (actualActiveRoles.join('|') !== [...expectedActiveRoles].sort().join('|')) {
     throw new Error(`INVARIANT FAILED: Active requirement roles must be exactly ${expectedActiveRoles.join(', ')}.`);
+  }
+
+  const orderedActiveRequirements = DEMO_REQUIREMENTS_FIXTURE
+    .filter((req) => req.isActive !== false)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+  const expectedRequirementOrder = expectedActiveStages
+    .map((stage) => `${stage.role}:${stage.stage}:${stage.label}`)
+    .join('|');
+  const actualRequirementOrder = orderedActiveRequirements
+    .map((req) => `${req.role}:${req.displayOrder}:${req.label}`)
+    .join('|');
+  if (actualRequirementOrder !== expectedRequirementOrder) {
+    throw new Error(`INVARIANT FAILED: Active requirements must follow the six-stage order (${expectedRequirementOrder}).`);
   }
 
   // 4. Verify Student A (Fully Approved)
@@ -106,7 +122,14 @@ export async function verifySeedInvariants(): Promise<boolean> {
   }
   const appAApprovals = await appA.ref.collection('approvals').get();
   const appARoles = appAApprovals.docs.map((doc) => doc.data().signatoryRole);
-  if (appAApprovals.size !== 5 || appARoles.includes('adviser') || !appARoles.includes('dean')) {
+  if (
+    appAApprovals.size !== expectedActiveStages.length ||
+    appARoles.includes('adviser') ||
+    appARoles.includes('accountant') ||
+    !appARoles.includes('dean') ||
+    new Set(appARoles).size !== expectedActiveStages.length ||
+    !expectedActiveRoles.every((role) => appARoles.includes(role))
+  ) {
     throw new Error('INVARIANT FAILED: Student A approval rows must contain the five active roles and no Adviser row.');
   }
 
@@ -140,7 +163,8 @@ export async function verifySeedInvariants(): Promise<boolean> {
     appDData?.financialStatus !== 'unpaid' ||
     appDData?.overallStatus !== 'not_approved' ||
     appDData?.printableAvailable !== false ||
-    appDData?.program !== 'CRIM'
+    appDData?.program !== 'CRIM' ||
+    appDData?.deanApproved !== true
   ) {
     throw new Error(`INVARIANT FAILED: Student D state incorrect. Got: ${JSON.stringify(appDData)}`);
   }

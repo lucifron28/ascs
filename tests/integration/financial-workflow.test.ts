@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-auth';
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminFirestore } from '@/lib/firebase/admin';
-import { updateFinancialStatusAction } from '@/app/actions/clearance';
+import { fetchFinancialQueueAction, updateFinancialStatusAction } from '@/app/actions/clearance';
 
 describe('Financial Workflow Integration Tests', () => {
   let accountantSession: string;
@@ -53,6 +53,40 @@ describe('Financial Workflow Integration Tests', () => {
     if (!noRemarksRes.success) {
       assert.match(noRemarksRes.error, /remarks are required/i);
     }
+  });
+
+  it('4b. Accountant queue and server action stay locked until Librarian approval', async () => {
+    process.env.TEST_SESSION_COOKIE = accountantSession;
+    const queueRes = await fetchFinancialQueueAction();
+    assert.equal(queueRes.success, true);
+    if (!queueRes.success) return;
+    assert.equal((queueRes.financialQueue || []).some((record) => record.application_id === 'app-student-c'), false);
+
+    const lockedRes = await updateFinancialStatusAction({
+      recordId: 'app-student-c',
+      status: 'paid',
+      financialRemarks: 'Attempted early payment review.',
+    });
+    assert.equal(lockedRes.success, false);
+    if (!lockedRes.success) {
+      assert.match(lockedRes.error, /Accountant Clearance is locked until Librarian Clearance is approved/i);
+    }
+  });
+
+  it('4c. Paid transition unlocks OSA exactly once', async () => {
+    process.env.TEST_SESSION_COOKIE = accountantSession;
+    const paidRes = await updateFinancialStatusAction({
+      recordId: 'app-student-d',
+      status: 'paid',
+      financialRemarks: 'Balance verified for the next clearance stage.',
+    });
+    assert.equal(paidRes.success, true);
+
+    const unlocks = await getAdminFirestore()
+      .collection('notifications')
+      .where('recipientId', '==', 'demo-osa-uid')
+      .get();
+    assert.equal(unlocks.docs.filter((doc) => doc.data().type === 'workflow_stage_unlocked' && doc.data().relatedApplicationId === 'app-student-d').length, 1);
   });
 
   it("6. 'unpaid' forces overall status to 'not_approved'", async () => {

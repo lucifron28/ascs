@@ -8,6 +8,7 @@ import { fetchPendingApprovalsAction, signClearanceAction } from '@/app/actions/
 describe('Signatory Workflow Integration Tests', () => {
   let librarianSession: string;
   let osaSession: string;
+  let areaChairSession: string;
   let adviserSession: string;
 
   before(async () => {
@@ -15,6 +16,7 @@ describe('Signatory Workflow Integration Tests', () => {
     await resetEmulator();
     librarianSession = await getSessionCookieForUser('librarian@example.test', 'password123');
     osaSession = await getSessionCookieForUser('osa@example.test', 'password123');
+    areaChairSession = await getSessionCookieForUser('chair@example.test', 'password123');
     const auth = getAdminAuth();
     const adviser = await auth.getUserByEmail('legacy-adviser@example.test').catch(async () => auth.createUser({
       email: 'legacy-adviser@example.test',
@@ -44,6 +46,23 @@ describe('Signatory Workflow Integration Tests', () => {
 
     assert.equal(queueRes.role, 'librarian');
     assert.ok(Array.isArray(queueRes.pendingQueue));
+  });
+
+  it('1b. A later signatory cannot bypass an unresolved earlier stage', async () => {
+    process.env.TEST_SESSION_COOKIE = osaSession;
+    const queueRes = await fetchPendingApprovalsAction();
+    assert.equal(queueRes.success, true);
+    if (!queueRes.success) return;
+    assert.equal((queueRes.pendingQueue || []).some((item) => item.application_id === 'app-student-c'), false);
+
+    const res = await signClearanceAction({
+      applicationId: 'app-student-c',
+      approvalId: 'osa_coordinator',
+      status: 'approved',
+      remarks: '',
+    });
+    assert.equal(res.success, false);
+    if (!res.success) assert.match(res.error || '', /stage is locked until the previous stage/i);
   });
 
   it('2. Wrong role cannot approve another requirement', async () => {
@@ -101,13 +120,19 @@ describe('Signatory Workflow Integration Tests', () => {
 
     const appDoc = await getAdminFirestore().collection('clearanceApplications').doc('app-student-b').get();
     assert.equal(appDoc.data()?.approvedCount, 3); // was 2, now 3
+
+    const areaChairUnlocks = await getAdminFirestore()
+      .collection('notifications')
+      .where('recipientId', '==', 'demo-chair-uid')
+      .get();
+    assert.equal(areaChairUnlocks.docs.filter((doc) => doc.data().type === 'workflow_stage_unlocked' && doc.data().relatedApplicationId === 'app-student-b').length, 1);
   });
 
   it('5. Pending requires remarks & 6. Not_approved requires remarks', async () => {
-    process.env.TEST_SESSION_COOKIE = osaSession;
+    process.env.TEST_SESSION_COOKIE = areaChairSession;
     const resNoRemarks = await signClearanceAction({
       applicationId: 'app-student-b',
-      approvalId: 'osa_coordinator',
+      approvalId: 'area_chair',
       status: 'not_approved',
       remarks: '   ',
     });
@@ -119,12 +144,12 @@ describe('Signatory Workflow Integration Tests', () => {
   });
 
   it('7. Remarks history is persisted & 8. Activity log persisted & 9. Student notification created', async () => {
-    process.env.TEST_SESSION_COOKIE = osaSession;
+    process.env.TEST_SESSION_COOKIE = areaChairSession;
     const resWithRemarks = await signClearanceAction({
       applicationId: 'app-student-b',
-      approvalId: 'osa_coordinator',
+      approvalId: 'area_chair',
       status: 'not_approved',
-      remarks: 'Lacking OSA community service hours.',
+      remarks: 'Area Chair review requires an updated clearance note.',
     });
 
     assert.equal(resWithRemarks.success, true);
@@ -136,11 +161,11 @@ describe('Signatory Workflow Integration Tests', () => {
       .get();
     assert.ok(remarksSnap.size >= 1);
     const latestRemark = remarksSnap.docs[remarksSnap.size - 1].data();
-    assert.equal(latestRemark.content, 'Lacking OSA community service hours.');
+    assert.equal(latestRemark.content, 'Area Chair review requires an updated clearance note.');
 
     const logsSnap = await getAdminFirestore()
       .collection('activityLogs')
-      .where('entityId', '==', 'osa_coordinator')
+      .where('entityId', '==', 'area_chair')
       .get();
     assert.ok(logsSnap.size >= 1);
 
@@ -149,5 +174,11 @@ describe('Signatory Workflow Integration Tests', () => {
       .where('recipientId', '==', 'demo-student-b-uid')
       .get();
     assert.ok(notifsSnap.size >= 1);
+
+    const deanUnlocks = await getAdminFirestore()
+      .collection('notifications')
+      .where('recipientId', '==', 'demo-dean-uid')
+      .get();
+    assert.equal(deanUnlocks.docs.filter((doc) => doc.data().type === 'workflow_stage_unlocked' && doc.data().relatedApplicationId === 'app-student-b').length, 0);
   });
 });

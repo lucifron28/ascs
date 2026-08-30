@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Live Multi-Role Clearance Journey', () => {
   test.setTimeout(120000);
 
-  test('Complete Dean clearance workflow (Student G -> Librarian -> OSA -> Guidance -> Area Chair -> Accountant -> Dean -> Approved Student)', async ({ page }) => {
+  test('Complete Dean clearance workflow (Student G -> Librarian -> Accountant -> OSA -> Guidance -> Area Chair -> Dean -> Approved Student)', async ({ page }) => {
     // Automatically accept native window.confirm dialogs used in Signatory and Accountant dashboards
     page.on('dialog', (dialog) => dialog.accept());
 
@@ -47,7 +47,27 @@ test.describe('Live Multi-Role Clearance Journey', () => {
     await page.getByRole('button', { name: /logout/i }).click();
     await page.waitForURL('**/login');
 
-    // Step 3: OSA Coordinator approves OSA requirement
+    // Step 3: Accountant verifies financial status as Paid (after Librarian)
+    await page.getByLabel(/email address/i).fill('accountant@example.test');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
+    await page.getByRole('button', { name: /log in/i }).click();
+
+    await page.waitForURL('**/accountant/dashboard');
+    await expect(page.getByRole('heading', { name: /accountant clearance/i })).toBeVisible();
+
+    const accRow = page.locator('tr', { hasText: 'STUD-2026-0007' });
+    await expect(accRow).toBeVisible();
+    await accRow.getByRole('button', { name: /update/i }).click();
+
+    await page.getByLabel(/mark financially paid/i).check();
+    await page.getByRole('button', { name: /save financial status/i }).click();
+    await expect(page.getByText(/account status updated successfully/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /update financial account/i })).toBeHidden({ timeout: 10000 });
+
+    await page.getByRole('button', { name: /logout/i }).click();
+    await page.waitForURL('**/login');
+
+    // Step 4: OSA Coordinator approves OSA requirement
     await page.getByLabel(/email address/i).fill('osa@example.test');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
@@ -64,7 +84,7 @@ test.describe('Live Multi-Role Clearance Journey', () => {
     await page.getByRole('button', { name: /logout/i }).click();
     await page.waitForURL('**/login');
 
-    // Step 4: Guidance Counselor approves Guidance requirement
+    // Step 5: Guidance Counselor approves Guidance requirement
     await page.getByLabel(/email address/i).fill('guidance@example.test');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
@@ -81,7 +101,7 @@ test.describe('Live Multi-Role Clearance Journey', () => {
     await page.getByRole('button', { name: /logout/i }).click();
     await page.waitForURL('**/login');
 
-    // Step 5: Area Chair approves Area Chair requirement
+    // Step 6: Area Chair approves Area Chair requirement
     await page.getByLabel(/email address/i).fill('chair@example.test');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
@@ -98,27 +118,7 @@ test.describe('Live Multi-Role Clearance Journey', () => {
     await page.getByRole('button', { name: /logout/i }).click();
     await page.waitForURL('**/login');
 
-    // Step 6: Accountant verifies financial status as Paid
-    await page.getByLabel(/email address/i).fill('accountant@example.test');
-    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
-    await page.getByRole('button', { name: /log in/i }).click();
-
-    await page.waitForURL('**/accountant/dashboard');
-    await expect(page.getByRole('heading', { name: /financial accountability management/i })).toBeVisible();
-
-    const accRow = page.locator('tr', { hasText: 'STUD-2026-0007' });
-    await expect(accRow).toBeVisible();
-    await accRow.getByRole('button', { name: /update/i }).click();
-
-    await page.getByLabel(/mark financially paid/i).check();
-    await page.getByRole('button', { name: /save financial status/i }).click();
-    await expect(page.getByText(/account status updated successfully/i)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('heading', { name: /update financial account/i })).toBeHidden({ timeout: 10000 });
-
-    await page.getByRole('button', { name: /logout/i }).click();
-    await page.waitForURL('**/login');
-
-    // Step 7: Academic Dean approves Dean Clearance
+    // Step 7: Dean of Business Program approves Dean Clearance
     await page.getByLabel(/email address/i).fill('dean@example.test');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
@@ -137,7 +137,7 @@ test.describe('Live Multi-Role Clearance Journey', () => {
     await page.getByRole('button', { name: /logout/i }).click();
     await page.waitForURL('**/login');
 
-    // Step 9: Student G verifies overall approved status & printable clearance control enabled
+    // Step 8: Student G verifies overall approved status & printable clearance control enabled
     await page.getByLabel(/email address/i).fill('student.g@example.test');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();
@@ -147,9 +147,10 @@ test.describe('Live Multi-Role Clearance Journey', () => {
 
     await expect(page.getByText(/approved/i).first()).toBeVisible();
     await expect(page.getByText(/paid /i).first()).toBeVisible();
+    await expect(page.getByTestId('workflow-progress')).toHaveText(/6 of 6 stages completed/i);
     await expect(page.getByRole('button', { name: /print|preview|certificate/i })).toBeEnabled();
 
-    // Step 10: Admin verifies Student G in institution reports for 2026-2027 1st Semester
+    // Step 9: Admin verifies Student G in institution reports for 2026-2027 1st Semester
     await page.getByRole('button', { name: /logout/i }).click();
     await page.waitForURL('**/login');
 
@@ -168,7 +169,7 @@ test.describe('Live Multi-Role Clearance Journey', () => {
     await page.getByRole('button', { name: /logout/i }).click();
     await page.waitForURL('**/login');
 
-    // Step 11: Dean verifies Student G in Dean clearance reports for 2026-2027 1st Semester
+    // Step 10: Dean verifies Student G in Dean clearance reports for 2026-2027 1st Semester
     await page.getByLabel(/email address/i).fill('dean@example.test');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: /log in/i }).click();

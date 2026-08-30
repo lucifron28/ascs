@@ -38,7 +38,7 @@ test('3. Student role cannot access Admin, Dean, or shared filter option scopes'
   assert.equal(checkReportRoleAuthorization(student, 'admin').authorized, false);
   assert.equal(checkReportRoleAuthorization(student, 'dean').authorized, false);
   assert.equal(checkReportRoleAuthorization(student, 'shared').authorized, false);
-  assert.throws(() => assertReportScope(student, 'shared'), /Only administrators or the Academic Dean/);
+  assert.throws(() => assertReportScope(student, 'shared'), /Only administrators or the Dean of Business Program/);
 });
 
 test('4. Signatory roles (librarian, accountant, adviser, etc.) cannot access any report scopes', () => {

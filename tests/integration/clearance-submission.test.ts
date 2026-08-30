@@ -64,6 +64,16 @@ describe('Clearance Submission Integration Tests', () => {
       .get();
     assert.ok(studentNotifs.size >= 1);
 
+    const signatoryNotifs = await getAdminFirestore()
+      .collection('notifications')
+      .where('relatedApplicationId', '==', appId)
+      .where('type', '==', 'signatory_action_required')
+      .get();
+    assert.deepEqual(
+      signatoryNotifs.docs.map((doc) => doc.data().recipientId),
+      ['demo-librarian-uid'],
+    );
+
     // 9. Activity log created
     const logsSnap = await getAdminFirestore()
       .collection('activityLogs')

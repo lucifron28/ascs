@@ -27,6 +27,9 @@ test.describe('Normal Clearance Journey', () => {
 
     // Pending status & print button disabled/hidden
     await expect(page.getByText(/pending/i).first()).toBeVisible();
+    await expect(page.getByTestId('workflow-progress')).toHaveText(/3 of 6 stages completed/i);
+    await expect(page.getByTestId('workflow-stage-2')).toContainText(/accountant clearance/i);
+    await expect(page.getByTestId('workflow-stage-6')).toContainText(/dean clearance/i);
     const printBtn = page.getByRole('button', { name: /print|preview|certificate/i });
     if (await printBtn.count() > 0) {
       await expect(printBtn).toBeDisabled();
