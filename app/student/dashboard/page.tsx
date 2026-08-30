@@ -12,14 +12,7 @@ import { Printer, CheckCircle2 } from 'lucide-react';
 import RoleHeader from '@/components/layout/RoleHeader';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
 import { formatProgramNameFirst } from '@/lib/academic-programs';
-
-const REQUIRED_SIGNATORY_ROLES = new Set([
-  'librarian',
-  'osa_coordinator',
-  'guidance_counselor',
-  'area_chair',
-  'dean',
-]);
+import { CLEARANCE_WORKFLOW_STAGES } from '@/lib/clearance/workflow';
 
 export default function StudentDashboardPage() {
   const router = useRouter();
@@ -30,6 +23,7 @@ export default function StudentDashboardPage() {
     financial: unknown;
     approvals: Array<Record<string, unknown>>;
     remarks: Array<Record<string, unknown>>;
+    workflow: unknown;
   } | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
@@ -45,6 +39,7 @@ export default function StudentDashboardPage() {
           financial: unknown;
           approvals: Array<Record<string, unknown>>;
           remarks: Array<Record<string, unknown>>;
+          workflow: unknown;
         });
       } else {
         if (res.error?.includes('Password change required')) {
@@ -149,6 +144,9 @@ export default function StudentDashboardPage() {
             <TrackingTable
               approvals={(dashboardData?.approvals as unknown) as Parameters<typeof TrackingTable>[0]['approvals']}
               remarks={(dashboardData?.remarks as unknown) as Parameters<typeof TrackingTable>[0]['remarks']}
+              financialStatus={String((dashboardData?.financial as { status?: string } | undefined)?.status || 'pending') as 'pending' | 'paid' | 'unpaid'}
+              financialVerifiedAt={(dashboardData?.financial as { verified_at?: string | null } | undefined)?.verified_at || null}
+              workflow={dashboardData?.workflow as Parameters<typeof TrackingTable>[0]['workflow']}
             />
           </div>
         )}
@@ -158,7 +156,7 @@ export default function StudentDashboardPage() {
           isOpen={showPrintModal}
           onClose={() => setShowPrintModal(false)}
           title="ASCS Student Clearance Record (Prototype)"
-          description="A4 prototype record preview of five signatory decisions and the separate financial gate."
+          description="A4 prototype record preview of the six-stage clearance workflow."
           maxWidthClass="max-w-3xl"
         >
           <div className="space-y-6">
@@ -215,25 +213,29 @@ export default function StudentDashboardPage() {
                 This prototype record summarizes the approval and financial status recorded in ASCS for the specified academic term. It is not an official school certificate.
               </p>
 
-              {/* Required signatory decisions */}
+              {/* Six-stage workflow */}
               <div className="mt-10">
-                <h3 className="text-xs font-black uppercase tracking-wider border-b border-slate-300 pb-1">Required Signatory Clearance</h3>
+                <h3 className="text-xs font-black uppercase tracking-wider border-b border-slate-300 pb-1">Six-Stage Clearance Workflow</h3>
                 <div className="grid grid-cols-2 gap-6 mt-4">
-                {((dashboardData?.approvals as Array<{ id: string; assignee_name?: string; label?: string; acted_at?: string; signatory_role?: string }>) || [])
-                  .filter((appr) => REQUIRED_SIGNATORY_ROLES.has(appr.signatory_role || ''))
-                  .map((appr) => (
-                  <div key={appr.id} className="border-b border-slate-200 pb-3 flex flex-col justify-end min-h-[60px] break-inside-avoid">
-                    <div className="font-bold text-slate-800 text-xs">{appr.label || 'Department desk'}</div>
-                    <div className="text-[10px] text-slate-600">{appr.assignee_name || 'Department desk'}</div>
-                    <div className="text-[9px] text-emerald-700 font-semibold mt-1">Decision recorded{appr.acted_at ? ` on ${new Date(appr.acted_at).toLocaleDateString()}` : ''}</div>
-                  </div>
-                ))}
+                {CLEARANCE_WORKFLOW_STAGES.map((stage) => {
+                  const appr = (dashboardData?.approvals as Array<{ id: string; assignee_name?: string; label?: string; acted_at?: string; signatory_role?: string }>)
+                    ?.find((item) => item.signatory_role === stage.role);
+                  const financial = dashboardData?.financial as { status?: string; verified_at?: string | null } | undefined;
+                  const stageStatus = (dashboardData?.workflow as { stages?: Array<{ key: string; status: string }> } | undefined)?.stages
+                    ?.find((item) => item.key === stage.key)?.status;
+                  return (
+                    <div key={stage.key} className="border-b border-slate-200 pb-3 flex flex-col justify-end min-h-[60px] break-inside-avoid">
+                      <div className="font-bold text-slate-800 text-xs">Step {stage.stage}: {stage.label}</div>
+                      <div className="text-[10px] text-slate-600">{stage.kind === 'financial' ? stage.responsibleTitle : appr?.assignee_name || 'Department desk'}</div>
+                      <div className={`text-[9px] font-semibold mt-1 ${stageStatus === 'failed' ? 'text-red-700' : stageStatus === 'locked' ? 'text-slate-500' : 'text-emerald-700'}`}>
+                        {stage.kind === 'financial'
+                          ? financial?.status === 'paid' ? 'Financially cleared' : financial?.status === 'unpaid' ? 'Unpaid / Hold' : 'Pending financial review'
+                          : stageStatus === 'locked' ? 'Locked: previous step incomplete' : stageStatus === 'failed' ? 'Not Approved' : appr?.acted_at ? `Decision recorded on ${new Date(appr.acted_at).toLocaleDateString()}` : 'Pending'}
+                      </div>
+                    </div>
+                  );
+                })}
                 </div>
-              </div>
-
-              <div className="mt-8 border border-slate-200 bg-slate-50 p-4 text-xs">
-                <h3 className="font-black uppercase tracking-wider text-slate-700">Financial Accountability Review</h3>
-                <p className="mt-1 text-slate-600">The Accountant review is a separate financial gate and is not a signatory approval row.</p>
               </div>
 
               <div className="mt-8 text-center text-[10px] text-slate-700 font-bold uppercase tracking-wider border-t border-slate-300 pt-4">

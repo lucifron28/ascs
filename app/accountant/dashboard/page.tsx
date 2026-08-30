@@ -13,10 +13,10 @@ export default function DashboardPage() {
       <main id="main-content" className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl w-full mx-auto space-y-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight text-base-content">
-            Financial Accountability Management
+            Accountant Clearance
           </h1>
           <p className="text-base-content/70 text-sm mt-1 font-medium">
-            Monitor student balances, log outstanding dues, and verify clear records.
+            Step 2 of 6: review financial accountability after Librarian Clearance is approved.
           </p>
         </div>
         <AccountantDashboard />

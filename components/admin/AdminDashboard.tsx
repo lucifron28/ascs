@@ -18,6 +18,7 @@ import {
 } from '@/app/actions/admin-accounts';
 import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
+import { CLEARANCE_WORKFLOW_STAGES } from '@/lib/clearance/workflow';
 import { ACADEMIC_PROGRAM_CODES, ACADEMIC_PROGRAMS, formatProgram } from '@/lib/academic-programs';
 import {
   Users,
@@ -83,9 +84,14 @@ const ROLES_LIST: { id: UserRole; label: string }[] = [
   { id: 'osa_coordinator', label: 'OSA Coordinator' },
   { id: 'guidance_counselor', label: 'Guidance Counselor' },
   { id: 'area_chair', label: 'Area Chair' },
-  { id: 'dean', label: 'Dean' },
+  { id: 'dean', label: 'Dean of Business Program' },
   { id: 'admin', label: 'System Admin' },
 ];
+
+function formatRoleLabel(role: string): string {
+  if (role === 'dean') return 'Dean of Business Program';
+  return role.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'requirements' | 'logs'>('overview');
@@ -358,7 +364,7 @@ export default function AdminDashboard() {
   const handleUpdateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
-    if (!window.confirm(`Change ${selectedUser.fullName}'s system role to ${selectedRole.replace('_', ' ')}?`)) return;
+    if (!window.confirm(`Change ${selectedUser.fullName}'s system role to ${formatRoleLabel(selectedRole)}?`)) return;
 
     setModalLoading(true);
     setModalError(null);
@@ -466,6 +472,8 @@ export default function AdminDashboard() {
         u.email.toLowerCase().includes(signatorySearch.toLowerCase()))
   );
 
+  const requirementsByRole = new Map(requirements.map((requirement) => [requirement.role, requirement]));
+
   return (
     <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
       {/* Header Banner */}
@@ -512,7 +520,7 @@ export default function AdminDashboard() {
             activeTab === 'requirements' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70'
           }`}
         >
-          <ListOrdered className="w-4 h-4" /> Requirements ({requirements.length})
+          <ListOrdered className="w-4 h-4" /> Requirements ({CLEARANCE_WORKFLOW_STAGES.length})
         </button>
         <button
           onClick={() => setActiveTab('logs')}
@@ -567,8 +575,8 @@ export default function AdminDashboard() {
                 <ListOrdered className="w-8 h-8 opacity-80" />
               </div>
               <div className="stat-title text-xs font-semibold uppercase tracking-wider">Clearance Steps</div>
-              <div className="stat-value text-3xl font-black text-accent">{requirements.length}</div>
-              <div className="stat-desc text-xs mt-1">Department sign-offs</div>
+              <div className="stat-value text-3xl font-black text-accent">{CLEARANCE_WORKFLOW_STAGES.length}</div>
+              <div className="stat-desc text-xs mt-1">Five sign-offs + financial gate</div>
             </div>
 
             <div className="stat bg-base-100 border border-base-content/15 rounded-xl shadow-sm">
@@ -672,7 +680,7 @@ export default function AdminDashboard() {
                       </td>
                       <td>
                         <span className="badge badge-primary border-primary/20 bg-primary/10 text-primary capitalize font-medium text-xs">
-                          {u.role.replace('_', ' ')}
+                          {formatRoleLabel(u.role)}
                         </span>
                       </td>
                       <td>
@@ -768,43 +776,52 @@ export default function AdminDashboard() {
               Department Clearance Requirements Sequence
             </h2>
             <p className="text-xs text-base-content/60 mt-1">
-              Configure assigned signatories for each department clearance requirement.
+              Configure the six ordered stages. Accountant is a financial gate; the other five stages use signatory assignments.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {requirements.map((req) => (
-              <div
-                key={req.id}
-                className="card bg-base-100 border border-base-content/15 shadow-sm rounded-xl p-5 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="badge badge-neutral text-xs font-mono font-bold">Step {req.displayOrder}</span>
-                  <span className="badge badge-accent border-accent/20 bg-accent/10 text-accent text-xs capitalize">
-                    Role: {req.role.replace('_', ' ')}
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="font-bold text-base">{req.label}</h3>
-                  <p className="text-xs text-base-content/60 mt-1">
-                    Assigned Signatory:{' '}
-                    <span className="font-semibold text-base-content">
-                      {req.assignedSignatoryName || 'Unassigned (Any user with role)'}
+            {CLEARANCE_WORKFLOW_STAGES.map((stage) => {
+              const req = requirementsByRole.get(stage.role);
+              const isFinancial = stage.kind === 'financial';
+              return (
+                <div
+                  key={stage.key}
+                  data-testid={`admin-workflow-stage-${stage.stage}`}
+                  className="card bg-base-100 border border-base-content/15 shadow-sm rounded-xl p-5 space-y-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="badge badge-neutral text-xs font-mono font-bold">Step {stage.stage}</span>
+                    <span className="badge badge-accent border-accent/20 bg-accent/10 text-accent text-xs">
+                      Role: {formatRoleLabel(stage.role)}
                     </span>
-                  </p>
-                </div>
+                  </div>
 
-                <div className="pt-2 border-t border-base-content/10 flex justify-end">
-                  <button
-                    onClick={() => handleOpenReqModal(req)}
-                    className="btn btn-sm min-h-11 btn-outline rounded-lg gap-1 hover:bg-base-200"
-                  >
-                    <UserCheck className="w-3.5 h-3.5" /> Assign Signatory
-                  </button>
+                  <div>
+                    <h3 className="font-bold text-base">{stage.label}</h3>
+                    <p className="text-xs text-base-content/60 mt-1">
+                      {isFinancial ? 'Financial verification stage. It unlocks OSA after the Librarian approves.' : <>Assigned Signatory:{' '}<span className="font-semibold text-base-content">{req?.assignedSignatoryName || 'Unassigned (Any user with role)'}</span></>}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-base-content/10 flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-base-content/60">{stage.responsibleTitle}</span>
+                    {isFinancial ? (
+                      <span className="badge badge-ghost text-[10px]">Financial gate</span>
+                    ) : req ? (
+                      <button
+                        onClick={() => handleOpenReqModal(req)}
+                        className="btn btn-sm min-h-11 btn-outline rounded-lg gap-1 hover:bg-base-200"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" /> Assign Signatory
+                      </button>
+                    ) : (
+                      <span className="text-xs text-warning">Not configured</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -957,7 +974,7 @@ export default function AdminDashboard() {
             <form onSubmit={handleUpdateRequirement} className="space-y-4">
               <div className="bg-base-200/50 p-3 rounded-xl border border-base-content/10 text-xs">
                 <div className="font-bold text-base-content">{selectedReq.label}</div>
-                <div className="text-base-content/60 capitalize mt-0.5">Required Role: {selectedReq.role.replace('_', ' ')}</div>
+                <div className="text-base-content/60 mt-0.5">Required Role: {formatRoleLabel(selectedReq.role)}</div>
               </div>
 
               {/* Signatory Options */}
@@ -1238,11 +1255,11 @@ export default function AdminDashboard() {
               onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value as UserRole })}
               className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              {VALID_STAFF_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r.replace('_', ' ').toUpperCase()}
-                </option>
-              ))}
+                {VALID_STAFF_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {formatRoleLabel(r)}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -1428,7 +1445,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <span className="text-base-content/60 font-medium">Role:</span>{' '}
-                <span className="capitalize font-semibold text-primary">{oneTimePasswordResult.role.replace('_', ' ')}</span>
+                  <span className="font-semibold text-primary">{formatRoleLabel(oneTimePasswordResult.role)}</span>
               </div>
               <div className="pt-2 border-t border-base-content/10 flex items-center justify-between">
                 <div>

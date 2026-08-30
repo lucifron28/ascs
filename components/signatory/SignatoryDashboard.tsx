@@ -126,6 +126,7 @@ export default function SignatoryDashboard() {
   };
 
   const formatRoleName = (str: string) => {
+    if (str === 'dean') return 'DEAN OF BUSINESS PROGRAM';
     return str.replace('_', ' ').toUpperCase();
   };
 

@@ -26,12 +26,15 @@ interface FinancialRecord {
   overall_status: string;
   student_name: string;
   student_id_number: string;
+  is_actionable?: boolean;
 }
 
 export default function AccountantDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [records, setRecords] = useState<FinancialRecord[]>([]);
+  const [historyRecords, setHistoryRecords] = useState<FinancialRecord[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -52,7 +55,8 @@ export default function AccountantDashboard() {
       const res = await fetchFinancialQueueAction();
       if (isMounted.current) {
         if (res.success) {
-          setRecords(res.financialQueue || []);
+          setRecords((res.financialQueue || []) as unknown as FinancialRecord[]);
+          setHistoryRecords((res.financialHistory || []) as unknown as FinancialRecord[]);
         } else {
           setError(res.error || 'Unable to load financial records. Please try again.');
         }
@@ -127,7 +131,8 @@ export default function AccountantDashboard() {
   };
 
   // Filtered List
-  const filteredRecords = records.filter((rec) => {
+  const visibleRecords = showHistory ? historyRecords : records;
+  const filteredRecords = visibleRecords.filter((rec) => {
     const matchesSearch =
       rec.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rec.student_id_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -140,7 +145,7 @@ export default function AccountantDashboard() {
 
   const pendingCount = records.filter((r) => r.status === 'pending').length;
   const unpaidCount = records.filter((r) => r.status === 'unpaid').length;
-  const paidCount = records.filter((r) => r.status === 'paid').length;
+  const paidCount = historyRecords.filter((r) => r.status === 'paid').length;
 
   if (loading) {
     return (
@@ -160,7 +165,7 @@ export default function AccountantDashboard() {
             <CreditCard className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-base-content/60 text-[10px] font-semibold uppercase tracking-wider">Total Accounts</span>
+            <span className="text-base-content/60 text-[10px] font-semibold uppercase tracking-wider">Actionable Accounts</span>
             <h3 className="text-2xl font-black text-base-content">{records.length}</h3>
           </div>
         </div>
@@ -263,6 +268,19 @@ export default function AccountantDashboard() {
           >
             Paid / Cleared
           </button>
+          <button
+            onClick={() => {
+              setShowHistory((current) => !current);
+              setStatusFilter('all');
+            }}
+            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
+              showHistory
+                ? 'bg-secondary text-secondary-content hover:bg-secondary/90'
+                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
+            }`}
+          >
+            {showHistory ? 'Back to Action Queue' : `Completed History (${paidCount})`}
+          </button>
         </div>
       </div>
 
@@ -270,8 +288,8 @@ export default function AccountantDashboard() {
       {filteredRecords.length === 0 ? (
         <div className="card bg-base-100 border border-base-content/15 p-12 rounded-xl text-center space-y-2 shadow-sm">
           <CircleEllipsis className="w-8 h-8 text-base-content/50 mx-auto" aria-hidden="true" />
-          <h3 className="text-base-content font-bold text-sm">No Accounts Found</h3>
-          <p className="text-base-content/70 text-xs font-medium">Try adjusting your filters or search query.</p>
+          <h3 className="text-base-content font-bold text-sm">{showHistory ? 'No Completed Financial Reviews' : 'No Actionable Accounts'}</h3>
+          <p className="text-base-content/70 text-xs font-medium">{showHistory ? 'No paid records are available in the completed history.' : 'Students appear here after Librarian Clearance is approved.'}</p>
         </div>
       ) : (
         <div className="card bg-base-100 border border-base-content/15 shadow-sm p-6 rounded-xl">

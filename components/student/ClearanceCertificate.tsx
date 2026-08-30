@@ -7,18 +7,15 @@ import Image from 'next/image';
 import { fetchClearanceCertificateAction } from '@/app/actions/clearance';
 import { Printer, ArrowLeft, CheckCircle2, AlertCircle, FileCheck } from 'lucide-react';
 import { formatProgramNameFirst } from '@/lib/academic-programs';
+import {
+  CLEARANCE_WORKFLOW_STAGES,
+  getWorkflowStageStatus,
+  type WorkflowState,
+} from '@/lib/clearance/workflow';
 
 interface ClearanceCertificateProps {
   applicationId: string;
 }
-
-const REQUIRED_SIGNATORY_ROLES = [
-  { role: 'librarian', fallbackLabel: 'Librarian' },
-  { role: 'osa_coordinator', fallbackLabel: 'OSA Coordinator' },
-  { role: 'guidance_counselor', fallbackLabel: 'Guidance Counselor' },
-  { role: 'area_chair', fallbackLabel: 'Area Chair' },
-  { role: 'dean', fallbackLabel: 'Dean Clearance' },
-] as const;
 
 export default function ClearanceCertificate({ applicationId }: ClearanceCertificateProps) {
   const router = useRouter();
@@ -115,23 +112,23 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
     issuedAt: string;
   };
 
-  const signatoryApprovals = REQUIRED_SIGNATORY_ROLES.map(({ role, fallbackLabel }) => {
-    const approval = approvals.find((item) => item.signatoryRole === role);
+  const workflowState: WorkflowState = {
+    approvals: approvals.map((approval) => ({
+      signatoryRole: approval.signatoryRole,
+      status: approval.status,
+    })),
+    financialStatus: application.financialStatus,
+  };
+  const workflowRows = CLEARANCE_WORKFLOW_STAGES.map((stage) => {
+    const approval = stage.kind === 'approval'
+      ? approvals.find((item) => item.signatoryRole === stage.role)
+      : undefined;
     return {
-      id: approval?.id || role,
-      label: approval?.label || fallbackLabel,
-      assignedSignatoryName: approval?.assignedSignatoryName || 'Department desk',
-      remarksLatest: approval?.remarksLatest || null,
-      status: approval?.status || 'pending',
-      actedAt: approval?.actedAt || null,
+      stage,
+      status: getWorkflowStageStatus(stage, workflowState),
+      approval,
     };
   });
-
-  const financialStatusLabel = application.financialStatus === 'paid'
-    ? 'Paid / Financially cleared'
-    : application.financialStatus === 'unpaid'
-      ? 'Unpaid / Hold'
-      : 'Pending review';
 
   const normalizedSemester = normalizeSemester(application.semester);
   const displaySemester = normalizedSemester === '1st Semester'
@@ -215,12 +212,13 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
 
         <section aria-labelledby="signatory-heading" data-testid="required-signatory-section" className="space-y-3 font-sans">
           <h2 id="signatory-heading" className="text-xs font-black tracking-[0.16em] uppercase text-slate-700 border-b border-slate-300 pb-1 flex items-center gap-1.5">
-            <FileCheck className="w-4 h-4 text-indigo-900" aria-hidden="true" /> Required Signatory Clearance
+            <FileCheck className="w-4 h-4 text-indigo-900" aria-hidden="true" /> Six-Stage Clearance Workflow
           </h2>
-          <table aria-label="Required signatory clearance" data-testid="required-signatory-table" className="w-full text-left text-xs border border-slate-300">
+          <table aria-label="Six-stage clearance workflow" data-testid="required-signatory-table" className="w-full text-left text-xs border border-slate-300">
             <thead>
               <tr className="bg-slate-100 border-b border-slate-300 text-slate-800">
-                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Office / Requirement</th>
+                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Stage / Office</th>
+                <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Type</th>
                 <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Status</th>
                 <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Assigned Signatory</th>
                 <th scope="col" className="p-2.5 border-r border-slate-300 font-black uppercase tracking-wide">Remarks</th>
@@ -228,61 +226,39 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {signatoryApprovals.map((approval) => (
-                <tr key={approval.id}>
+              {workflowRows.map(({ stage, status, approval }) => (
+                <tr key={stage.key}>
                   <td className="p-2.5 border-r border-slate-200 font-bold uppercase text-[10px]">
-                    <span className="font-bold text-slate-900">{approval.label}</span>
+                    <span className="font-bold text-slate-900">Step {stage.stage}: {stage.label}</span>
+                  </td>
+                  <td className="p-2.5 border-r border-slate-200 text-[10px] text-slate-700">
+                    {stage.kind === 'financial' ? 'Financial gate' : 'Signatory approval'}
                   </td>
                   <td className="p-2.5 border-r border-slate-200 font-bold uppercase text-[10px]">
-                    {approval.status === 'approved' ? (
+                    {status === 'completed' ? (
                       <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Approved</span>
-                    ) : approval.status === 'not_approved' ? (
+                    ) : status === 'failed' ? (
                       <span className="inline-flex items-center gap-1 text-red-700"><AlertCircle className="w-3 h-3" aria-hidden="true" /> Not Approved</span>
+                    ) : status === 'locked' ? (
+                      <span className="text-slate-500">Locked</span>
                     ) : (
                       <span className="text-amber-700">Pending</span>
                     )}
                   </td>
                   <td className="p-2.5 border-r border-slate-200 text-[11px] text-slate-700">
-                    {approval.assignedSignatoryName}
+                    {stage.kind === 'financial' ? application.financialUpdatedByName || 'Accountant desk' : approval?.assignedSignatoryName || 'Department desk'}
                   </td>
                   <td className="p-2.5 border-r border-slate-200 text-[11px] text-slate-700 break-words">
-                    {approval.remarksLatest || 'No remarks recorded.'}
+                    {status === 'locked' ? 'Waiting for previous clearance step.' : stage.kind === 'financial' ? application.financialRemarks || 'No remarks recorded.' : approval?.remarksLatest || 'No remarks recorded.'}
                   </td>
                   <td className="p-2.5 font-mono text-[11px] text-slate-600">
-                    {approval.actedAt ? new Date(approval.actedAt).toLocaleDateString() : 'N/A'}
+                    {(stage.kind === 'financial' ? application.financialVerifiedAt : approval?.actedAt) ? new Date((stage.kind === 'financial' ? application.financialVerifiedAt : approval?.actedAt) as string).toLocaleDateString() : 'N/A'}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="text-[10px] text-slate-600">Decisions are recorded in ASCS; this prototype does not reproduce handwritten or electronic signatures.</p>
-        </section>
-
-        <section aria-labelledby="financial-accountability-review" className="space-y-3 font-sans">
-          <h2 id="financial-accountability-review" className="text-xs font-black tracking-[0.16em] uppercase text-slate-700 border-b border-slate-300 pb-1">
-            Financial Accountability Review
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 p-4 text-xs">
-            <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</span>
-              <span className={`font-bold ${application.financialStatus === 'paid' ? 'text-emerald-700' : application.financialStatus === 'unpaid' ? 'text-red-700' : 'text-amber-700'}`}>
-                {financialStatusLabel}
-              </span>
-            </div>
-            <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Verified By</span>
-              <span className="font-semibold text-slate-800">{application.financialUpdatedByName || 'Accountant desk'}</span>
-            </div>
-            <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Remarks</span>
-              <span className="text-slate-700 break-words">{application.financialRemarks || 'No remarks recorded.'}</span>
-            </div>
-            <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date Reviewed</span>
-              <span className="font-mono text-slate-700">{application.financialVerifiedAt ? new Date(application.financialVerifiedAt).toLocaleDateString() : 'N/A'}</span>
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-600">The Accountant review is a separate financial gate and is not a signatory approval row.</p>
+          <p className="text-[10px] text-slate-600">Accountant Clearance is Step 2 of 6 and is represented by financial status, not an approval document or signature. Decisions are recorded in ASCS; this prototype does not reproduce handwritten or electronic signatures.</p>
         </section>
 
         <footer className="flex items-end justify-between gap-6 border-t border-slate-300 pt-4 font-sans">

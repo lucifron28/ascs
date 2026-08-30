@@ -91,7 +91,7 @@ export default function DeanReportsPage() {
 
   return (
     <div className="min-h-screen bg-base-300 text-base-content font-sans flex flex-col transition-colors duration-200">
-      <RoleHeader roleTitle="Academic Dean" navLinks={deanNavLinks} />
+      <RoleHeader roleTitle="Dean of Business Program" navLinks={deanNavLinks} />
 
       {/* Main Content Area */}
       <main id="main-content" className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">

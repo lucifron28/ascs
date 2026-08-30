@@ -13,7 +13,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-base-300 text-base-content font-sans flex flex-col transition-colors duration-200">
-      <RoleHeader roleTitle="Academic Dean" navLinks={deanNavLinks} />
+      <RoleHeader roleTitle="Dean of Business Program" navLinks={deanNavLinks} />
 
       {/* Main Content */}
       <main id="main-content" className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl w-full mx-auto space-y-8">
@@ -22,7 +22,7 @@ export default function DashboardPage() {
             Dean Clearance Queue
           </h1>
           <p className="text-base-content/70 text-sm mt-1 font-medium">
-            Review and approve the final Dean Clearance requirement for each student.
+            Step 6 of 6: review and approve the final Dean Clearance requirement for each student.
           </p>
         </div>
         <SignatoryDashboard />
