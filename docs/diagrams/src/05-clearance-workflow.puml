@@ -1,5 +1,5 @@
 @startuml
-title ASCS Clearance Workflow and Status Derivation
+title ASCS Six-Stage Sequential Clearance Workflow
 top to bottom direction
 skinparam shadowing false
 skinparam defaultFontName Arial
@@ -9,35 +9,47 @@ skinparam state {
   FontColor #0F172A
 }
 
-[*] --> Pending : Student submits
-Pending --> Pending : signatory or financial review remains
-Pending --> NotApproved : required signatory = not_approved
-Pending --> NotApproved : all signatories approved\n+ financialStatus = unpaid
-Pending --> Approved : all signatories approved\n+ financialStatus = paid
+[*] --> Librarian : Student submits
+Librarian --> Accountant : approved
+Librarian --> NotApproved : not_approved
+Accountant --> OSA : paid
+Accountant --> NotApproved : unpaid
+OSA --> Guidance : approved
+OSA --> NotApproved : not_approved
+Guidance --> AreaChair : approved
+Guidance --> NotApproved : not_approved
+AreaChair --> Dean : approved
+AreaChair --> NotApproved : not_approved
+Dean --> Approved : approved
+Dean --> NotApproved : not_approved
 
+state "Librarian Clearance\nStage 1" as Librarian
+state "Accountant Clearance\nStage 2 · financialStatus" as Accountant
+state "OSA Coordinator Clearance\nStage 3" as OSA
+state "Guidance Counselor Clearance\nStage 4" as Guidance
+state "Area Chair Clearance\nStage 5" as AreaChair
+state "Dean Clearance\nStage 6" as Dean
 state Approved
-state Pending
 state "Not Approved" as NotApproved
 
-Approved --> [*] : printable prototype available
+Approved --> [*] : printableAvailable = true
 NotApproved --> [*] : print blocked; remarks visible
 
-state "Five required signatory rows" as Signatories
-state "Accountant financial gate" as Financial
-state "Dean approved" as DeanGate
-state "Dean reports" as DeanReports
-
-Pending --> Signatories : evaluate rows
-Pending --> Financial : update paid / unpaid
-Signatories --> DeanGate : Dean approves fifth row
-DeanGate --> DeanReports : reports remain separately scoped
-
-note right of DeanReports
-Dean reports exclude financial details.
+note right of Accountant
+Accountant is a financial gate, not
+an approval subdocument. OSA unlocks
+only after Librarian approved and
+financialStatus = paid.
 end note
 
-note right of Approved
-Required signatories approved
-and paid financial state.
+note right of Dean
+Dean is the fifth signatory approval
+row and sixth workflow stage.
+Dean reports remain separately scoped.
+end note
+
+note bottom of Approved
+All five signatory rows approved
+and financialStatus = paid.
 end note
 @enduml

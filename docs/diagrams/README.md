@@ -19,7 +19,8 @@ Required diagrams:
    and Rules boundary.
 3. `03-vercel-firebase-deployment.puml` - fictional-data demo deployment.
 4. `04-role-rbac.puml` - nine roles grouped by responsibility.
-5. `05-clearance-workflow.puml` - five-step status derivation and Dean approval.
+5. `05-clearance-workflow.puml` - six-stage sequential status derivation and
+   Dean approval.
 6. `06-auth-session-sequence.puml` - sign-in, session, authorization, and
    invalidation flow.
 7. `07-firestore-data-model.puml` - logical document relationships.

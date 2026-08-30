@@ -30,18 +30,17 @@ notification control, theme selector, and logout control.
 
 Open the Student Dashboard, open the submission form, choose the current
 academic year/semester and purpose, then submit. Say that the server creates an
-application, five approval rows, notifications, and an activity log in the
-workflow transaction.
+application, five signatory approval rows, the Step 2 financial gate,
+notifications, and an activity log in the workflow transaction.
 
 Expected result: the application appears in a pending state with financial
 status pending.
 
-### 1:30 - Signatory review
+### 1:30 - Librarian clearance
 
-Log in as `guidance@example.test` (or use the assigned Librarian, OSA, Chair,
-or Dean account). Open the pending queue and the Review dialog. Show the
-requirement context, remarks field, and the Approved/Pending/Not Approved
-actions. Approve the selected requirement.
+Log in as `librarian@example.test`. Open the pending queue and the Review
+dialog. Show the requirement context, remarks field, and the
+Approved/Pending/Not Approved actions. Approve the selected requirement.
 
 Say that remarks are required for pending and not-approved decisions and that
 the Accountant is not a duplicate signatory row.
@@ -52,40 +51,47 @@ Log in as `accountant@example.test`. Open the financial queue and select the
 application. In the Update Financial Account dialog, mark it Paid. Explain that
 the financial state is stored directly on the application.
 
-### 3:30 - Dean approval
+### 3:30 - OSA, Guidance, and Area Chair clearances
+
+Use `osa@example.test`, `guidance@example.test`, and
+`chair@example.test` in order. Approve each unlocked queue item and point out
+that later stages remain locked until the previous stage is complete.
+
+### 5:00 - Dean approval
 
 Log in as `dean@example.test`, approve the Dean Clearance requirement, and
-explain that this sets `deanApproved` and recomputes the application status. If
+explain that this is the sixth workflow stage and fifth approval row, sets
+`deanApproved`, and recomputes the application status. If
 the live submission is taking too long, switch to the pre-seeded Dean queue.
 
-### 4:30 - Dean reports
+### 6:00 - Dean reports
 
 Log in as `dean@example.test`. Show the actionable Dean queue and open
 `/dean/reports`; point out that the
 financial summary is intentionally absent.
 
-### 5:30 - Final student state and print prototype
+### 6:30 - Final student state and print prototype
 
 For a deterministic approved screen, log in as `student.a@example.test`. Show
 the approved summary and open the printable clearance prototype. Point out the
-five required signatory rows and the separate `FINANCIAL ACCOUNTABILITY REVIEW`.
+six ordered workflow rows, including the Accountant financial gate at Step 2.
 State that it is an A4 MVP record and not an official institutional certificate
 or electronic signature.
 
-### 6:30 - Admin overview and user management
+### 7:30 - Admin overview and user management
 
 Log in as `admin@example.test`. Show the account overview, lifecycle status,
 requirement assignment controls, and activity-log area. Explain that temporary
 password reset forces a mandatory password change and that final-admin
 protection is enforced server-side.
 
-### 7:30 - Admin reports
+### 8:30 - Admin reports
 
 Open `/admin/reports`. Show status totals, financial summary, bottlenecks,
 breakdowns, filters, and CSV export. Explain that Admin scope is institution-wide
 and bounded to 5,000 applications.
 
-### 8:30 - Limitations and close
+### 9:30 - Limitations and close
 
 State the deferred features: bulk CSV import, email delivery, payment gateway,
 electronic signatures, and official certificate issuance. Close by restating

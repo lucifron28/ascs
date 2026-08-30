@@ -23,7 +23,7 @@
 - [ ] Verify `admin@example.test`, `student.a@example.test`, and
       `student.g@example.test` in the local fixture.
 - [ ] On local emulator login, verify the grouped Demo account selector exposes
-      all seven student scenarios and eight staff identities; confirm it is
+      all seven student scenarios and seven staff identities; confirm it is
       absent when the emulator flag is false.
 - [ ] Open the presentation deck and keep the Corporate theme selected.
 - [ ] Set browser zoom to 100% and viewport to a desktop size.

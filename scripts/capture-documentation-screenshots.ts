@@ -25,6 +25,13 @@ async function login(page: Page, email: string, route: string) {
   await setAscsLightTheme(page);
 }
 
+async function approveFirstPendingReview(page: Page) {
+  await page.getByRole('button', { name: /review clearance/i }).first().click();
+  await page.getByRole('dialog', { name: /evaluate clearance requirement/i }).waitFor();
+  await page.getByRole('dialog').getByRole('button', { name: /approve clearance/i }).click();
+  await page.waitForTimeout(1_200);
+}
+
 async function logout(page: Page) {
   await page.getByRole('button', { name: /logout/i }).first().click();
   await page.waitForURL('**/login', { timeout: 30_000 });
@@ -43,6 +50,7 @@ async function replaceContext(browser: Browser, currentContext: BrowserContext) 
   await currentContext.close();
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
   const page = await context.newPage();
+  page.on('dialog', (dialog) => dialog.accept());
   return { context, page };
 }
 
@@ -50,6 +58,7 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   let context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
   let page = await context.newPage();
+  page.on('dialog', (dialog) => dialog.accept());
 
   try {
     await page.goto(`${baseUrl}/login`, { waitUntil: 'networkidle' });
@@ -82,12 +91,20 @@ async function main() {
     await page.getByRole('button', { name: /review clearance/i }).first().click();
     await page.getByRole('dialog', { name: /evaluate clearance requirement/i }).waitFor();
     await capture(page, '06-signatory-review-dialog.png', false);
-    await page.getByRole('dialog').getByRole('button', { name: /close dialog/i }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /approve clearance/i }).click();
+    await page.waitForTimeout(1_200);
+    await logout(page);
+    ({ context, page } = await replaceContext(browser, context));
+
+    // The seeded OSA approval makes Area Chair the next unlocked signatory.
+    // Advance Student B so the Dean screenshot contains a real actionable row.
+    await login(page, 'chair@example.test', 'area_chair/dashboard');
+    await approveFirstPendingReview(page);
     await logout(page);
     ({ context, page } = await replaceContext(browser, context));
 
     await login(page, 'accountant@example.test', 'accountant/dashboard');
-    await page.getByRole('heading', { name: /financial accountability management/i }).waitFor();
+    await page.getByRole('heading', { name: /accountant clearance/i }).waitFor();
     await capture(page, '07-accountant-dashboard.png');
     await page.getByRole('button', { name: /update financial status/i }).first().click();
     await page.getByRole('dialog', { name: /update financial account/i }).waitFor();
@@ -102,7 +119,8 @@ async function main() {
     await page.getByRole('button', { name: /review clearance/i }).first().click();
     await page.getByRole('dialog', { name: /evaluate clearance requirement/i }).waitFor();
     await capture(page, '10-dean-review-dialog.png', false);
-    await page.getByRole('dialog').getByRole('button', { name: /close dialog/i }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /approve clearance/i }).click();
+    await page.waitForTimeout(1_200);
     await page.goto(`${baseUrl}/dean/reports`, { waitUntil: 'networkidle' });
     await page.getByRole('heading', { name: /academic clearance reports/i }).waitFor();
     await capture(page, '14-dean-reports.png', true);

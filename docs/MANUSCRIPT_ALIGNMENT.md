@@ -26,8 +26,8 @@ Evidence: `app/actions/clearance.ts`, `components/student/`,
 
 ## 3. System scope
 
-The MVP covers student clearance submission and tracking, five required
-signatory requirements, Accountant financial verification, Dean final approval,
+The MVP covers student clearance submission and tracking, six ordered workflow
+stages (five required signatory requirements with an Accountant financial gate), Dean final approval,
 Admin account/requirement management, Admin and Dean reports, CSV
 exports, in-app notifications, activity logs, and a print-friendly prototype
 record. It is a capstone demonstration system using fictional data.
@@ -47,7 +47,7 @@ production readiness.
 | Area Chair | Academic area requirement review. |
 | Adviser (legacy) | Historical compatibility only; excluded from new flow. |
 | Accountant | Financial gate (`pending`, `paid`, `unpaid`), not a duplicate approval row. |
-| Dean | Dean Clearance approval and Dean reports. |
+| Dean of Business Program | Dean Clearance approval and Dean reports. |
 | System Administrator | Account lifecycle, roles, assignments, logs, and institution reports. |
 
 Evidence: `lib/types/roles.ts`, `tests/fixtures/demo-data.ts`,
@@ -64,7 +64,7 @@ BSMA, BEED, CRIM, ENGLISH, ACP, and FSM respectively; FILIPINO, MATH, and SS
 remain supported catalog entries for future fictional records.
 
 The local emulator login exposes one grouped account selector for all seven
-student scenarios and eight staff identities. The selector requires both Demo
+student scenarios and seven staff identities. The selector requires both Demo
 Mode and Firebase Emulator Mode and is not rendered on the public Vercel
 fictional-data demo. It only fills the normal Firebase login form; it does not
 bypass authentication or display a password in selected-account details.
@@ -142,10 +142,13 @@ Evidence: `lib/auth/session.ts`, `lib/auth/edge-session.ts`, `proxy.ts`,
 ## 11. Clearance workflow
 
 The student submits one application per academic year/semester. The server
-creates five required signatory rows: Librarian, OSA Coordinator, Guidance
-Counselor, Area Chair, and Dean. The Accountant is not a sixth signatory;
-financial status is stored directly on the application. Dean approval writes
-the `deanApproved` flag.
+models six ordered stages: (1) Librarian Clearance, (2) Accountant Clearance
+as a financial gate, (3) OSA Coordinator Clearance, (4) Guidance Counselor
+Clearance, (5) Area Chair Clearance, and (6) Dean Clearance. It creates five
+signatory approval rows for the non-financial stages; Accountant status is
+stored directly on the application. Each stage is visible and actionable only
+after its predecessor is complete. Dean approval writes the `deanApproved`
+flag.
 
 Evidence: `app/actions/clearance.ts`, `lib/clearance/status.ts`,
 `tests/integration/clearance-submission.test.ts`,
@@ -189,14 +192,13 @@ Evidence: `app/actions/notifications.ts`, `components/ui/NotificationDropdown.ts
 `/student/clearance/[id]/print` renders an A4-oriented, PKM-slip-inspired digital
 prototype record only when the derived overall status is `approved`. Its identity
 block includes the academic term, student number, program, year, section, and
-purpose. The record renders exactly five signatory rows (Librarian, OSA
-Coordinator, Guidance Counselor, Area Chair, and Dean) with explicit Office /
-Requirement, Status, Assigned Signatory, Remarks, and Date Reviewed columns,
-followed by a separate `FINANCIAL ACCOUNTABILITY REVIEW` containing Status,
-Verified By, Remarks, and Date Reviewed for the Accountant gate. The Dean is an
-oversight role and is not printed as a signatory; the prototype does not reproduce
-handwritten or electronic signatures. The page explicitly states that it is not
-an official institutional certificate, receipt, or electronic signature.
+purpose. The record renders six ordered workflow rows (Librarian, Accountant
+financial gate, OSA Coordinator, Guidance Counselor, Area Chair, and Dean) with
+explicit Stage / Office, Type, Status, Assigned Signatory, Remarks, and Date
+Reviewed columns. The Accountant row is clearly marked as financial status, not
+a duplicate approval signature. The prototype does not reproduce handwritten or
+electronic signatures and explicitly states that it is not an official
+institutional certificate, receipt, or electronic signature.
 
 Evidence: `app/student/clearance/[id]/print/page.tsx`,
 `components/student/ClearanceCertificate.tsx`,

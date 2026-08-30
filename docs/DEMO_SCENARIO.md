@@ -130,25 +130,27 @@ npm run demo:reset   # or: npm run demo:prepare
    fictional emulator dataset before the demonstration.
 2. **Student pending application** — log in as `student.b@example.test`;
    show the pending signatory checklist (Librarian + OSA approved, 3 pending).
-3. **Signatory approval** — log in as `guidance@example.test` (or
-   `chair@example.test` / `dean@example.test`) and approve the pending
-   requirement; switch back to Student B to show the updated counters.
-   For a remark path, mark one requirement `not approved` with remarks and
-   show the student-visible remarks log.
-4. **Accountant financial verification** — log in as
-   `accountant@example.test`; show the financial queue, mark Student D
-   `paid` (or flip Student A to `unpaid` with remarks to show the hold).
-5. **Dean approval** — as `dean@example.test`, approve Student B's
+3. **Guidance Counselor approval** — log in as `guidance@example.test` and
+   approve Student B's unlocked Guidance Counselor Clearance requirement;
+   switch back to Student B to show the next stage unlocking.
+4. **Area Chair approval** — log in as `chair@example.test` and approve
+   Student B's Area Chair Clearance requirement. The Dean queue remains empty
+   until this stage is complete.
+5. **Accountant financial verification** — log in as
+   `accountant@example.test`; show that Student D is held in the financial
+   queue with an unpaid balance. The Accountant gate is Step 2 and never adds
+   a duplicate approval row.
+6. **Dean approval** — as `dean@example.test`, approve Student B's final
    Dean Clearance requirement in the actionable queue.
-6. **Dean reports** — open `/dean/reports`; show Dean-scoped records with no
+7. **Dean reports** — open `/dean/reports`; show Dean-scoped records with no
    financial data.
-7. **Final approved student** — finish the remaining signatories for
-   Student B and confirm `overallStatus = approved`.
-8. **Printable clearance preview** — as Student B, open the print/preview
+8. **Final approved student** — switch back to Student B and confirm
+   `overallStatus = approved` after the ordered six-stage journey.
+9. **Printable clearance preview** — as Student B, open the print/preview
    record. It is a prototype record, **not an official PKM certificate**.
-9. **Admin reports** — as `admin@example.test`, open `/admin/reports`;
+10. **Admin reports** — as `admin@example.test`, open `/admin/reports`;
    verify fixture totals, financial summary, bottleneck table, CSV export.
-10. **Dean report privacy boundary** — as `dean@example.test`, open
+11. **Dean report privacy boundary** — as `dean@example.test`, open
     `/dean/reports`; confirm no financial summary and only Dean-approved
     data; export the Dean CSV (no financial columns).
 
@@ -189,7 +191,7 @@ Execute before commencing the live capstone presentation:
 - [ ] Firestore emulator running (`http://127.0.0.1:8080`)
 - [ ] Reset and seed completed (`npm run demo:reset` or `npm run demo:prepare`)
 - [ ] Admin login verified (`admin@example.test`)
-- [ ] Student G live workflow ready (for live 9-step clearance submission)
+- [ ] Student G live workflow ready (for live six-stage clearance submission)
 - [ ] Pre-approved Student A available as fallback for printable clearance
 - [ ] Report pages verified (`/admin/reports` and `/dean/reports`)
 - [ ] Presentation theme selected (`ASCS Light` or `ASCS Dark`)

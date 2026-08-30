@@ -9,7 +9,7 @@ skinparam ArrowColor #334155
 rectangle "Student\nSubmit / track / print approved record" as Student #E0F2FE
 rectangle "Clearance Signatories\nLibrarian\nOSA Coordinator\nGuidance Counselor\nArea Chair\nDean" as Signatories #E0F2FE
 rectangle "Accountant\nFinancial gate" as Accountant #FEF3C7
-rectangle "Dean\nFinal clearance signatory\nAcademic reports" as Dean #F3E8FF
+rectangle "Dean of Business Program\nFinal clearance signatory\nAcademic reports" as Dean #F3E8FF
 rectangle "System Administrator\nAccounts / assignments / reports / logs" as Admin #F1F5F9
 rectangle "ASCS\nRole-scoped actions" as ASCS #DBEAFE
 
@@ -25,7 +25,7 @@ Updates financialStatus.
 end note
 
 note right of Dean
-Reviews and approves Dean Clearance.
+Reviews and approves Dean Clearance as the sixth workflow stage.
 Reports remain available separately.
 end note
 

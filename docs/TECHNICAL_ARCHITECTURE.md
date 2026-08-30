@@ -107,7 +107,7 @@ The nine implemented roles are:
 | Area Chair | Review the program/area requirement queue. |
 | Adviser (legacy) | Preserved for historical records only; cannot be newly created or assigned. |
 | Accountant | Verify `financialStatus`; this is a financial gate, not a duplicate approval row. |
-| Dean | Review and approve the fifth Dean Clearance requirement; access Dean-scoped reports separately. |
+| Dean of Business Program | Review and approve the sixth Dean Clearance stage (the fifth approval row); access Dean-scoped reports separately. |
 | System Administrator | Manage accounts, roles, requirement assignments, activity logs, and institution-wide reports. |
 
 `UserRole` is defined in `lib/types/roles.ts`. Role-specific routing is
@@ -131,7 +131,9 @@ approved | pending | not_approved
 ```
 
 `lib/clearance/status.ts` derives the overall status from the five required
-signatory approval rows and `financialStatus`:
+signatory approval rows and `financialStatus`. The canonical workflow exposes
+six ordered stages: Librarian (1), Accountant financial gate (2), OSA
+Coordinator (3), Guidance Counselor (4), Area Chair (5), and Dean (6):
 
 - Any required `not_approved` row produces `not_approved`.
 - All required signatories approved plus `paid` produces `approved`.
@@ -139,14 +141,12 @@ signatory approval rows and `financialStatus`:
 - Otherwise the result is `pending`.
 - Legacy Accountant approval rows are ignored for signatory counts.
 - `printableAvailable` is true only for `approved`. The print route renders an
-  A4-oriented digital prototype record with five required signatory rows and
-  explicit Office / Requirement, Status, Assigned Signatory, Remarks, and Date
-  Reviewed columns, followed by a separate Accountant financial review with
-  Status, Verified By, Remarks, and Date Reviewed. Dean Clearance is printed
-  as the fifth signatory row. No handwritten or electronic
-  signatures are reproduced.
+  A4-oriented digital prototype record with six ordered workflow rows and
+  explicit Stage / Office, Type, Status, Assigned Signatory, Remarks, and Date
+  Reviewed columns. The Accountant row is a financial gate rather than an
+  approval signature. No handwritten or electronic signatures are reproduced.
 
-The Dean is the fifth row in the active required signatory matrix. A successful
+The Dean is the sixth workflow stage and fifth active approval row. A successful
 Dean action writes `deanApproved`, recomputes the application counters, and
 keeps Dean reports separately scoped. Historical Adviser rows and the optional
 `adviserApproved` field remain readable during migration but are not counted.
@@ -171,6 +171,10 @@ Important application fields include `studentUid`, `academicYear`, `semester`,
 `overallStatus`, `financialStatus`, `deanApproved`, and
 `printableAvailable`. These are denormalized references and logical
 relationships; Firestore does not enforce relational foreign keys.
+
+The `approvals` collection-group query uses the composite index on
+`status ASCENDING` and `signatoryRole ASCENDING`. The server still rechecks
+the sequential stage before every approval or financial write.
 
 ## 7. Reporting architecture
 
