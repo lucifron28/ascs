@@ -16,6 +16,8 @@ const SAFE_BUSINESS_MESSAGES = [
   /^(?:invalid clearance approval status\.)$/i,
   /^(?:remarks are required when marking an approval as pending or not approved\.)$/i,
   /^(?:clearance approval record not found\.)$/i,
+  /^(?:this clearance stage is locked until the previous stage is completed\.)$/i,
+  /^(?:accountant clearance is locked until librarian clearance is approved\.)$/i,
   /^(?:unauthorized: .+)$/i,
   /^(?:invalid financial status\.)$/i,
   /^(?:remarks are required when marking a student as 'unpaid'\.)$/i,

@@ -165,7 +165,7 @@ export async function verifyMigrationState(): Promise<void> {
   const deanProfileSnap = await firestore.collection('users').doc(deanAuth.uid).get();
   const deanProfile = deanProfileSnap.data();
   if (!deanProfileSnap.exists || deanProfile?.role !== 'dean' || isInactive(deanProfile) || deanAuth.customClaims?.role !== 'dean') {
-    throw new Error('Verification failed: the configured Academic Dean account is missing, inactive, or role-mismatched.');
+    throw new Error('Verification failed: the configured Dean of Business Program account is missing, inactive, or role-mismatched.');
   }
 
   const requirementsSnap = await firestore.collection('clearanceRequirements').get();
@@ -196,7 +196,7 @@ export async function verifyMigrationState(): Promise<void> {
     throw new Error('Verification failed: Dean Clearance requirement is missing or mislabeled.');
   }
   if (deanRequirement.data().assignedSignatoryId !== deanAuth.uid) {
-    throw new Error('Verification failed: Dean Clearance is not assigned to the active Academic Dean.');
+    throw new Error('Verification failed: Dean Clearance is not assigned to the active Dean of Business Program.');
   }
 
   const applicationsSnap = await firestore.collection('clearanceApplications').get();
@@ -266,7 +266,7 @@ export async function migrateAdviserToDean(options: MigrationOptions): Promise<M
     throw new Error(`Migration requires Firebase Auth role=dean for ${DEAN_EMAIL}.`);
   }
 
-  const deanName = stringValue(deanData.fullName, deanAuth.displayName || 'Academic Dean');
+  const deanName = stringValue(deanData.fullName, deanAuth.displayName || 'Dean of Business Program');
   const now = new Date().toISOString();
   let batch: WriteBatch | null = options.apply ? firestore.batch() : null;
   let pendingWrites = 0;
@@ -301,7 +301,7 @@ export async function migrateAdviserToDean(options: MigrationOptions): Promise<M
   await queueWrite((current) => current.set(deanRequirementRef, {
     role: 'dean',
     label: 'Dean Clearance',
-    displayOrder: 5,
+    displayOrder: 6,
     isActive: true,
     assignedSignatoryId: deanAuth.uid,
     assignedSignatoryName: deanName,

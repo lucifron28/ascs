@@ -52,6 +52,14 @@
         { "fieldPath": "academicYear", "order": "ASCENDING" },
         { "fieldPath": "semester", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "approvals",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "signatoryRole", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

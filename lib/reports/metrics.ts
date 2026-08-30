@@ -9,6 +9,7 @@ import {
   VALID_FINANCIAL_STATUSES,
 } from './filters';
 import { formatProgram } from '@/lib/academic-programs';
+import { isRequiredSignatoryRole } from '@/lib/clearance/workflow';
 
 export const VALID_APPROVAL_STATUSES = ['pending', 'approved', 'not_approved'] as const;
 
@@ -168,9 +169,10 @@ export function calculateRequirementMetrics(
     }
   >();
 
-  // Seed known active requirements (excluding accountant requirement role)
+  // Seed only the five canonical active signatory requirements. Accountant is
+  // a financial gate and Adviser is legacy-only, so neither belongs here.
   for (const req of knownRequirements) {
-    if (req.role === 'accountant') continue;
+    if (!isRequiredSignatoryRole(req.role)) continue;
     map.set(req.id, {
       requirementId: req.id,
       role: req.role,
@@ -183,7 +185,7 @@ export function calculateRequirementMetrics(
   }
 
   for (const approval of approvals) {
-    if (approval.signatoryRole === 'accountant') continue;
+    if (!approval.signatoryRole || !isRequiredSignatoryRole(approval.signatoryRole)) continue;
 
     const reqId = approval.requirementId || approval.signatoryRole || 'unknown';
     const role = approval.signatoryRole || 'unknown';

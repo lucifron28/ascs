@@ -23,6 +23,7 @@ import {
   assertReportDatasetWithinLimit,
   MAX_REPORT_APPLICATIONS,
 } from '@/lib/reports/authorization';
+import { isRequiredSignatoryRole } from '@/lib/clearance/workflow';
 import {
   generateSummaryCsv,
   generateRequirementBreakdownCsv,
@@ -116,7 +117,9 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
       };
     });
 
-    // 2. Fetch known active requirements (excluding accountant requirement role)
+    // 2. Fetch only the five canonical active signatory requirements. Legacy
+    // Adviser rows must never re-enter report metrics if old configuration is
+    // still present during migration.
     const reqsSnap = await firestore.collection('clearanceRequirements').get().catch(() => null);
     const knownReqs = reqsSnap
       ? reqsSnap.docs
@@ -129,7 +132,7 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
               isActive: d.isActive ?? true,
             };
           })
-          .filter((req) => req.role !== 'accountant' && req.isActive === true)
+          .filter((req) => isRequiredSignatoryRole(req.role) && req.isActive === true)
       : [];
 
     // 3. Fetch approvals in batched chunks for ALL scoped applications
@@ -203,7 +206,8 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
       };
     });
 
-    // 2. Fetch known active requirements (excluding accountant requirement role)
+    // 2. Keep Dean metrics aligned with the five canonical signatory roles;
+    // legacy Adviser configuration is read-only and excluded from reports.
     const reqsSnap = await firestore.collection('clearanceRequirements').get().catch(() => null);
     const knownReqs = reqsSnap
       ? reqsSnap.docs
@@ -216,7 +220,7 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
               isActive: d.isActive ?? true,
             };
           })
-          .filter((req) => req.role !== 'accountant' && req.isActive === true)
+          .filter((req) => isRequiredSignatoryRole(req.role) && req.isActive === true)
       : [];
 
     // 3. Fetch approvals in batched chunks for ALL Dean-visible applications
@@ -491,7 +495,7 @@ export async function exportDeanReportCsvAction(
     const logRef = firestore.collection('activityLogs').doc();
     await logRef.set({
       actorId: deanUid,
-      actorName: authenticated.user.fullName || 'Academic Dean',
+      actorName: authenticated.user.fullName || 'Dean of Business Program',
       actorRole: 'dean',
       action: 'export_dean_report_csv',
       entityType: 'report',

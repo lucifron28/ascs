@@ -9,27 +9,27 @@ export interface DefaultClearanceRequirement {
 export const DEFAULT_CLEARANCE_REQUIREMENTS: DefaultClearanceRequirement[] = [
   {
     role: 'librarian',
-    label: 'Library Clearance',
+    label: 'Librarian Clearance',
     displayOrder: 1,
   },
   {
     role: 'osa_coordinator',
-    label: 'Office of Student Affairs Clearance',
-    displayOrder: 2,
-  },
-  {
-    role: 'guidance_counselor',
-    label: 'Guidance and Counseling Clearance',
+    label: 'OSA Coordinator Clearance',
     displayOrder: 3,
   },
   {
-    role: 'area_chair',
-    label: 'Academic Department Clearance',
+    role: 'guidance_counselor',
+    label: 'Guidance Counselor Clearance',
     displayOrder: 4,
+  },
+  {
+    role: 'area_chair',
+    label: 'Area Chair Clearance',
+    displayOrder: 5,
   },
   {
     role: 'dean',
     label: 'Dean Clearance',
-    displayOrder: 5,
+    displayOrder: 6,
   },
 ];
