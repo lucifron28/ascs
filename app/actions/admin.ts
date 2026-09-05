@@ -12,6 +12,7 @@ import {
   mapLifecycleError,
   logSafeAuthError,
 } from '@/lib/admin/lifecycle-validation';
+import { parseAuditDate } from '@/lib/audit/timestamp';
 
 // Helper to authenticate Admin user
 async function getAuthenticatedAdmin() {
@@ -339,7 +340,7 @@ export async function fetchActivityLogsAction() {
         entityType: data.entityType,
         entityId: data.entityId,
         metadata: data.metadata || {},
-        createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? data.createdAt : data.createdAt.toDate?.()?.toISOString?.() || new Date().toISOString()) : new Date().toISOString(),
+        createdAt: parseAuditDate(data.createdAt)?.toISOString() || new Date().toISOString(),
       };
     });
 

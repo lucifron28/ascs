@@ -20,6 +20,7 @@ import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
 import { CLEARANCE_WORKFLOW_STAGES } from '@/lib/clearance/workflow';
 import { ACADEMIC_PROGRAM_CODES, ACADEMIC_PROGRAMS, formatProgram } from '@/lib/academic-programs';
+import { formatAuditTimestamp } from '@/lib/audit/timestamp';
 import {
   Users,
   Shield,
@@ -852,7 +853,7 @@ export default function AdminDashboard() {
                   logs.map((log) => (
                     <tr key={log.id}>
                       <td className="font-mono text-base-content/60">
-                        {new Date(log.createdAt).toLocaleString()}
+                        {formatAuditTimestamp(log.createdAt)}
                       </td>
                       <td>
                         <span className="font-bold">{log.actorName}</span>
