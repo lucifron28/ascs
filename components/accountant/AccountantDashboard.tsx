@@ -82,6 +82,7 @@ export default function AccountantDashboard() {
   }, []);
 
   const handleOpenUpdate = (rec: FinancialRecord) => {
+    if (showHistory || rec.is_actionable === false || rec.status === 'paid') return;
     setSelectedRecord(rec);
     setStatusInput(getInitialFinancialDecision(rec.status));
     setNotesInput(rec.notes || '');
@@ -202,9 +203,9 @@ export default function AccountantDashboard() {
       </div>
 
       {error && (
-        <div role="alert" className="alert alert-error bg-error/10 border-error/20 text-error-content rounded-xl flex items-center gap-2 p-3 text-sm">
+        <div role="alert" className="alert bg-error/10 border border-error/30 text-error rounded-xl flex items-center gap-2 p-3 text-sm">
           <span>Error: {error}</span>
-          <button onClick={loadRecords} className="btn btn-xs btn-outline border-error/40 text-error-content rounded-lg ml-auto">
+          <button onClick={loadRecords} className="btn btn-xs btn-outline border-error/40 text-error rounded-lg ml-auto">
             Retry
           </button>
         </div>
@@ -336,13 +337,19 @@ export default function AccountantDashboard() {
                       {rec.verified_at ? new Date(rec.verified_at).toLocaleDateString() : '--'}
                     </td>
                     <td className="py-4 rounded-r-xl pr-4 text-right">
-                      <button
-                        onClick={() => handleOpenUpdate(rec)}
-                        aria-label={`Update financial status for ${rec.student_name}`}
-                        className="btn btn-sm min-h-11 btn-primary rounded-lg font-semibold shadow-sm flex items-center gap-1 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      >
-                        <FileText className="w-3 h-3" aria-hidden="true" /> Update
-                      </button>
+                      {showHistory || rec.is_actionable === false || rec.status === 'paid' ? (
+                        <span className="text-xs font-semibold text-base-content/60 inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-success" aria-hidden="true" /> Completed
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleOpenUpdate(rec)}
+                          aria-label={`Update financial status for ${rec.student_name}`}
+                          className="btn btn-sm min-h-11 btn-primary rounded-lg font-semibold shadow-sm flex items-center gap-1 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
+                          <FileText className="w-3 h-3" aria-hidden="true" /> Update
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

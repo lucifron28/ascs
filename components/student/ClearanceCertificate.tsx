@@ -235,7 +235,17 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
                     {stage.kind === 'financial' ? 'Financial gate' : 'Signatory approval'}
                   </td>
                   <td className="p-2.5 border-r border-slate-200 font-bold uppercase text-[10px]">
-                    {status === 'completed' ? (
+                    {stage.kind === 'financial' ? (
+                      status === 'locked' ? (
+                        <span className="text-slate-500">Locked</span>
+                      ) : status === 'completed' || application.financialStatus === 'paid' ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Paid / Financially Cleared</span>
+                      ) : status === 'failed' || application.financialStatus === 'unpaid' ? (
+                        <span className="inline-flex items-center gap-1 text-red-700"><AlertCircle className="w-3 h-3" aria-hidden="true" /> Unpaid / Hold</span>
+                      ) : (
+                        <span className="text-amber-700">Pending Financial Review</span>
+                      )
+                    ) : status === 'completed' ? (
                       <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Approved</span>
                     ) : status === 'failed' ? (
                       <span className="inline-flex items-center gap-1 text-red-700"><AlertCircle className="w-3 h-3" aria-hidden="true" /> Not Approved</span>
@@ -246,7 +256,14 @@ export default function ClearanceCertificate({ applicationId }: ClearanceCertifi
                     )}
                   </td>
                   <td className="p-2.5 border-r border-slate-200 text-[11px] text-slate-700">
-                    {stage.kind === 'financial' ? application.financialUpdatedByName || 'Accountant desk' : approval?.assignedSignatoryName || 'Department desk'}
+                    {stage.kind === 'financial' ? (
+                      <div>
+                        <span>{application.financialUpdatedByName || 'Financial Office'}</span>
+                        <span className="block text-[9px] text-slate-500 font-normal">Financial status review</span>
+                      </div>
+                    ) : (
+                      approval?.assignedSignatoryName || 'Department desk'
+                    )}
                   </td>
                   <td className="p-2.5 border-r border-slate-200 text-[11px] text-slate-700 break-words">
                     {status === 'locked' ? 'Waiting for previous clearance step.' : stage.kind === 'financial' ? application.financialRemarks || 'No remarks recorded.' : approval?.remarksLatest || 'No remarks recorded.'}

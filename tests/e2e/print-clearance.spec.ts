@@ -37,17 +37,26 @@ test.describe('Printable Clearance Record QA', () => {
       'Date Reviewed',
     ]);
     await expect(signatoryTable.locator('tbody tr')).toHaveCount(6);
-    await expect(signatoryTable.getByText(/accountant clearance/i)).toBeVisible();
-    await expect(record.getByText(/librarian/i).first()).toBeVisible();
-    await expect(record.getByText(/osa coordinator/i).first()).toBeVisible();
-    await expect(record.getByText(/guidance counselor/i).first()).toBeVisible();
-    await expect(record.getByText(/area chair/i).first()).toBeVisible();
-    await expect(record.getByText(/dean clearance/i).first()).toBeVisible();
+    const accountantRow = signatoryTable.locator('tbody tr').nth(1);
+    await expect(accountantRow.locator('td').nth(0)).toContainText('Step 2: Accountant Clearance');
+    await expect(accountantRow.locator('td').nth(1)).toHaveText('Financial gate');
+    await expect(accountantRow.locator('td').nth(2)).toContainText('Paid / Financially Cleared');
+    await expect(signatoryTable.locator('tbody tr').nth(0)).toContainText('Step 1: Librarian Clearance');
+    await expect(signatoryTable.locator('tbody tr').nth(2)).toContainText('Step 3: OSA Coordinator Clearance');
+    await expect(signatoryTable.locator('tbody tr').nth(3)).toContainText('Step 4: Guidance Counselor Clearance');
+    await expect(signatoryTable.locator('tbody tr').nth(4)).toContainText('Step 5: Area Chair Clearance');
+    await expect(signatoryTable.locator('tbody tr').nth(5)).toContainText('Step 6: Dean Clearance');
+
+    // Verify no separate duplicate financial section exists
+    await expect(record.getByRole('heading', { name: /financial accountability review/i })).toHaveCount(0);
+    await expect(record.locator('section[aria-labelledby="financial-accountability-review"]')).toHaveCount(0);
+
+    // Verify disclaimer and absence of fake signatures
     await expect(record.getByText(/accountant clearance is step 2 of 6 and is represented by financial status/i)).toBeVisible();
     await expect(record.getByText(/not an official institutional clearance certificate/i)).toBeVisible();
     await expect(record.getByText(/adviser/i)).toHaveCount(0);
+    await expect(record.getByText(/accountant signature|signed by accountant/i)).toHaveCount(0);
     await expect(record.getByText(/signed on|institution seal placeholder/i)).toHaveCount(0);
-
     await page.emulateMedia({ media: 'print' });
     await expect(record).toBeVisible();
 
