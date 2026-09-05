@@ -73,7 +73,7 @@ describe('Financial Workflow Integration Tests', () => {
     }
   });
 
-  it('4c. Paid transition unlocks OSA exactly once', async () => {
+  it('4c. Paid transition on legacy all-approved application produces no false unlock notification', async () => {
     process.env.TEST_SESSION_COOKIE = accountantSession;
     const paidRes = await updateFinancialStatusAction({
       recordId: 'app-student-d',
@@ -86,51 +86,102 @@ describe('Financial Workflow Integration Tests', () => {
       .collection('notifications')
       .where('recipientId', '==', 'demo-osa-uid')
       .get();
-    assert.equal(unlocks.docs.filter((doc) => doc.data().type === 'workflow_stage_unlocked' && doc.data().relatedApplicationId === 'app-student-d').length, 1);
+    assert.equal(
+      unlocks.docs.filter((doc) => doc.data().type === 'workflow_stage_unlocked' && doc.data().relatedApplicationId === 'app-student-d').length,
+      0
+    );
   });
 
-  it("6. 'unpaid' forces overall status to 'not_approved'", async () => {
+  it('5a. Paid -> Unpaid direct Accountant action is rejected on completed stage', async () => {
+    process.env.TEST_SESSION_COOKIE = accountantSession;
+    const rejectedRes = await updateFinancialStatusAction({
+      recordId: 'app-student-a',
+      status: 'unpaid',
+      financialRemarks: 'Attempting to reverse paid status.',
+    });
+    assert.equal(rejectedRes.success, false);
+    if (!rejectedRes.success) {
+      assert.match(rejectedRes.error, /Accountant Clearance has already been completed\./i);
+    }
+  });
+
+  it("6. 'unpaid' forces overall status to 'not_approved' and subsequent 'paid' permits approval", async () => {
+    const db = getAdminFirestore();
+    const testAppId = 'app-financial-lifecycle-test';
+    const now = new Date().toISOString();
+
+    // Seed actionable application where Librarian is approved and financialStatus is pending
+    await db.collection('clearanceApplications').doc(testAppId).set({
+      applicationNumber: 'CLR-FIN-TEST-001',
+      studentId: 'demo-student-a-uid',
+      studentUid: 'demo-student-a-uid',
+      studentNumber: 'STUD-2026-0001',
+      studentName: 'Student A',
+      academicYear: '2026-2027',
+      semester: '1st Semester',
+      purpose: 'Graduation',
+      overallStatus: 'pending',
+      financialStatus: 'pending',
+      financialVerifiedAt: null,
+      financialRemarks: null,
+      deanApproved: true,
+      printableAvailable: false,
+      pendingCount: 0,
+      approvedCount: 5,
+      notApprovedCount: 0,
+      submittedAt: now,
+      updatedAt: now,
+    });
+
+    for (const role of ['librarian', 'osa_coordinator', 'guidance_counselor', 'area_chair', 'dean']) {
+      await db.collection('clearanceApplications').doc(testAppId).collection('approvals').doc(role).set({
+        requirementId: role,
+        signatoryRole: role,
+        status: 'approved',
+        actedAt: now,
+        updatedAt: now,
+      });
+    }
+
+    // 1. Mark 'unpaid' -> succeeds, overallStatus becomes not_approved
     process.env.TEST_SESSION_COOKIE = accountantSession;
     const unpaidRes = await updateFinancialStatusAction({
-      recordId: 'app-student-a',
+      recordId: testAppId,
       status: 'unpaid',
       financialRemarks: 'Unpaid balance for laboratory fees.',
     });
     assert.equal(unpaidRes.success, true);
 
-    const appDoc = await getAdminFirestore().collection('clearanceApplications').doc('app-student-a').get();
-    assert.equal(appDoc.data()?.financialStatus, 'unpaid');
-    assert.equal(appDoc.data()?.overallStatus, 'not_approved');
-    assert.equal(appDoc.data()?.printableAvailable, false);
-  });
+    const appDocUnpaid = await db.collection('clearanceApplications').doc(testAppId).get();
+    assert.equal(appDocUnpaid.data()?.financialStatus, 'unpaid');
+    assert.equal(appDocUnpaid.data()?.overallStatus, 'not_approved');
+    assert.equal(appDocUnpaid.data()?.printableAvailable, false);
 
-  it("5. 'paid' status permits approval when all signatories are approved & 7. Activity log & 8. Notification", async () => {
-    process.env.TEST_SESSION_COOKIE = accountantSession;
+    // 2. Settle 'unpaid' -> 'paid' -> succeeds, overallStatus becomes approved, printableAvailable becomes true
     const paidRes = await updateFinancialStatusAction({
-      recordId: 'app-student-a',
+      recordId: testAppId,
       status: 'paid',
       financialRemarks: 'Balance fully cleared.',
     });
     assert.equal(paidRes.success, true);
 
-    const appDoc = await getAdminFirestore().collection('clearanceApplications').doc('app-student-a').get();
-    assert.equal(appDoc.data()?.financialStatus, 'paid');
-    assert.equal(appDoc.data()?.overallStatus, 'approved');
-    assert.equal(appDoc.data()?.printableAvailable, true);
+    const appDocPaid = await db.collection('clearanceApplications').doc(testAppId).get();
+    assert.equal(appDocPaid.data()?.financialStatus, 'paid');
+    assert.equal(appDocPaid.data()?.overallStatus, 'approved');
+    assert.equal(appDocPaid.data()?.printableAvailable, true);
 
-    const logSnap = await getAdminFirestore()
+    const logSnap = await db
       .collection('activityLogs')
-      .where('entityId', '==', 'app-student-a')
+      .where('entityId', '==', testAppId)
       .get();
     assert.ok(logSnap.size >= 1);
 
-    const notifSnap = await getAdminFirestore()
+    const notifSnap = await db
       .collection('notifications')
       .where('recipientId', '==', 'demo-student-a-uid')
       .get();
     assert.ok(notifSnap.size >= 1);
   });
-
   it('9. Accountant does not behave as a signatory approval row', async () => {
     const approvalsSnap = await getAdminFirestore()
       .collection('clearanceApplications')
