@@ -13,14 +13,14 @@ institutional deployment or certification.
    controls within a bounded academic project; production operations, official
    certificates, payments, email, and electronic signatures are out of scope.
 3. **Who are the users?** Students, five clearance signatory roles, an
-   Accountant, an Academic Dean, and a System Administrator.
+   Accountant, the Dean of Business Program, and a System Administrator.
 4. **Why is Bulk CSV Account Import deferred?** Single-account creation and
    lifecycle safeguards are implemented first. Bulk import needs parser,
    validation, preview, rollback, and operational audit design.
 5. **Does the system use real student data?** No. Fixtures use fictional
    `@example.test` identities.
 5a. **Why does the local login show many demo accounts?** The emulator-only
-   selector is a rehearsal aid for all seven student scenarios and eight staff
+   selector is a rehearsal aid for all seven student scenarios and seven staff
    identities. It requires both Demo Mode and Firebase Emulator Mode, uses the
    normal Firebase authentication flow after filling the form, and is hidden
    on the public Vercel demo.
@@ -82,12 +82,13 @@ institutional deployment or certification.
     and the print record is unavailable.
 24. **When is a record printable?** When all five required signatories are
     approved and the financial state is `paid`, producing overall `approved`.
-    The output is an A4 PKM-slip-inspired digital prototype with a separate
-    `FINANCIAL ACCOUNTABILITY REVIEW`; it contains no reproduced signatures and
-    is not an official certificate.
-25. **Why does the Dean act on the fifth step?** The Academic Dean is the
-    final active signatory. A Dean decision writes `deanApproved` and updates
-    the application counters; Dean reports remain separately scoped.
+    The output is an A4 PKM-slip-inspired digital prototype with six ordered
+    workflow rows, including the Step 2 Accountant financial gate; it contains
+    no reproduced signatures and is not an official certificate.
+25. **Why does the Dean act on the sixth stage?** The Dean of Business Program
+    is the final active signatory and acts on the fifth approval row. A Dean
+    decision writes `deanApproved` and updates the application counters; Dean
+    reports remain separately scoped.
 26. **How are duplicate applications prevented?** Submission uses a
     deterministic student/academic-year/semester identity and rejects an
     existing application for the same term.
@@ -106,10 +107,10 @@ institutional deployment or certification.
      signatory's decision and actor name in the audit trail. It does not create a
      fake handwritten or electronic signature, and the printed page is labelled
      a nonofficial prototype record.
-27d. **Where are Accountant and Dean responsibilities shown?** Accountant
-     verification appears in the separate Financial Accountability Review. Dean
-     access is a separate report scope, while Dean Clearance is the fifth
-     required signatory row.
+27d. **Where are Accountant and Dean responsibilities shown?** The Accountant
+     financial gate appears as Step 2 in the six-stage workflow, while Dean
+     Clearance is the sixth stage and fifth required signatory row. Dean access
+     is a separate report scope.
 
 ## Reports and data integrity
 

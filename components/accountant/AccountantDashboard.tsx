@@ -26,12 +26,15 @@ interface FinancialRecord {
   overall_status: string;
   student_name: string;
   student_id_number: string;
+  is_actionable?: boolean;
 }
 
 export default function AccountantDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [records, setRecords] = useState<FinancialRecord[]>([]);
+  const [historyRecords, setHistoryRecords] = useState<FinancialRecord[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -52,7 +55,8 @@ export default function AccountantDashboard() {
       const res = await fetchFinancialQueueAction();
       if (isMounted.current) {
         if (res.success) {
-          setRecords(res.financialQueue || []);
+          setRecords((res.financialQueue || []) as unknown as FinancialRecord[]);
+          setHistoryRecords((res.financialHistory || []) as unknown as FinancialRecord[]);
         } else {
           setError(res.error || 'Unable to load financial records. Please try again.');
         }
@@ -78,6 +82,7 @@ export default function AccountantDashboard() {
   }, []);
 
   const handleOpenUpdate = (rec: FinancialRecord) => {
+    if (showHistory || rec.is_actionable === false || rec.status === 'paid') return;
     setSelectedRecord(rec);
     setStatusInput(getInitialFinancialDecision(rec.status));
     setNotesInput(rec.notes || '');
@@ -127,7 +132,8 @@ export default function AccountantDashboard() {
   };
 
   // Filtered List
-  const filteredRecords = records.filter((rec) => {
+  const visibleRecords = showHistory ? historyRecords : records;
+  const filteredRecords = visibleRecords.filter((rec) => {
     const matchesSearch =
       rec.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rec.student_id_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -140,7 +146,7 @@ export default function AccountantDashboard() {
 
   const pendingCount = records.filter((r) => r.status === 'pending').length;
   const unpaidCount = records.filter((r) => r.status === 'unpaid').length;
-  const paidCount = records.filter((r) => r.status === 'paid').length;
+  const paidCount = historyRecords.filter((r) => r.status === 'paid').length;
 
   if (loading) {
     return (
@@ -160,7 +166,7 @@ export default function AccountantDashboard() {
             <CreditCard className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-base-content/60 text-[10px] font-semibold uppercase tracking-wider">Total Accounts</span>
+            <span className="text-base-content/60 text-[10px] font-semibold uppercase tracking-wider">Actionable Accounts</span>
             <h3 className="text-2xl font-black text-base-content">{records.length}</h3>
           </div>
         </div>
@@ -197,9 +203,9 @@ export default function AccountantDashboard() {
       </div>
 
       {error && (
-        <div role="alert" className="alert alert-error bg-error/10 border-error/20 text-error-content rounded-xl flex items-center gap-2 p-3 text-sm">
+        <div role="alert" className="alert bg-error/10 border border-error/30 text-error rounded-xl flex items-center gap-2 p-3 text-sm">
           <span>Error: {error}</span>
-          <button onClick={loadRecords} className="btn btn-xs btn-outline border-error/40 text-error-content rounded-lg ml-auto">
+          <button onClick={loadRecords} className="btn btn-xs btn-outline border-error/40 text-error rounded-lg ml-auto">
             Retry
           </button>
         </div>
@@ -263,6 +269,19 @@ export default function AccountantDashboard() {
           >
             Paid / Cleared
           </button>
+          <button
+            onClick={() => {
+              setShowHistory((current) => !current);
+              setStatusFilter('all');
+            }}
+            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
+              showHistory
+                ? 'bg-secondary text-secondary-content hover:bg-secondary/90'
+                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
+            }`}
+          >
+            {showHistory ? 'Back to Action Queue' : `Completed History (${paidCount})`}
+          </button>
         </div>
       </div>
 
@@ -270,8 +289,8 @@ export default function AccountantDashboard() {
       {filteredRecords.length === 0 ? (
         <div className="card bg-base-100 border border-base-content/15 p-12 rounded-xl text-center space-y-2 shadow-sm">
           <CircleEllipsis className="w-8 h-8 text-base-content/50 mx-auto" aria-hidden="true" />
-          <h3 className="text-base-content font-bold text-sm">No Accounts Found</h3>
-          <p className="text-base-content/70 text-xs font-medium">Try adjusting your filters or search query.</p>
+          <h3 className="text-base-content font-bold text-sm">{showHistory ? 'No Completed Financial Reviews' : 'No Actionable Accounts'}</h3>
+          <p className="text-base-content/70 text-xs font-medium">{showHistory ? 'No paid records are available in the completed history.' : 'Students appear here after Librarian Clearance is approved.'}</p>
         </div>
       ) : (
         <div className="card bg-base-100 border border-base-content/15 shadow-sm p-6 rounded-xl">
@@ -318,13 +337,19 @@ export default function AccountantDashboard() {
                       {rec.verified_at ? new Date(rec.verified_at).toLocaleDateString() : '--'}
                     </td>
                     <td className="py-4 rounded-r-xl pr-4 text-right">
-                      <button
-                        onClick={() => handleOpenUpdate(rec)}
-                        aria-label={`Update financial status for ${rec.student_name}`}
-                        className="btn btn-sm min-h-11 btn-primary rounded-lg font-semibold shadow-sm flex items-center gap-1 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      >
-                        <FileText className="w-3 h-3" aria-hidden="true" /> Update
-                      </button>
+                      {showHistory || rec.is_actionable === false || rec.status === 'paid' ? (
+                        <span className="text-xs font-semibold text-base-content/60 inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-success" aria-hidden="true" /> Completed
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleOpenUpdate(rec)}
+                          aria-label={`Update financial status for ${rec.student_name}`}
+                          className="btn btn-sm min-h-11 btn-primary rounded-lg font-semibold shadow-sm flex items-center gap-1 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
+                          <FileText className="w-3 h-3" aria-hidden="true" /> Update
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -16,12 +16,17 @@ const SAFE_BUSINESS_MESSAGES = [
   /^(?:invalid clearance approval status\.)$/i,
   /^(?:remarks are required when marking an approval as pending or not approved\.)$/i,
   /^(?:clearance approval record not found\.)$/i,
+  /^(?:this clearance stage is locked until the previous stage is completed\.)$/i,
+  /^(?:accountant clearance is locked until librarian clearance is approved\.)$/i,
   /^(?:unauthorized: .+)$/i,
   /^(?:invalid financial status\.)$/i,
   /^(?:remarks are required when marking a student as 'unpaid'\.)$/i,
   /^(?:clearance application not found\.)$/i,
   /^(?:student profile record not found\. please contact administration\.)$/i,
   /^(?:password change required before accessing this operation\.)$/i,
+  /^(?:accountant clearance has already been completed\.)$/i,
+  /^(?:this clearance decision has already been finalized\.)$/i,
+  /^(?:this clearance stage is no longer actionable\.)$/i,
 ];
 
 function getErrorMessage(error: unknown): string {

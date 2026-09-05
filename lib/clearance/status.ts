@@ -1,4 +1,7 @@
 import type { ClearanceStatus, FinancialStatus } from '@/lib/types/status';
+import { REQUIRED_SIGNATORY_ROLES } from '@/lib/clearance/workflow';
+
+export { REQUIRED_SIGNATORY_ROLES } from '@/lib/clearance/workflow';
 
 export interface ClearanceApprovalStatus {
   status?: ClearanceStatus | string | null;
@@ -14,13 +17,6 @@ export interface ClearanceStatusSummary {
 }
 export const VALID_APPROVAL_STATUSES = ['approved', 'pending', 'not_approved'] as const;
 export const VALID_FINANCIAL_STATUSES = ['paid', 'unpaid'] as const;
-export const REQUIRED_SIGNATORY_ROLES = [
-  'librarian',
-  'osa_coordinator',
-  'guidance_counselor',
-  'area_chair',
-  'dean',
-] as const;
 const REQUIRED_SIGNATORY_ROLE_SET = new Set<string>(REQUIRED_SIGNATORY_ROLES);
 
 export function validateApprovalStatus(status: string): boolean {

@@ -61,7 +61,28 @@ describe('Dean clearance signatory integration tests', () => {
     assert.equal(visibleIds.includes('app-student-c'), false);
   });
 
-  it('Dean receives the fifth approval and recomputes deanApproved/counters', async () => {
+  it('Dean receives the final approval only after Accountant and prior signatories finish', async () => {
+    const guidanceSession = await getSessionCookieForUser('guidance@example.test', 'password123');
+    const areaChairSession = await getSessionCookieForUser('chair@example.test', 'password123');
+
+    process.env.TEST_SESSION_COOKIE = guidanceSession;
+    const guidanceRes = await signClearanceAction({
+      applicationId: 'app-student-b',
+      approvalId: 'guidance_counselor',
+      status: 'approved',
+      remarks: '',
+    });
+    assert.equal(guidanceRes.success, true);
+
+    process.env.TEST_SESSION_COOKIE = areaChairSession;
+    const areaChairRes = await signClearanceAction({
+      applicationId: 'app-student-b',
+      approvalId: 'area_chair',
+      status: 'approved',
+      remarks: '',
+    });
+    assert.equal(areaChairRes.success, true);
+
     process.env.TEST_SESSION_COOKIE = deanSession;
     const queue = await fetchPendingApprovalsAction();
     assert.equal(queue.success, true);
@@ -79,8 +100,9 @@ describe('Dean clearance signatory integration tests', () => {
 
     const app = await getAdminFirestore().collection('clearanceApplications').doc('app-student-b').get();
     assert.equal(app.data()?.deanApproved, true);
-    assert.equal(app.data()?.approvedCount, 3);
-    assert.equal(app.data()?.pendingCount, 2);
+    assert.equal(app.data()?.approvedCount, 5);
+    assert.equal(app.data()?.pendingCount, 0);
+    assert.equal(app.data()?.overallStatus, 'approved');
   });
 
   it('Dean is an active required role and Adviser is legacy-only', async () => {

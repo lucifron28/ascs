@@ -40,12 +40,12 @@
 | Guidance Counselor | Review guidance clearance |
 | Area Chair | Review area/department clearance |
 | Adviser (legacy) | Historical compatibility only; not available for new assignments |
-| Dean | Approve Dean Clearance and access Dean-scoped reports |
+| Dean of Business Program | Approve Dean Clearance and access Dean-scoped reports |
 | Admin | Manage profiles, roles, requirement assignments, activity logs, and institution clearance reports |
 ## Workflow and status rules
 
 1. A student submits one application for an academic year/semester using canonical semester representation ('1st Semester', '2nd Semester', 'Summer Semester'). Legacy records using short-form semester values ('1st', '2nd', 'Summer') are preserved and supported via storage aliases.
-2. The server creates the application, approval rows (5 default required signatories: Librarian, OSA Coordinator, Guidance Counselor, Area Chair, Dean), student submission confirmation notification, signatory action notifications for assigned or role-wide signatories, and activity log in a Firestore transaction.
+2. The server creates the application, five approval rows (Librarian, OSA Coordinator, Guidance Counselor, Area Chair, Dean), the Step 2 Accountant financial gate, a student submission confirmation notification, and the activity log in a Firestore transaction. Only the Librarian receives the first workflow notification; each later stage is unlocked in order.
 3. The Accountant acts as a financial gate only via `financialStatus: 'pending' | 'paid' | 'unpaid'`. The Accountant does not have a duplicate signatory approval row.
 4. Signatories act on their own role queue. An assigned approval can only be acted on by its assigned user; an unassigned row is a role-wide queue item.
 5. Remarks are required for `pending` and `not_approved` decisions and are visible to the student.
@@ -60,8 +60,8 @@
    - If all required signatory approvals are `approved` and `financialStatus` is `unpaid`, overall status is `not_approved`.
    - Otherwise, overall status is `pending`.
 8. Printable clearance (`printableAvailable`) is true and available only when overall status is `approved`.
-   The print view is a prototype/MVP record and makes no official institutional approval claim.
-9. The Dean receives the fifth approval row directly; successful Dean approval writes `deanApproved` and updates the application counters.
+    The print view is a six-row prototype/MVP record and makes no official institutional approval claim.
+9. The ordered workflow is Librarian (1), Accountant financial gate (2), OSA Coordinator (3), Guidance Counselor (4), Area Chair (5), and Dean of Business Program (6). Successful Dean approval writes `deanApproved` and updates the application counters.
 
 ## Data model
 
@@ -94,7 +94,7 @@ System administrators can create student and staff accounts, deactivate and reac
 issue temporary passwords, change system roles, assign requirement signatories, and inspect activity logs.
 Newly created and reset accounts must complete a mandatory password change at `/change-password` before
 accessing normal dashboards.
-System Administrators and the Academic Dean have access to role-scoped clearance reports and CSV exports:
+System Administrators and the Dean of Business Program have access to role-scoped clearance reports and CSV exports:
 - `/admin/reports`: Institution-wide clearance metrics, financial summaries (Paid / Unpaid / Pending), requirement bottlenecks (`Highest Unresolved Requirements`), program/year-level/section breakdowns, and safe CSV data exports.
 - `/dean/reports`: Academic clearance progress for Dean-approved applications (`deanApproved === true`), program breakdowns, requirement bottlenecks, and role-scoped Dean CSV exports. Financial summaries are excluded from Dean scope.
 - **Reporting Architecture & Scaling Guards**:

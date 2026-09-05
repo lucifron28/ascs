@@ -136,10 +136,11 @@ test('5. Unknown status throws data integrity error in application, financial, a
   assert.throws(() => calculateRequirementMetrics(invalidAppr), /Unknown approval status/);
 });
 
-test('6. calculateRequirementMetrics handles 500+ applications and excludes accountant requirement role', () => {
+test('6. calculateRequirementMetrics handles 500+ applications and excludes non-signatory roles', () => {
   const knownReqs = [
     { id: 'lib', role: 'librarian', label: 'Library Clearance' },
     { id: 'acc', role: 'accountant', label: 'Accountant Clearance' }, // should be excluded
+    { id: 'adviser', role: 'adviser', label: 'Class Adviser Clearance' }, // legacy-only
   ];
 
   const approvals: RawApprovalData[] = [];
@@ -154,6 +155,12 @@ test('6. calculateRequirementMetrics handles 500+ applications and excludes acco
       requirementId: 'acc',
       signatoryRole: 'accountant',
       label: 'Accountant Clearance',
+      status: 'approved',
+    });
+    approvals.push({
+      requirementId: 'adviser',
+      signatoryRole: 'adviser',
+      label: 'Class Adviser Clearance',
       status: 'approved',
     });
   }

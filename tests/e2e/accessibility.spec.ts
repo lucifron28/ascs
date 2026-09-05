@@ -87,7 +87,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
     await page.getByRole('button', { name: /log in/i }).click();
 
     await page.waitForURL('**/accountant/dashboard');
-    await expect(page.getByRole('heading', { name: /financial accountability management/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /accountant clearance/i })).toBeVisible();
     await assertZeroSevereViolations(page);
 
     const updateBtn = page.locator('button', { hasText: 'Update' }).first();
@@ -192,7 +192,7 @@ test.describe('Automated Accessibility (axe-core WCAG 2.2 AA)', () => {
 
     test('Accountant Dashboard and Update dialog are scanned under all representative themes', async ({ page }) => {
       await loginAs(page, 'accountant@example.test', 'accountant/dashboard');
-      await expect(page.getByRole('heading', { name: /financial accountability management/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /accountant clearance/i })).toBeVisible();
 
       for (const theme of REPRESENTATIVE_THEMES) {
         await setTheme(page, theme);

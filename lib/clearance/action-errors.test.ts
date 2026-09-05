@@ -29,4 +29,16 @@ test('clearance business validation errors remain specific', () => {
     mapClearanceActionError('fetchStudentDashboard', new Error('Password change required before accessing this operation.')),
     'Password change required before accessing this operation.',
   );
+  assert.equal(
+    mapClearanceActionError('updateFinancialStatus', new Error('Accountant Clearance has already been completed.')),
+    'Accountant Clearance has already been completed.',
+  );
+  assert.equal(
+    mapClearanceActionError('signClearance', new Error('This clearance decision has already been finalized.')),
+    'This clearance decision has already been finalized.',
+  );
+  assert.equal(
+    mapClearanceActionError('signClearance', new Error('This clearance stage is no longer actionable.')),
+    'This clearance stage is no longer actionable.',
+  );
 });

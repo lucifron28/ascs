@@ -76,6 +76,6 @@ Before conducting a live capstone defense or demonstration:
 - [ ] Set browser zoom level to 100% on standard desktop resolution (1440x900 or 1920x1080).
 - [ ] Open `http://localhost:3000/login`.
 - [ ] Verify Demo Environment Banner (`Demo Environment - Fictional Data`) is visible.
-- [ ] Use `student.g@example.test` for the live 9-step multi-role clearance workflow.
+- [ ] Use `student.g@example.test` for the live six-stage multi-role clearance workflow.
 - [ ] Use `student.a@example.test` for pre-cleared certificate print demonstration fallback.
 - [ ] Select presentation theme (`ASCS Light` or `ASCS Dark`) via theme selector.

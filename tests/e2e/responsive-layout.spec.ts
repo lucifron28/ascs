@@ -68,7 +68,7 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
       await page.getByRole('button', { name: /log in/i }).click();
 
       await expect(page).toHaveURL(/\/accountant\/dashboard/, { timeout: 10_000 });
-      await expect(page.getByRole('heading', { name: /financial accountability management/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /accountant clearance/i })).toBeVisible();
 
       const hasAccOverflow = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth

@@ -105,7 +105,7 @@ Role: Dean
 Fixture: pending Dean approval queue
 Theme: Corporate
 Viewport: 1440x900
-Purpose: Shows the actionable fifth signatory queue.
+Purpose: Shows the actionable sixth-stage Dean queue (the fifth signatory row).
 
 ## Dean Review Dialog
 
@@ -174,8 +174,8 @@ Fixture: Student A approved + paid (BSAIS - Accounting Information System)
 Theme: Corporate / print layout
 Viewport: 1440px wide, full-page (base viewport 1440x900)
 Purpose: Shows the A4-oriented, PKM-slip-inspired digital prototype record with
-the normalized Accounting Information System (BSAIS) display, five required
-signatory rows, and a separate Accountant financial review. It contains no
+the normalized Accounting Information System (BSAIS) display and six ordered
+workflow rows, including the Step 2 Accountant financial gate. It contains no
 reproduced signatures and is not an official certificate.
 
 ## Not-approved Student View

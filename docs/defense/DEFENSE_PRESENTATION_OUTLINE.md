@@ -51,7 +51,8 @@ Talking points:
 
 - Student and five clearance signatories.
 - Accountant as a financial gate, not a duplicate signatory.
-- Dean approves the fifth required clearance row.
+- Dean of Business Program approves the sixth workflow stage (the fifth
+  signatory approval row).
 - Dean reports remain a separate privacy-scoped surface.
 - Admin owns account, requirement, log, and report administration.
 
@@ -156,9 +157,9 @@ Talking points:
 - Corporate theme desktop screenshot library.
 - Approved, pending, not-approved, and unpaid states.
 - Signatory and Accountant dialogs remain usable at desktop width.
-- The printable output is an A4 PKM-slip-inspired prototype with five signatory
-  rows and a separate financial accountability review; it does not reproduce
-  signatures.
+- The printable output is an A4 PKM-slip-inspired prototype with six ordered
+  workflow rows, including the Step 2 Accountant financial gate; it does not
+  reproduce signatures.
 
 Visual: `02-student-dashboard-approved.png`, `06-signatory-review-dialog.png`,
 `15-printable-clearance-prototype.png`.

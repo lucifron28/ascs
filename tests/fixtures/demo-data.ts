@@ -21,10 +21,10 @@ export interface DemoUserFixture {
 
 export const DEMO_REQUIREMENTS_FIXTURE = [
   { id: 'librarian', role: 'librarian' as const, label: 'Librarian Clearance', displayOrder: 1, isActive: true },
-  { id: 'osa_coordinator', role: 'osa_coordinator' as const, label: 'OSA Coordinator Clearance', displayOrder: 2, isActive: true },
-  { id: 'guidance_counselor', role: 'guidance_counselor' as const, label: 'Guidance Counselor Clearance', displayOrder: 3, isActive: true },
-  { id: 'area_chair', role: 'area_chair' as const, label: 'Area Chair Clearance', displayOrder: 4, isActive: true },
-  { id: 'dean', role: 'dean' as const, label: 'Dean Clearance', displayOrder: 5, isActive: true },
+  { id: 'osa_coordinator', role: 'osa_coordinator' as const, label: 'OSA Coordinator Clearance', displayOrder: 3, isActive: true },
+  { id: 'guidance_counselor', role: 'guidance_counselor' as const, label: 'Guidance Counselor Clearance', displayOrder: 4, isActive: true },
+  { id: 'area_chair', role: 'area_chair' as const, label: 'Area Chair Clearance', displayOrder: 5, isActive: true },
+  { id: 'dean', role: 'dean' as const, label: 'Dean Clearance', displayOrder: 6, isActive: true },
 ];
 
 type DemoUserOverrides = Omit<Partial<DemoUserFixture>, 'uid' | 'email' | 'password' | 'role' | 'fullName'>;
@@ -208,7 +208,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
       dean: { status: 'pending', remarksLatest: null },
     },
   },
-  // Student C: 1 not_approved with remarks + paid -> overall not_approved, printable false
+  // Student C: Librarian not approved, so later stages remain locked.
   {
     id: 'app-student-c',
     applicationNumber: 'CLR-2026-000003',
@@ -222,22 +222,22 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     semester: '1st Semester',
     purpose: 'Graduation',
     overallStatus: 'not_approved',
-    financialStatus: 'paid',
+    financialStatus: 'pending',
     financialRemarks: null,
     deanApproved: false,
     printableAvailable: false,
-    pendingCount: 3,
-    approvedCount: 1,
+    pendingCount: 4,
+    approvedCount: 0,
     notApprovedCount: 1,
     approvals: {
       librarian: { status: 'not_approved', remarksLatest: 'Unreturned book: Operating System Concepts' },
-      osa_coordinator: { status: 'approved', remarksLatest: null },
+      osa_coordinator: { status: 'pending', remarksLatest: null },
       guidance_counselor: { status: 'pending', remarksLatest: null },
       area_chair: { status: 'pending', remarksLatest: null },
       dean: { status: 'pending', remarksLatest: null },
     },
   },
-  // Student D: All 5 signatories approved + unpaid -> overall not_approved, printable false
+  // Student D: legacy / historical out-of-order state. Tests legacy resilience where earlier gate (Accountant) is unpaid while later signatory rows were historically approved.
   {
     id: 'app-student-d',
     applicationNumber: 'CLR-2026-000004',

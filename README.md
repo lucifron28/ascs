@@ -8,7 +8,7 @@
 
 ## Overview
 
-The **Automated Student Clearance System (ASCS)** modernizes the clearance process for students at Pambayang Kolehiyo ng Mauban (PKM). It replaces paper-based routing slips with a digital workflow that provides real-time clearance tracking, five role-scoped signatory sign-offs, a separate Accountant financial accountability review, and an A4-oriented MVP print record. The print record is a PKM-slip-inspired digital prototype, not an official certificate or electronic signature.
+The **Automated Student Clearance System (ASCS)** modernizes the clearance process for students at Pambayang Kolehiyo ng Mauban (PKM). It replaces paper-based routing slips with a sequential six-stage workflow: Librarian, Accountant financial verification, OSA Coordinator, Guidance Counselor, Area Chair, and Dean. The A4-oriented output is a PKM-slip-inspired digital prototype, not an official certificate or electronic signature.
 
 ---
 
@@ -45,13 +45,13 @@ ASCS operates on nine core collections and subcollections:
 
 ## Roles & Responsibilities
 
-1. **Student:** Submits term clearance applications, tracks sign-off progress, views remarks, and views the printable clearance summary upon full approval.
-2. **Librarian:** Reviews library clearance requirements.
-3. **Accountant:** Financial gate only. Verifies financial status (`paid` vs `unpaid`) on `clearanceApplications`. Marking `unpaid` requires a remark and blocks overall clearance approval. (Accountant does not have a duplicate signatory approval row).
-4. **OSA Coordinator:** Reviews Office of Student Affairs clearance requirements.
-5. **Guidance Counselor:** Reviews guidance department clearance requirements.
-6. **Area Chair:** Reviews academic program / department clearance requirements.
-7. **Dean:** Reviews and approves the fifth Dean Clearance requirement in the signatory queue.
+1. **Student:** Submits term clearance applications, tracks the six-stage progress, views remarks, and views the printable clearance summary upon full approval.
+2. **Librarian:** Reviews the first clearance requirement.
+3. **Accountant:** Performs the second-stage financial gate by verifying `paid` or `unpaid` status. Marking `unpaid` requires a remark and blocks overall clearance approval; no duplicate Accountant approval row is created.
+4. **OSA Coordinator:** Reviews the third-stage Office of Student Affairs requirement.
+5. **Guidance Counselor:** Reviews the fourth-stage guidance requirement.
+6. **Area Chair:** Reviews the fifth-stage academic program / department requirement.
+7. **Dean of Business Program:** Reviews and approves the sixth and final Dean Clearance requirement in the signatory queue.
 8. **Reports:** Dean reports remain available separately and are scoped to Dean-approved applications.
 9. **System Administrator:** Provisions student and staff accounts, manages user roles, deactivates/reactivates accounts, issues temporary passwords, assigns requirement signatories, and inspects activity logs.
 
@@ -114,7 +114,7 @@ To run fully offline with local Firebase Auth and Firestore emulators:
 The deterministic demo accounts and fictional records are documented in [`docs/DEMO_SCENARIO.md`](docs/DEMO_SCENARIO.md). The demo is emulator-only; it must not be seeded into a production Firebase project.
 
 When both local switches are enabled, `/login` provides one accessible,
-grouped Demo account selector for all seven student scenarios and eight staff
+grouped Demo account selector for all seven student scenarios and seven staff
 identities. It only fills deterministic emulator credentials and is hidden on
 the public Vercel fictional-data deployment. Student profiles and applications
 store the compact PKM **Program Code**; the shared catalog in

@@ -45,7 +45,8 @@ describe('Reports & CSV Export Integration Tests', () => {
     assert.equal(summary.applicationSummary.notApproved, 2);
 
     assert.ok(summary.financialSummary);
-    assert.equal(summary.financialSummary?.paid, 3);
+    assert.equal(summary.financialSummary?.paid, 2);
+    assert.equal(summary.financialSummary?.pending, 1);
     assert.equal(summary.financialSummary?.unpaid, 1);
   });
 

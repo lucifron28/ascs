@@ -14,7 +14,7 @@ integration, Firestore Rules, and browser tests.
 | **Unit** | Pure logic and security helpers (status derivation, lifecycle validation, session edge helpers, password transition recovery, report metrics/filters/CSV/authorization, manifest verification, test-session override guard) | `node:test` via tsx | No |
 | **Emulator integration** | Real persisted state against Auth + Firestore emulators via server actions / service functions; authorization, transactions, workflow transitions | `node:test` via tsx | Yes |
 | **Firestore Rules** | Authenticated **client SDK** operations against the emulator to prove Rules enforce boundaries (Admin SDK bypasses Rules, so these are separate) | `node:test` via tsx + `@firebase/rules-unit-testing` | Yes |
-| **Browser acceptance** | High-value user journeys in Chromium (login, mandatory password change, live 9-step multi-role clearance journey, status views, reports) | Playwright | Yes (+ Next.js web server) |
+| **Browser acceptance** | High-value user journeys in Chromium (login, mandatory password change, live six-stage clearance journey, status views, reports) | Playwright | Yes (+ Next.js web server) |
 
 The existing `npm test` unit suite is preserved unchanged. Acceptance layers
 are additive.
@@ -52,13 +52,15 @@ accounts; no real student or institutional data). Seeded state:
     `printableAvailable = true`
   - **B** — 2 approved / 3 pending, `paid`, `pending`
   - **C** — librarian `not_approved` with remarks, `paid`, `not_approved`
-  - **D** — all signatories approved but `unpaid`, `not_approved`
+  - **D** — all five signatory rows historically approved, Accountant gate
+    `unpaid`, `not_approved` (later rows remain locked by the current gate)
   - **E** — `mustChangePassword = true` (Auth claim + Firestore flag)
   - **F** — `inactive`, `isActive = false`, Auth user disabled
   - **G** — `mustChangePassword = false`, active student for live E2E submission
-- 5 clearance requirements (Librarian, OSA Coordinator, Guidance Counselor,
-  Area Chair, Dean) with deterministic IDs and assigned signatories; no
-  Accountant approval row
+- 6 ordered workflow stages (Librarian, Accountant financial gate, OSA
+  Coordinator, Guidance Counselor, Area Chair, Dean) backed by 5 clearance
+  requirements with deterministic IDs and assigned signatories; no Accountant
+  approval row
 - 4 clearance applications with approvals, remarks, notifications, and
   activity logs for the seeded term (2026-2027, 1st Semester)
 
@@ -90,9 +92,11 @@ npm run test:acceptance        # unit + lint + build + integration + rules + e2e
                                # writes artifacts/acceptance-summary.json
 ```
 
-`test:integration` and `test:e2e` self-orchestrate the emulators through
-`firebase emulators:exec` (deterministic lifecycle; no manual start/stop).
-Playwright additionally starts the Next.js production server
+`test:e2e` self-orchestrates the emulators through `firebase emulators:exec`
+(deterministic lifecycle; no manual start/stop). `test:integration` and
+`test:rules` expect the Auth and Firestore emulators to already be running.
+The full `test:acceptance` wrapper starts isolated emulator runs for each
+integration/rules scenario. Playwright additionally starts the Next.js production server
 (`playwright.config.ts` → `webServer`) with emulator environment variables and
 runs a global setup (`scripts/prepare-e2e.ts`) that resets and seeds before the suite.
 
@@ -117,12 +121,13 @@ runs a global setup (`scripts/prepare-e2e.ts`) that resets and seeds before the 
   `mustChangePassword`, wrong current password fails, correct change succeeds,
   flag cleared, old session/password invalid, new password works
 - `clearance-submission.test.ts` — one application per term, duplicate
-  rejection, denormalized fields, initial `pending` financial state, 5
-  approval rows without Accountant, notifications, activity log, cross-student
-  action rejection
-- `signatory-workflow.test.ts` — role queue visibility, cross-role rejection,
-  approved/pending/not_approved transitions, remarks requirement and history,
-  activity log, student notification, status recalculation
+  rejection, denormalized fields, initial `pending` financial state, five
+  approval rows without Accountant, first-stage notification, activity log,
+  cross-student action rejection
+- `signatory-workflow.test.ts` — sequential role queue visibility, cross-role
+  rejection, locked-stage bypass rejection, approved/pending/not_approved
+  transitions, remarks requirement and history, activity log, unlock
+  notifications, student notification, status recalculation
 - `financial-workflow.test.ts` — Accountant-only gate, valid/invalid values,
   unpaid-requires-remarks, paid/unpaid status derivation, activity log,
   notification, no Accountant approval row
@@ -236,4 +241,4 @@ written only from actual execution results:
 - **Rules tests** use the Firebase **client** SDK with authenticated emulator
   users — they prove the security boundary as seen by the browser.
 - **Browser tests** prove the end-to-end UX with the real Next.js server and
-  emulators; they include a complete 9-step multi-role live journey.
+  emulators; they include a complete six-stage multi-role live journey.

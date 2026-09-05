@@ -4,8 +4,92 @@ import { getAdminFirestore } from '@/lib/firebase/admin';
 import { normalizeSemester, getApplicationTermDocumentIds } from '@/lib/academic-term';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { getClearanceStatusSummary, REQUIRED_SIGNATORY_ROLES } from '@/lib/clearance/status';
+import {
+  CLEARANCE_WORKFLOW_STAGES,
+  canRoleActOnApplication,
+  getCurrentWorkflowStage,
+  getWorkflowProgress,
+  getWorkflowStageByKey,
+  getWorkflowStageForRole,
+  getWorkflowStageStatus,
+  isFinancialStageActionable,
+  isWorkflowStagePassed,
+  type ClearanceWorkflowStage,
+  type WorkflowApproval,
+  type WorkflowState,
+} from '@/lib/clearance/workflow';
 import { logClearanceActionError, mapClearanceActionError } from '@/lib/clearance/action-errors';
-import type { QueryDocumentSnapshot, Transaction, DocumentData } from 'firebase-admin/firestore';
+import type {
+  QueryDocumentSnapshot,
+  DocumentSnapshot,
+  Transaction,
+  DocumentData,
+  DocumentReference,
+} from 'firebase-admin/firestore';
+
+type AdminFirestore = ReturnType<typeof getAdminFirestore>;
+
+function toWorkflowApproval(doc: { data: () => DocumentData }): WorkflowApproval {
+  const data = doc.data();
+  return {
+    signatoryRole: typeof data.signatoryRole === 'string' ? data.signatoryRole : null,
+    status: typeof data.status === 'string' ? data.status : null,
+  };
+}
+
+function toWorkflowState(approvalDocs: readonly { data: () => DocumentData }[], financialStatus: unknown): WorkflowState {
+  return {
+    approvals: approvalDocs.map(toWorkflowApproval),
+    financialStatus: typeof financialStatus === 'string' ? financialStatus : null,
+  };
+}
+
+function isActiveUser(data: DocumentData | undefined): boolean {
+  return Boolean(data && data.accountStatus !== 'inactive' && data.isActive !== false);
+}
+
+async function getApplicationStageRecipientIds(
+  transaction: Transaction,
+  firestore: AdminFirestore,
+  stage: ClearanceWorkflowStage,
+  approvals: readonly QueryDocumentSnapshot[] | readonly DocumentSnapshot[],
+): Promise<string[]> {
+  if (stage.kind === 'financial') {
+    const usersQuery = firestore.collection('users').where('role', '==', stage.role);
+    const usersSnap = await transaction.get(usersQuery);
+    return usersSnap.docs
+      .filter((doc) => isActiveUser(doc.data()))
+      .map((doc) => doc.id);
+  }
+
+  if (stage.kind === 'approval') {
+    const approvalDoc = approvals.find((doc) => doc.data()?.signatoryRole === stage.role);
+    const approvalData = approvalDoc?.data();
+    const assignedSignatoryId = typeof approvalData?.assignedSignatoryId === 'string' && approvalData.assignedSignatoryId.trim() !== ''
+      ? approvalData.assignedSignatoryId
+      : null;
+
+    if (assignedSignatoryId) {
+      const assignedSnap = await transaction.get(firestore.collection('users').doc(assignedSignatoryId));
+      if (assignedSnap.exists && isActiveUser(assignedSnap.data()) && assignedSnap.data()?.role === stage.role) {
+        return [assignedSignatoryId];
+      }
+      return [];
+    }
+
+    const usersQuery = firestore.collection('users').where('role', '==', stage.role);
+    const usersSnap = await transaction.get(usersQuery);
+    return usersSnap.docs
+      .filter((doc) => isActiveUser(doc.data()))
+      .map((doc) => doc.id);
+  }
+
+  return [];
+}
+
+function formatRoleName(role: string): string {
+  return role.replace(/_/g, ' ').toUpperCase();
+}
 
 // 1. Submit Clearance Application (Student)
 export async function submitApplicationAction(data: {
@@ -52,7 +136,8 @@ export async function submitApplicationAction(data: {
 
       const student = studentSnap.data()!;
 
-      // Fetch active requirements to initialize approvals (excluding accountant)
+      // Fetch active signatory requirements. Accountant is Stage 2 of the
+      // workflow but remains represented by financialStatus, not an approval row.
       const reqColRef = firestore.collection('clearanceRequirements');
       const requirementsQuery = await transaction.get(reqColRef.where('isActive', '==', true));
 
@@ -67,36 +152,37 @@ export async function submitApplicationAction(data: {
             assignedSignatoryName: (reqData.assignedSignatoryName as string | null) || null,
           };
         })
-        .filter((req) => (REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(req.role));
+        .filter((req) => (REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(req.role))
+        .sort((a, b) => {
+          const aStage = CLEARANCE_WORKFLOW_STAGES.find((stage) => stage.role === a.role)?.stage || 999;
+          const bStage = CLEARANCE_WORKFLOW_STAGES.find((stage) => stage.role === b.role)?.stage || 999;
+          return aStage - bStage;
+        });
 
       if (activeReqs.length === 0) {
         throw new Error('No active clearance signatory requirements are configured.');
       }
 
-      // Gather signatory notification targets within transaction read phase
-      const signatoryNotifications: Array<{ recipientId: string; reqLabel: string }> = [];
-      const notifiedRecipients = new Set<string>();
+      const configuredRoles = new Set(activeReqs.map((requirement) => requirement.role));
+      const hasEveryRequiredRole = REQUIRED_SIGNATORY_ROLES.every((role) => configuredRoles.has(role));
+      if (activeReqs.length !== REQUIRED_SIGNATORY_ROLES.length || configuredRoles.size !== REQUIRED_SIGNATORY_ROLES.length || !hasEveryRequiredRole) {
+        throw new Error('All five active signatory clearance requirements must be configured before submitting.');
+      }
 
-      for (const req of activeReqs) {
-        if (req.assignedSignatoryId) {
-          if (!notifiedRecipients.has(req.assignedSignatoryId) && req.assignedSignatoryId !== studentUid) {
-            notifiedRecipients.add(req.assignedSignatoryId);
-            signatoryNotifications.push({ recipientId: req.assignedSignatoryId, reqLabel: req.label });
-          }
-        } else {
-          const matchingUsersSnap = await transaction.get(
-            firestore.collection('users')
-              .where('role', '==', req.role)
-              .where('accountStatus', '==', 'active')
-          );
-          for (const userDoc of matchingUsersSnap.docs) {
-            const recipientId = userDoc.id;
-            if (!notifiedRecipients.has(recipientId) && recipientId !== studentUid) {
-              notifiedRecipients.add(recipientId);
-              signatoryNotifications.push({ recipientId, reqLabel: req.label });
-            }
-          }
+      // Only Stage 1 is eligible on submission. Later offices are notified as
+      // their preceding stage is completed.
+      let librarianRecipients: string[] = [];
+      const librarianReq = activeReqs.find((req) => req.role === 'librarian');
+      if (librarianReq?.assignedSignatoryId) {
+        const assignedSnap = await transaction.get(firestore.collection('users').doc(librarianReq.assignedSignatoryId));
+        if (assignedSnap.exists && isActiveUser(assignedSnap.data()) && assignedSnap.data()?.role === 'librarian') {
+          librarianRecipients = [librarianReq.assignedSignatoryId];
         }
+      } else {
+        const usersSnap = await transaction.get(firestore.collection('users').where('role', '==', 'librarian'));
+        librarianRecipients = usersSnap.docs
+          .filter((doc) => isActiveUser(doc.data()))
+          .map((doc) => doc.id);
       }
 
       const appNumber = `CLR-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -171,13 +257,15 @@ export async function submitApplicationAction(data: {
         createdAt: now
       });
 
-      // Add Signatory Notifications
-      for (const sigNotif of signatoryNotifications) {
+      // Notify only the first actionable office. Later stages must not receive
+      // work before their prerequisites pass.
+      for (const recipientId of librarianRecipients) {
+        if (recipientId === studentUid) continue;
         const sigNotifRef = firestore.collection('notifications').doc();
         transaction.set(sigNotifRef, {
-          recipientId: sigNotif.recipientId,
+          recipientId,
           type: 'signatory_action_required',
-          message: `A new clearance application ${appNumber} from ${student.fullName} requires ${sigNotif.reqLabel} review.`,
+          message: `A new clearance application ${appNumber} from ${student.fullName} requires Librarian Clearance review.`,
           relatedApplicationId: appId,
           isRead: false,
           createdAt: now
@@ -218,8 +306,10 @@ export async function fetchStudentDashboardAction() {
 
     // Fetch approvals subcollection
     const approvalsQuery = await appDoc.ref.collection('approvals').get();
+    const workflowState = toWorkflowState(approvalsQuery.docs, rawApplication.financialStatus);
+    const workflowProgress = getWorkflowProgress(workflowState);
     const statusSummary = getClearanceStatusSummary(
-      approvalsQuery.docs.map((doc) => ({ status: doc.data().status, signatoryRole: doc.data().signatoryRole })),
+      workflowState.approvals,
       rawApplication.financialStatus as string | null | undefined,
     );
     const application = {
@@ -258,6 +348,27 @@ export async function fetchStudentDashboardAction() {
       };
     }).sort((a, b) => a.displayOrder - b.displayOrder);
 
+    const workflowStages = CLEARANCE_WORKFLOW_STAGES.map((stage) => {
+      const approval = stage.kind === 'approval'
+        ? approvalsQuery.docs.find((doc) => doc.data().signatoryRole === stage.role)
+        : undefined;
+      const approvalData = approval?.data();
+      return {
+        stage: stage.stage,
+        key: stage.key,
+        role: stage.role,
+        kind: stage.kind,
+        label: stage.label,
+        responsibleTitle: stage.responsibleTitle,
+        status: getWorkflowStageStatus(stage, workflowState),
+        approvalStatus: stage.kind === 'approval' ? (approvalData?.status || 'pending') : null,
+        financialStatus: stage.kind === 'financial' ? (rawApplication.financialStatus || 'pending') : null,
+        assignedSignatoryName: approvalData?.assignedSignatoryName || null,
+        actedAt: approvalData?.actedAt || null,
+        remarksLatest: approvalData?.remarksLatest || null,
+      };
+    });
+
     // Fetch remarks subcollection
     const remarksQuery = await appDoc.ref.collection('remarks')
       .orderBy('createdAt', 'desc')
@@ -280,7 +391,13 @@ export async function fetchStudentDashboardAction() {
       application,
       approvals,
       remarks,
-      financial
+      financial,
+      workflow: {
+        stages: workflowStages,
+        completedStages: workflowProgress.completedStages,
+        totalStages: workflowProgress.totalStages,
+        currentStage: workflowProgress.currentStage?.key || null,
+      },
     };
   } catch (error: unknown) {
     logClearanceActionError('fetchStudentDashboard', error);
@@ -301,12 +418,12 @@ export async function fetchPendingApprovalsAction() {
     const firestore = getAdminFirestore();
     const approvalsQuery = await firestore.collectionGroup('approvals')
       .where('status', '==', 'pending')
+      .where('signatoryRole', '==', role)
       .get();
     const pendingQueue: Array<Record<string, unknown>> = [];
 
     for (const approvalDoc of approvalsQuery.docs) {
       const approvalData = approvalDoc.data();
-      if (approvalData.signatoryRole !== role) continue;
       if (approvalData.assignedSignatoryId && approvalData.assignedSignatoryId !== userId) continue;
 
       const appRef = approvalDoc.ref.parent.parent;
@@ -314,6 +431,9 @@ export async function fetchPendingApprovalsAction() {
       const appSnap = await appRef.get();
       if (!appSnap.exists) continue;
       const appData = appSnap.data()!;
+      const approvalsSnap = await appRef.collection('approvals').get();
+      const workflowState = toWorkflowState(approvalsSnap.docs, appData.financialStatus);
+      if (!canRoleActOnApplication(role, workflowState)) continue;
 
       pendingQueue.push({
         approval_id: approvalDoc.id,
@@ -326,7 +446,8 @@ export async function fetchPendingApprovalsAction() {
         purpose: appData.purpose,
         submitted_at: appData.submittedAt,
         student_id_number: appData.studentNumber,
-        student_name: appData.studentName
+        student_name: appData.studentName,
+        workflow_stage: getWorkflowStageForRole(role)?.stage || null,
       });
     }
 
@@ -388,6 +509,14 @@ export async function signClearanceAction(data: {
       if (approvalData.assignedSignatoryId && approvalData.assignedSignatoryId !== signatoryId) {
         throw new Error('Unauthorized: This approval is assigned to another signatory.');
       }
+      if (approvalData.status === 'approved' || approvalData.status === 'not_approved') {
+        throw new Error('This clearance decision has already been finalized.');
+      }
+
+      const workflowState = toWorkflowState(approvalsSnap.docs, appData.financialStatus);
+      if (!canRoleActOnApplication(user.role, workflowState)) {
+        throw new Error('This clearance stage is locked until the previous stage is completed.');
+      }
 
       const approvalStatuses: Array<{ status: string; signatoryRole?: string }> = approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({
         status: doc.id === data.approvalId ? data.status : doc.data().status,
@@ -397,6 +526,40 @@ export async function signClearanceAction(data: {
       const deanRows = approvalStatuses.filter((approval) => approval.signatoryRole === 'dean');
       const deanApproved = deanRows.length > 0 && deanRows.every((approval) => approval.status === 'approved');
       const now = new Date().toISOString();
+
+      const isApprovalTransition = data.status === 'approved' && approvalData.status !== 'approved';
+      const unlockNotifications: Array<{ ref: DocumentReference; recipientId: string; message: string }> = [];
+      if (isApprovalTransition) {
+        const nextApprovals = approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({
+          signatoryRole: doc.id === data.approvalId ? approvalData.signatoryRole : doc.data().signatoryRole,
+          status: doc.id === data.approvalId ? data.status : doc.data().status,
+        }));
+        const nextWorkflowState: WorkflowState = {
+          approvals: nextApprovals,
+          financialStatus: appData.financialStatus,
+        };
+        const nextStage = getCurrentWorkflowStage(nextWorkflowState);
+        if (nextStage) {
+          const nextRecipients = await getApplicationStageRecipientIds(
+            transaction,
+            firestore,
+            nextStage,
+            approvalsSnap.docs,
+          );
+          for (const recipientId of nextRecipients) {
+            if (recipientId === appData.studentUid) continue;
+            const ref = firestore.collection('notifications').doc(`unlock-${data.applicationId}-${nextStage.key}-${recipientId}`);
+            const existing = await transaction.get(ref);
+            if (!existing.exists) {
+              unlockNotifications.push({
+                ref,
+                recipientId,
+                message: `Clearance application ${appData.applicationNumber} is ready for ${nextStage.label} review.`,
+              });
+            }
+          }
+        }
+      }
 
       transaction.update(approvalRef, {
         status: data.status,
@@ -456,6 +619,17 @@ export async function signClearanceAction(data: {
         isRead: false,
         createdAt: now,
       });
+
+      for (const unlock of unlockNotifications) {
+        transaction.set(unlock.ref, {
+          recipientId: unlock.recipientId,
+          type: 'workflow_stage_unlocked',
+          message: unlock.message,
+          relatedApplicationId: data.applicationId,
+          isRead: false,
+          createdAt: now,
+        });
+      }
     });
 
     return { success: true };
@@ -478,9 +652,16 @@ export async function fetchFinancialQueueAction() {
     const appsQuery = await firestore.collection('clearanceApplications')
       .orderBy('submittedAt', 'desc')
       .get();
-    const financialQueue = appsQuery.docs.map(doc => {
+    const librarianStage = getWorkflowStageByKey('librarian');
+    const allEligibleRecords: Array<Record<string, unknown>> = [];
+
+    for (const doc of appsQuery.docs) {
       const data = doc.data();
-      return {
+      const approvalsSnap = await doc.ref.collection('approvals').get();
+      const workflowState = toWorkflowState(approvalsSnap.docs, data.financialStatus);
+      if (!librarianStage || !isWorkflowStagePassed(librarianStage, workflowState)) continue;
+      const actionable = isFinancialStageActionable(workflowState);
+      allEligibleRecords.push({
         id: doc.id, // Re-use doc ID as record ID for simplicity
         application_id: doc.id,
         student_id: data.studentId,
@@ -494,11 +675,15 @@ export async function fetchFinancialQueueAction() {
         purpose: data.purpose,
         overall_status: data.overallStatus,
         student_name: data.studentName,
-        student_id_number: data.studentNumber
-      };
-    });
+        student_id_number: data.studentNumber,
+        is_actionable: actionable,
+      });
+    }
 
-    return { success: true, financialQueue };
+    const financialQueue = allEligibleRecords.filter((record) => record.is_actionable === true);
+    const financialHistory = allEligibleRecords.filter((record) => record.is_actionable !== true);
+
+    return { success: true, financialQueue, financialHistory };
   } catch (error: unknown) {
     logClearanceActionError('fetchFinancialQueue', error);
     return { success: false, error: mapClearanceActionError('fetchFinancialQueue', error) };
@@ -539,6 +724,51 @@ export async function updateFinancialStatusAction(data: {
       }
 
       const appData = appSnap.data()!;
+      if (appData.financialStatus === 'paid') {
+        throw new Error('Accountant Clearance has already been completed.');
+      }
+
+      const workflowState = toWorkflowState(approvalsSnap.docs, appData.financialStatus);
+      if (!isFinancialStageActionable(workflowState)) {
+        throw new Error('Accountant Clearance is locked until Librarian Clearance is approved.');
+      }
+
+      const wasPaid = appData.financialStatus === 'paid';
+      const paidTransition = data.status === 'paid' && !wasPaid;
+      const unlockNotifications: Array<{ ref: DocumentReference; recipientId: string; message: string }> = [];
+      if (paidTransition) {
+        const nextWorkflowState: WorkflowState = {
+          approvals: approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({
+            signatoryRole: doc.data().signatoryRole,
+            status: doc.data().status,
+          })),
+          financialStatus: data.status,
+        };
+        const nextStage = getCurrentWorkflowStage(nextWorkflowState);
+        if (nextStage) {
+          const nextRecipients = await getApplicationStageRecipientIds(
+            transaction,
+            firestore,
+            nextStage,
+            approvalsSnap.docs,
+          );
+          for (const recipientId of nextRecipients) {
+            if (recipientId === appData.studentUid) continue;
+            const ref = firestore.collection('notifications').doc(
+              `unlock-${data.recordId}-${nextStage.key}-${recipientId}`,
+            );
+            const existing = await transaction.get(ref);
+            if (!existing.exists) {
+              unlockNotifications.push({
+                ref,
+                recipientId,
+                message: `Clearance application ${appData.applicationNumber} is ready for ${nextStage.label} review.`,
+              });
+            }
+          }
+        }
+      }
+
       const summary = getClearanceStatusSummary(
         approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({
           status: doc.data().status,
@@ -586,6 +816,17 @@ export async function updateFinancialStatusAction(data: {
         isRead: false,
         createdAt: now
       });
+
+      for (const unlock of unlockNotifications) {
+        transaction.set(unlock.ref, {
+          recipientId: unlock.recipientId,
+          type: 'workflow_stage_unlocked',
+          message: unlock.message,
+          relatedApplicationId: data.recordId,
+          isRead: false,
+          createdAt: now,
+        });
+      }
     });
 
     return { success: true };
@@ -720,10 +961,6 @@ export async function fetchClearanceCertificateAction(applicationId: string) {
     console.error('Fetch certificate error:', error);
     return { success: false, error: message };
   }
-}
-
-function formatRoleName(role: string) {
-  return role.replace('_', ' ').toUpperCase();
 }
 
 

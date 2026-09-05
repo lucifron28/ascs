@@ -49,7 +49,7 @@ export default function ReportFiltersComponent({
           </h3>
         </div>
         <span className="text-[10px] uppercase font-bold text-base-content/80 px-2 py-0.5 bg-base-200 rounded-md">
-          {scope === 'admin' ? 'Institution Scope' : 'Academic Dean Oversight Scope'}
+          {scope === 'admin' ? 'Institution Scope' : 'Dean of Business Program Oversight Scope'}
         </span>
       </div>
 
@@ -214,7 +214,7 @@ export default function ReportFiltersComponent({
               onReset();
             }}
             disabled={loading}
-            className="btn btn-sm min-h-11 btn-ghost rounded-xl text-sm gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="btn btn-sm min-h-11 btn-ghost text-base-content hover:bg-base-200 rounded-xl text-sm gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Reset</span>

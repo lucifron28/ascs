@@ -12,6 +12,7 @@ export const INTEGRATION_SCENARIOS: IntegrationScenario[] = [
   { scenario: 'deanVisibility', file: 'tests/integration/dean-visibility.test.ts' },
   { scenario: 'clearanceCompletion', file: 'tests/integration/clearance-completion.test.ts' },
   { scenario: 'reports', file: 'tests/integration/reports.test.ts' },
+  { scenario: 'sequentialRepairs', file: 'tests/integration/sequential-repairs.test.ts' },
 ];
 
 export const RULES_TEST_FILE = 'tests/rules/security-boundaries.test.ts';

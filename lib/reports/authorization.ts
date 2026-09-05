@@ -52,11 +52,11 @@ export function assertReportScope(
     }
   } else if (requestedScope === 'dean') {
     if (role !== 'dean') {
-      throw new Error('Unauthorized: Only the Academic Dean can access Dean clearance reports.');
+      throw new Error('Unauthorized: Only the Dean of Business Program can access Dean clearance reports.');
     }
   } else if (requestedScope === 'shared') {
     if (role !== 'admin' && role !== 'dean') {
-      throw new Error('Unauthorized: Only administrators or the Academic Dean can access reporting filter options.');
+      throw new Error('Unauthorized: Only administrators or the Dean of Business Program can access reporting filter options.');
     }
   }
 }
