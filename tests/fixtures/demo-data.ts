@@ -222,12 +222,12 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
     semester: '1st Semester',
     purpose: 'Graduation',
     overallStatus: 'not_approved',
-    financialStatus: 'paid',
+    financialStatus: 'pending',
     financialRemarks: null,
     deanApproved: false,
     printableAvailable: false,
     pendingCount: 4,
-    approvedCount: 1,
+    approvedCount: 0,
     notApprovedCount: 1,
     approvals: {
       librarian: { status: 'not_approved', remarksLatest: 'Unreturned book: Operating System Concepts' },
@@ -237,8 +237,7 @@ export const DEMO_APPLICATION_FIXTURES: DemoApplicationFixture[] = [
       dean: { status: 'pending', remarksLatest: null },
     },
   },
-  // Student D: later signatory rows are historical approvals, but the unpaid
-  // Accountant gate is the current blocking stage.
+  // Student D: legacy / historical out-of-order state. Tests legacy resilience where earlier gate (Accountant) is unpaid while later signatory rows were historically approved.
   {
     id: 'app-student-d',
     applicationNumber: 'CLR-2026-000004',

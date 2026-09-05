@@ -149,11 +149,27 @@ export async function verifySeedInvariants(): Promise<boolean> {
     throw new Error('INVARIANT FAILED: Application for Student C missing.');
   }
   const appCData = appC.data();
-  if (appCData?.overallStatus !== 'not_approved' || appCData?.printableAvailable !== false || appCData?.program !== 'BEED') {
+  if (
+    appCData?.overallStatus !== 'not_approved' ||
+    appCData?.financialStatus !== 'pending' ||
+    appCData?.approvedCount !== 0 ||
+    appCData?.pendingCount !== 4 ||
+    appCData?.notApprovedCount !== 1 ||
+    appCData?.deanApproved !== false ||
+    appCData?.printableAvailable !== false ||
+    appCData?.program !== 'BEED'
+  ) {
     throw new Error(`INVARIANT FAILED: Student C state incorrect. Got: ${JSON.stringify(appCData)}`);
   }
+  const appCApprovals = await appC.ref.collection('approvals').get();
+  const librarianApproval = appCApprovals.docs.find((d) => d.id === 'librarian')?.data();
+  if (librarianApproval?.status !== 'not_approved') {
+    throw new Error('INVARIANT FAILED: Student C librarian requirement must be not_approved.');
+  }
 
-  // 7. Verify Student D (Unpaid Hold)
+  // 7. Verify Student D (Legacy / Historical Out-of-Order Fixture)
+  // Tests legacy resilience where earlier gate (Accountant) is unpaid while later signatory rows were historically approved.
+  // Verified as the legacy fixture without forcing it into clean sequential consistency.
   const appD = await firestore.collection('clearanceApplications').doc('app-student-d').get();
   if (!appD.exists) {
     throw new Error('INVARIANT FAILED: Application for Student D missing.');
@@ -164,7 +180,10 @@ export async function verifySeedInvariants(): Promise<boolean> {
     appDData?.overallStatus !== 'not_approved' ||
     appDData?.printableAvailable !== false ||
     appDData?.program !== 'CRIM' ||
-    appDData?.deanApproved !== true
+    appDData?.deanApproved !== true ||
+    appDData?.approvedCount !== 5 ||
+    appDData?.pendingCount !== 0 ||
+    appDData?.notApprovedCount !== 0
   ) {
     throw new Error(`INVARIANT FAILED: Student D state incorrect. Got: ${JSON.stringify(appDData)}`);
   }
