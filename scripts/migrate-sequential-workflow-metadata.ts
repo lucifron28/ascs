@@ -110,11 +110,42 @@ export function assertMigrationEnvironment(env: Record<string, string | undefine
   const authHost = env.FIREBASE_AUTH_EMULATOR_HOST;
   const useEmulator = env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
 
+  const intendsToUseEmulators =
+    useEmulator ||
+    Boolean(firestoreHost) ||
+    Boolean(authHost);
+
+  if (intendsToUseEmulators) {
+    if (!firestoreHost || !authHost) {
+      throw new Error(
+        'REFUSING EXECUTION: Complete Firestore and Firebase Auth emulator configuration is required.'
+      );
+    }
+
+    if (env.NODE_ENV === 'production') {
+      throw new Error(
+        'REFUSING EXECUTION: Migration cannot run in production mode with emulator configuration.'
+      );
+    }
+
+    const emulatorProjectId =
+      env.FIREBASE_PROJECT_ID ||
+      env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+      env.GCLOUD_PROJECT ||
+      'ascs11';
+
+    return {
+      isEmulator: true,
+      projectId: emulatorProjectId,
+    };
+  }
+
+  // Remote target validation
   const projectId =
     env.FIREBASE_PROJECT_ID ||
     env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
     env.GCLOUD_PROJECT ||
-    (useEmulator || firestoreHost ? 'ascs11' : '');
+    '';
 
   if (!projectId) {
     throw new Error('REFUSING EXECUTION: Firebase project ID cannot be determined.');
@@ -127,19 +158,6 @@ export function assertMigrationEnvironment(env: Record<string, string | undefine
     throw new Error(`REFUSING EXECUTION: Project "${projectId}" is recognized as a production project.`);
   }
 
-  const isEmulatorEnv = Boolean(useEmulator || firestoreHost || authHost);
-
-  if (isEmulatorEnv) {
-    if (!firestoreHost && !authHost && !useEmulator) {
-      throw new Error('REFUSING EXECUTION: Incomplete emulator configuration.');
-    }
-    return {
-      isEmulator: true,
-      projectId,
-    };
-  }
-
-  // Remote target validation
   if (env.ASCS_ALLOW_REMOTE_DEMO_MIGRATION !== 'true') {
     throw new Error(
       'REFUSING EXECUTION: Set ASCS_ALLOW_REMOTE_DEMO_MIGRATION=true before running migrations against remote demo projects.'

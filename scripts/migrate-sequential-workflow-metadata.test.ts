@@ -347,7 +347,7 @@ test('7. Dean title normalization: normalizes literal Academic Dean job title wi
   assert.equal(userPlaceholderResult.patch?.fullName, NORMALIZED_DEAN_TITLE);
 });
 
-test('8. Environment safety guards prevent execution against production projects', () => {
+test('8. Environment safety guards prevent execution against production projects and enforce complete emulator configuration', () => {
   // Known production project IDs throw immediately
   assert.throws(
     () =>
@@ -373,7 +373,76 @@ test('8. Environment safety guards prevent execution against production projects
     /recognized as a production project/
   );
 
-  // Remote migration rejected without explicit flag
+  // Case A — only public emulator flag
+  assert.throws(
+    () =>
+      assertMigrationEnvironment({
+        NEXT_PUBLIC_USE_FIREBASE_EMULATOR: 'true',
+      }),
+    /Complete Firestore and Firebase Auth emulator configuration is required/
+  );
+
+  // Case B — only Firestore emulator host
+  assert.throws(
+    () =>
+      assertMigrationEnvironment({
+        FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
+      }),
+    /Complete Firestore and Firebase Auth emulator configuration is required/
+  );
+
+  // Case C — only Auth emulator host
+  assert.throws(
+    () =>
+      assertMigrationEnvironment({
+        FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+      }),
+    /Complete Firestore and Firebase Auth emulator configuration is required/
+  );
+
+  // Case D — Firestore host + public flag, Auth missing
+  assert.throws(
+    () =>
+      assertMigrationEnvironment({
+        FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
+        NEXT_PUBLIC_USE_FIREBASE_EMULATOR: 'true',
+      }),
+    /Complete Firestore and Firebase Auth emulator configuration is required/
+  );
+
+  // Case E — Auth host + public flag, Firestore missing
+  assert.throws(
+    () =>
+      assertMigrationEnvironment({
+        FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+        NEXT_PUBLIC_USE_FIREBASE_EMULATOR: 'true',
+      }),
+    /Complete Firestore and Firebase Auth emulator configuration is required/
+  );
+
+  // Case F — both service hosts configured
+  const caseFResult = assertMigrationEnvironment({
+    FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
+    FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+    FIREBASE_PROJECT_ID: 'ascs11',
+    NODE_ENV: 'test',
+  });
+  assert.equal(caseFResult.isEmulator, true);
+  assert.equal(caseFResult.projectId, 'ascs11');
+
+  // Case G — complete emulator config + production mode
+  assert.throws(
+    () =>
+      assertMigrationEnvironment({
+        NODE_ENV: 'production',
+        NEXT_PUBLIC_USE_FIREBASE_EMULATOR: 'true',
+        FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
+        FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+      }),
+    /Migration cannot run in production mode with emulator configuration/
+  );
+
+  // Case H — remote demo without opt-in
   assert.throws(
     () =>
       assertMigrationEnvironment({
@@ -381,6 +450,26 @@ test('8. Environment safety guards prevent execution against production projects
       }),
     /Set ASCS_ALLOW_REMOTE_DEMO_MIGRATION=true/
   );
+
+  // Case I — remote wrong project
+  assert.throws(
+    () =>
+      assertMigrationEnvironment({
+        FIREBASE_PROJECT_ID: 'ascs-other-project',
+        ASCS_ALLOW_REMOTE_DEMO_MIGRATION: 'true',
+      }),
+    /Remote migration is strictly restricted to confirmed demo project "ascs11"/
+  );
+
+  // Case J — remote demo + explicit opt-in + valid Admin credentials
+  const caseJResult = assertMigrationEnvironment({
+    FIREBASE_PROJECT_ID: 'ascs11',
+    ASCS_ALLOW_REMOTE_DEMO_MIGRATION: 'true',
+    FIREBASE_CLIENT_EMAIL: 'firebase-adminsdk-real@ascs11.iam.gserviceaccount.com',
+    FIREBASE_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCfakekey1234567890\n-----END PRIVATE KEY-----',
+  });
+  assert.equal(caseJResult.isEmulator, false);
+  assert.equal(caseJResult.projectId, 'ascs11');
 
   // Remote migration rejected if credentials contain dummy placeholders
   assert.throws(
@@ -393,14 +482,4 @@ test('8. Environment safety guards prevent execution against production projects
       }),
     /A valid, non-placeholder Firebase Admin credential is required/
   );
-
-  // Emulator environment is accepted
-  const emulatorResult = assertMigrationEnvironment({
-    FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
-    FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
-    NEXT_PUBLIC_USE_FIREBASE_EMULATOR: 'true',
-    FIREBASE_PROJECT_ID: 'ascs11',
-  });
-  assert.equal(emulatorResult.isEmulator, true);
-  assert.equal(emulatorResult.projectId, 'ascs11');
 });
