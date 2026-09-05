@@ -4,6 +4,7 @@ import {
   CLEARANCE_WORKFLOW_STAGES,
   REQUIRED_SIGNATORY_ROLES,
   canRoleActOnApplication,
+  getCurrentWorkflowStage,
   getWorkflowProgress,
   getWorkflowStageStatus,
   isFinancialStageActionable,
@@ -99,4 +100,77 @@ test('unpaid and not-approved states stay failed and never unlock later offices'
   };
   assert.equal(getWorkflowStageStatus(CLEARANCE_WORKFLOW_STAGES[0], notApproved), 'failed');
   assert.equal(canRoleActOnApplication('osa_coordinator', notApproved), false);
+});
+
+test('financial paid = completed and non-actionable', () => {
+  const state: WorkflowState = {
+    approvals: [{ signatoryRole: 'librarian', status: 'approved' }],
+    financialStatus: 'paid',
+  };
+  assert.equal(isFinancialStageActionable(state), false);
+  assert.equal(isWorkflowStagePassed(CLEARANCE_WORKFLOW_STAGES[1], state), true);
+  assert.equal(getWorkflowStageStatus(CLEARANCE_WORKFLOW_STAGES[1], state), 'completed');
+});
+
+test('financial unpaid = current/failed but actionable for later settlement', () => {
+  const state: WorkflowState = {
+    approvals: [{ signatoryRole: 'librarian', status: 'approved' }],
+    financialStatus: 'unpaid',
+  };
+  assert.equal(isFinancialStageActionable(state), true);
+  assert.equal(getCurrentWorkflowStage(state)?.key, 'accountant');
+  assert.equal(getWorkflowStageStatus(CLEARANCE_WORKFLOW_STAGES[1], state), 'failed');
+});
+
+test('post-state workflow returns no next stage when historical later approvals already complete the workflow', () => {
+  const postState: WorkflowState = {
+    approvals: approvedApprovals(REQUIRED_SIGNATORY_ROLES),
+    financialStatus: 'paid',
+  };
+  assert.equal(getCurrentWorkflowStage(postState), null);
+});
+
+test('normal paid transition returns OSA as next stage', () => {
+  const postState: WorkflowState = {
+    approvals: [{ signatoryRole: 'librarian', status: 'approved' }],
+    financialStatus: 'paid',
+  };
+  const nextStage = getCurrentWorkflowStage(postState);
+  assert.equal(nextStage?.key, 'osa_coordinator');
+  assert.equal(nextStage?.stage, 3);
+});
+
+test('normal signatory approval returns the correct next unresolved stage', () => {
+  const postLibrarianState: WorkflowState = {
+    approvals: [{ signatoryRole: 'librarian', status: 'approved' }],
+    financialStatus: 'pending',
+  };
+  assert.equal(getCurrentWorkflowStage(postLibrarianState)?.key, 'accountant');
+
+  const postOsaState: WorkflowState = {
+    approvals: [
+      { signatoryRole: 'librarian', status: 'approved' },
+      { signatoryRole: 'osa_coordinator', status: 'approved' },
+    ],
+    financialStatus: 'paid',
+  };
+  assert.equal(getCurrentWorkflowStage(postOsaState)?.key, 'guidance_counselor');
+
+  const postGuidanceState: WorkflowState = {
+    approvals: [
+      { signatoryRole: 'librarian', status: 'approved' },
+      { signatoryRole: 'osa_coordinator', status: 'approved' },
+      { signatoryRole: 'guidance_counselor', status: 'approved' },
+    ],
+    financialStatus: 'paid',
+  };
+  assert.equal(getCurrentWorkflowStage(postGuidanceState)?.key, 'area_chair');
+});
+
+test('final Dean approval returns no next stage', () => {
+  const postDeanState: WorkflowState = {
+    approvals: approvedApprovals(REQUIRED_SIGNATORY_ROLES),
+    financialStatus: 'paid',
+  };
+  assert.equal(getCurrentWorkflowStage(postDeanState), null);
 });

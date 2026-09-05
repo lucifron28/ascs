@@ -24,6 +24,9 @@ const SAFE_BUSINESS_MESSAGES = [
   /^(?:clearance application not found\.)$/i,
   /^(?:student profile record not found\. please contact administration\.)$/i,
   /^(?:password change required before accessing this operation\.)$/i,
+  /^(?:accountant clearance has already been completed\.)$/i,
+  /^(?:this clearance decision has already been finalized\.)$/i,
+  /^(?:this clearance stage is no longer actionable\.)$/i,
 ];
 
 function getErrorMessage(error: unknown): string {
