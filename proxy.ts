@@ -36,7 +36,13 @@ export async function proxy(request: NextRequest) {
   let role = 'student';
   let mustChangePassword = false;
 
-  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+  const isDevEmulator =
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true' &&
+    Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) &&
+    Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+
+  if (isDevEmulator) {
     /* DEVELOPMENT ONLY: Unverified JWT decode for local Firebase Auth emulator */
     const devPayload = decodeDevelopmentJwt(session);
     role = (devPayload?.role as string) || 'student';
@@ -102,7 +108,6 @@ export async function proxy(request: NextRequest) {
     'osa_coordinator',
     'guidance_counselor',
     'area_chair',
-    'adviser',
     'dean',
     'admin',
   ];
