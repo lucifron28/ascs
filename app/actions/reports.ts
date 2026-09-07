@@ -117,9 +117,7 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
       };
     });
 
-    // 2. Fetch only the five canonical active signatory requirements. Legacy
-    // Adviser rows must never re-enter report metrics if old configuration is
-    // still present during migration.
+    // 2. Fetch only the five canonical active signatory requirements.
     const reqsSnap = await firestore.collection('clearanceRequirements').get().catch(() => null);
     const knownReqs = reqsSnap
       ? reqsSnap.docs
@@ -206,8 +204,7 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
       };
     });
 
-    // 2. Keep Dean metrics aligned with the five canonical signatory roles;
-    // legacy Adviser configuration is read-only and excluded from reports.
+    // 2. Keep Dean metrics aligned with the five canonical signatory roles.
     const reqsSnap = await firestore.collection('clearanceRequirements').get().catch(() => null);
     const knownReqs = reqsSnap
       ? reqsSnap.docs

@@ -24,7 +24,7 @@ describe('Dean clearance signatory integration tests', () => {
     process.env.TEST_SESSION_COOKIE = deanSession;
   });
 
-  it('Student checklist hides retained Adviser and Accountant rows', async () => {
+  it('Student checklist only exposes the five canonical signatory approvals', async () => {
     await getAdminFirestore()
       .collection('clearanceApplications')
       .doc('app-student-a')
@@ -105,11 +105,12 @@ describe('Dean clearance signatory integration tests', () => {
     assert.equal(app.data()?.overallStatus, 'approved');
   });
 
-  it('Dean is an active required role and Adviser is legacy-only', async () => {
+  it('Dean is an active required role and Adviser is completely absent from requirements', async () => {
     const reqsSnap = await getAdminFirestore().collection('clearanceRequirements').get();
-    const activeRoles = reqsSnap.docs.filter((d) => d.data().isActive !== false).map((d) => d.data().role);
-    assert.deepEqual(activeRoles.sort(), ['area_chair', 'dean', 'guidance_counselor', 'librarian', 'osa_coordinator']);
-    assert.equal(activeRoles.includes('adviser'), false);
+    const allRoles = reqsSnap.docs.map((d) => d.data().role);
+    assert.deepEqual(allRoles.sort(), ['area_chair', 'dean', 'guidance_counselor', 'librarian', 'osa_coordinator']);
+    assert.equal(allRoles.includes('adviser'), false);
+    assert.equal(reqsSnap.docs.some((d) => d.id === 'adviser'), false);
   });
 
   it('Dean cannot perform Admin-only operations', async () => {

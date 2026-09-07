@@ -907,11 +907,6 @@ export default function AdminDashboard() {
                 onChange={(e) => setSelectedRole(e.target.value as UserRole)}
                 className="select select-bordered w-full bg-base-200 border-base-content/10 rounded-xl text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                {selectedUser.role === 'adviser' && (
-                  <option value="adviser" disabled>
-                    Legacy Adviser (read-only)
-                  </option>
-                )}
                 {ROLES_LIST.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.label}

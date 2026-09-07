@@ -1,7 +1,7 @@
 import { UserRole } from '../types/roles';
 
 export interface DefaultClearanceRequirement {
-  role: Exclude<UserRole, 'student' | 'admin' | 'accountant' | 'adviser'>;
+  role: Exclude<UserRole, 'student' | 'admin' | 'accountant'>;
   label: string;
   displayOrder: number;
 }

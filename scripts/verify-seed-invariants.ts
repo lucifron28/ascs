@@ -32,7 +32,11 @@ export async function verifySeedInvariants(): Promise<boolean> {
     if (userData?.role !== staff.role) {
       throw new Error(`INVARIANT FAILED: Staff role mismatch for ${staff.uid}. Expected ${staff.role}, got ${userData?.role}`);
     }
-
+    if (staff.role === 'dean') {
+      if (userData?.fullName !== 'Dean of Business Program') {
+        throw new Error(`INVARIANT FAILED: Dean fullName must be "Dean of Business Program", got "${userData?.fullName}"`);
+      }
+    }
     const publicDoc = await firestore.collection('publicUsers').doc(staff.uid).get();
     if (!publicDoc.exists) {
       throw new Error(`INVARIANT FAILED: publicUsers doc missing for staff UID ${staff.uid}`);
@@ -205,6 +209,64 @@ export async function verifySeedInvariants(): Promise<boolean> {
     throw new Error('INVARIANT FAILED: Student F accountStatus must be inactive.');
   }
 
+  // 10. Verify Student E (Stage 1 Librarian Pending Scenario)
+  const appE = await firestore.collection('clearanceApplications').doc('app-student-e').get();
+  if (!appE.exists) {
+    throw new Error('INVARIANT FAILED: Application for Student E (Librarian pending scenario) missing.');
+  }
+  const appEData = appE.data();
+  if (
+    appEData?.overallStatus !== 'pending' ||
+    appEData?.financialStatus !== 'pending' ||
+    appEData?.approvedCount !== 0 ||
+    appEData?.pendingCount !== 5 ||
+    appEData?.notApprovedCount !== 0 ||
+    appEData?.deanApproved !== false ||
+    appEData?.printableAvailable !== false
+  ) {
+    throw new Error(`INVARIANT FAILED: Student E application state incorrect. Got: ${JSON.stringify(appEData)}`);
+  }
+  const appEApprovals = await appE.ref.collection('approvals').get();
+  const appERoles = appEApprovals.docs.map((doc) => doc.data().signatoryRole);
+  if (
+    appEApprovals.size !== expectedActiveStages.length ||
+    appERoles.includes('adviser') ||
+    appERoles.includes('accountant') ||
+    new Set(appERoles).size !== expectedActiveStages.length ||
+    !expectedActiveRoles.every((role) => appERoles.includes(role))
+  ) {
+    throw new Error('INVARIANT FAILED: Student E approval rows must contain the five active roles and no Adviser row.');
+  }
+  const libE = appEApprovals.docs.find((d) => d.id === 'librarian')?.data();
+  if (libE?.status !== 'pending') {
+    throw new Error('INVARIANT FAILED: Student E librarian approval must be pending.');
+  }
+
+  // 11. Comprehensive Invariant: Complete Absence of Adviser Traces
+  const adviserAuth = await auth.getUserByEmail('adviser@example.test').catch(() => null);
+  if (adviserAuth) {
+    throw new Error(`INVARIANT FAILED: Legacy adviser Auth account still exists: ${adviserAuth.uid}`);
+  }
+
+  const adviserUsersSnap = await firestore.collection('users').where('role', '==', 'adviser').get();
+  if (!adviserUsersSnap.empty) {
+    throw new Error(`INVARIANT FAILED: users collection contains ${adviserUsersSnap.size} doc(s) with role="adviser"`);
+  }
+
+  const adviserPublicUsersSnap = await firestore.collection('publicUsers').where('role', '==', 'adviser').get();
+  if (!adviserPublicUsersSnap.empty) {
+    throw new Error(`INVARIANT FAILED: publicUsers collection contains ${adviserPublicUsersSnap.size} doc(s) with role="adviser"`);
+  }
+
+  const adviserReqDoc = await firestore.collection('clearanceRequirements').doc('adviser').get();
+  if (adviserReqDoc.exists) {
+    throw new Error('INVARIANT FAILED: clearanceRequirements contains "adviser" doc.');
+  }
+
+  const adviserApprovalsSnap = await firestore.collectionGroup('approvals').where('signatoryRole', '==', 'adviser').get();
+  if (!adviserApprovalsSnap.empty) {
+    throw new Error(`INVARIANT FAILED: Found ${adviserApprovalsSnap.size} approval doc(s) with signatoryRole="adviser"`);
+  }
   console.log('✅ All seed invariants verified successfully.');
   return true;
 }

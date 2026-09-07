@@ -2,14 +2,14 @@ import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-auth';
 import { resetEmulator } from '@/scripts/reset-emulator';
-import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
+import { getAdminFirestore } from '@/lib/firebase/admin';
 import { fetchPendingApprovalsAction, signClearanceAction } from '@/app/actions/clearance';
 
 describe('Signatory Workflow Integration Tests', () => {
   let librarianSession: string;
   let osaSession: string;
   let areaChairSession: string;
-  let adviserSession: string;
+  let nonSignatorySession: string;
 
   before(async () => {
     setupTestEnvironment();
@@ -17,24 +17,7 @@ describe('Signatory Workflow Integration Tests', () => {
     librarianSession = await getSessionCookieForUser('librarian@example.test', 'password123');
     osaSession = await getSessionCookieForUser('osa@example.test', 'password123');
     areaChairSession = await getSessionCookieForUser('chair@example.test', 'password123');
-    const auth = getAdminAuth();
-    const adviser = await auth.getUserByEmail('legacy-adviser@example.test').catch(async () => auth.createUser({
-      email: 'legacy-adviser@example.test',
-      password: 'password123',
-      displayName: 'Legacy Adviser',
-      emailVerified: true,
-    }));
-    await auth.setCustomUserClaims(adviser.uid, { role: 'adviser', mustChangePassword: false });
-    await getAdminFirestore().collection('users').doc(adviser.uid).set({
-      uid: adviser.uid,
-      email: adviser.email,
-      fullName: 'Legacy Adviser',
-      role: 'adviser',
-      accountStatus: 'active',
-      isActive: true,
-      mustChangePassword: false,
-    }, { merge: true });
-    adviserSession = await getSessionCookieForUser('legacy-adviser@example.test', 'password123');
+    nonSignatorySession = await getSessionCookieForUser('student.b@example.test', 'password123');
     process.env.TEST_SESSION_COOKIE = librarianSession;
   });
 
@@ -80,29 +63,27 @@ describe('Signatory Workflow Integration Tests', () => {
     }
   });
 
-  it('3. Legacy Adviser cannot load a queue or sign a retained Adviser row', async () => {
-    process.env.TEST_SESSION_COOKIE = adviserSession;
+  it('3. Non-signatory role cannot load a queue or sign an approval row, and no Adviser row exists', async () => {
+    process.env.TEST_SESSION_COOKIE = nonSignatorySession;
     const queueRes = await fetchPendingApprovalsAction();
     assert.equal(queueRes.success, false);
     if (!queueRes.success) assert.match(queueRes.error, /active clearance signatories|unauthorized/i);
 
-    const approvalRef = getAdminFirestore()
-      .collection('clearanceApplications')
-      .doc('app-student-b')
-      .collection('approvals')
-      .doc('adviser');
-    await approvalRef.set({ signatoryRole: 'adviser', status: 'pending', remarksLatest: null }, { merge: true });
-    const before = await approvalRef.get();
-
     const signRes = await signClearanceAction({
       applicationId: 'app-student-b',
-      approvalId: 'adviser',
+      approvalId: 'librarian',
       status: 'approved',
       remarks: '',
     });
     assert.equal(signRes.success, false);
-    const after = await approvalRef.get();
-    assert.equal(after.data()?.status, before.data()?.status);
+
+    const approvalsSnap = await getAdminFirestore()
+      .collection('clearanceApplications')
+      .doc('app-student-b')
+      .collection('approvals')
+      .get();
+    assert.equal(approvalsSnap.docs.some((doc) => doc.id === 'adviser' || doc.data().signatoryRole === 'adviser'), false);
+    assert.equal(approvalsSnap.size, 5);
   });
 
   it('4. Approved works & 10. Status summary recalculates correctly', async () => {

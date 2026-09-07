@@ -46,8 +46,6 @@ export interface RawApplicationData {
   yearLevel?: string | number;
   section?: string;
   deanApproved?: boolean;
-  /** @deprecated Read-only compatibility for pre-migration report rows. */
-  adviserApproved?: boolean;
 }
 
 export interface RawApprovalData {
@@ -170,7 +168,7 @@ export function calculateRequirementMetrics(
   >();
 
   // Seed only the five canonical active signatory requirements. Accountant is
-  // a financial gate and Adviser is legacy-only, so neither belongs here.
+  // a financial gate, so it does not belong here.
   for (const req of knownRequirements) {
     if (!isRequiredSignatoryRole(req.role)) continue;
     map.set(req.id, {
