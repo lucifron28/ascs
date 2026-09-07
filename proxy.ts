@@ -37,7 +37,8 @@ export async function proxy(request: NextRequest) {
   let mustChangePassword = false;
 
   const isDevEmulator =
-    process.env.NODE_ENV !== 'production' &&
+    !process.env.VERCEL &&
+    process.env.VERCEL_ENV !== 'production' &&
     process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true' &&
     Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) &&
     Boolean(process.env.FIRESTORE_EMULATOR_HOST);
