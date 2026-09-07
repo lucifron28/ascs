@@ -46,7 +46,11 @@ test('2. Staff-role validation accepts staff roles and rejects student', () => {
     /Invalid role specified/
   );
   assert.throws(
-    () => validateStaffInput({ email: 'legacy@pkm.edu.ph', fullName: 'Legacy Adviser', role: 'adviser' as UserRole }),
+    () => validateStaffInput({ email: 'legacy@pkm.edu.ph', fullName: 'Legacy Adviser', role: 'adviser' as unknown as UserRole }),
+    /Invalid role specified/
+  );
+  assert.throws(
+    () => validateRole('adviser'),
     /Invalid role specified/
   );
 });

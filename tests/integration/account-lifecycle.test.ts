@@ -190,14 +190,14 @@ describe('Account Lifecycle Integration Tests', () => {
     const created = await createStaffAccountAction({
       email: 'new-adviser@example.test',
       fullName: 'New Adviser Attempt',
-      role: 'adviser',
+      role: 'adviser' as never,
     });
     assert.equal(created.success, false);
 
-    const adviserCandidates = await fetchSignatoryCandidatesAction('adviser');
+    const adviserCandidates = await fetchSignatoryCandidatesAction('adviser' as never);
     assert.equal(adviserCandidates.success, false);
 
-    const roleUpdate = await updateUserRoleAction({ userId: 'demo-librarian-uid', newRole: 'adviser' });
+    const roleUpdate = await updateUserRoleAction({ userId: 'demo-librarian-uid', newRole: 'adviser' as never });
     assert.equal(roleUpdate.success, false);
 
     await getAdminFirestore().collection('users').doc('legacy-adviser-assignment-uid').set({
