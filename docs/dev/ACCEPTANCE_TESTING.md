@@ -45,8 +45,8 @@ password or revert a workflow state. Determinism comes from
 Fixtures live in `tests/fixtures/demo-data.ts` (fictional `@example.test`
 accounts; no real student or institutional data). Seeded state:
 
-- 7 active staff accounts: Admin, Dean, Librarian, Accountant, OSA Coordinator,
-  Guidance Counselor, Area Chair; legacy Adviser accounts are not seeded
+- 7 active staff accounts: Admin, Dean of Business Program, Librarian, Accountant, OSA Coordinator,
+  Guidance Counselor, Area Chair (clearance-role Adviser is fully retired and not seeded)
 - 7 students A–G:
   - **A** — all 5 signatory approvals approved, `paid`, `approved`,
     `printableAvailable = true`
@@ -58,7 +58,7 @@ accounts; no real student or institutional data). Seeded state:
   - **F** — `inactive`, `isActive = false`, Auth user disabled
   - **G** — `mustChangePassword = false`, active student for live E2E submission
 - 6 ordered workflow stages (Librarian, Accountant financial gate, OSA
-  Coordinator, Guidance Counselor, Area Chair, Dean) backed by 5 clearance
+  Coordinator, Guidance Counselor, Area Chair, Dean of Business Program) backed by 5 clearance
   requirements with deterministic IDs and assigned signatories; no Accountant
   approval row
 - 4 clearance applications with approvals, remarks, notifications, and
@@ -131,8 +131,8 @@ runs a global setup (`scripts/prepare-e2e.ts`) that resets and seeds before the 
 - `financial-workflow.test.ts` — Accountant-only gate, valid/invalid values,
   unpaid-requires-remarks, paid/unpaid status derivation, activity log,
   notification, no Accountant approval row
-- `dean-visibility.test.ts` — Dean queue visibility, Dean approval state and
-  counters, Adviser exclusion, Dean cannot run Admin actions, Dean report
+- `dean-visibility.test.ts` — Dean of Business Program queue visibility, approval state and
+  counters, absence of clearance-role Adviser, Dean cannot run Admin actions, Dean report
   scope + no financial summary
 - `clearance-completion.test.ts` — approved+paid → printable; approved+unpaid →
   not printable; pending → not printable; not_approved → not printable;
@@ -148,13 +148,13 @@ Authenticated client-SDK tests against the emulator:
 - Student reads own profile/application; **cannot** read another student's
   private data
 - Student **cannot** write user/student/application/approval records or financialStatus
-- Staff client SDK writes (Librarian, Accountant, Dean, Admin) are denied (Server-Only architecture)
+- Staff client SDK writes (Librarian, Accountant, Dean of Business Program, Admin) are denied (Server-Only architecture)
 - Unauthenticated access denied
 
 ### Browser acceptance (`tests/e2e/`)
 
 - `live-clearance-journey.spec.ts` — full multi-role browser clearance journey
-  (Student G submission → 5 signatories -> Accountant -> Dean approval -> Student approved status & print control enabled)
+  (Student G submission → Stage 1: Librarian → Stage 2: Accountant financial gate → Stage 3: OSA Coordinator → Stage 4: Guidance Counselor → Stage 5: Area Chair → Stage 6: Dean of Business Program approval → Student approved status & print control enabled)
 - `password-change.spec.ts` — mandatory password journey (login → forced
   change → direct dashboard nav rejected → wrong password error → change →
   re-login with new password → dashboard)

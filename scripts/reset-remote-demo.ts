@@ -11,8 +11,8 @@ import {
 } from '../tests/fixtures/demo-data';
 import { DEFAULT_ACADEMIC_PROGRAM_CODE } from '../lib/academic-programs';
 
-const CONFIRMED_REMOTE_DEMO_PROJECT_ID = 'ascs11';
-const KNOWN_PRODUCTION_PROJECT_IDS = [
+export const CONFIRMED_REMOTE_DEMO_PROJECT_ID = 'ascs11';
+export const KNOWN_PRODUCTION_PROJECT_IDS = [
   'ascs-prod',
   'ascs-production',
   'pkm-ascs-prod',
@@ -21,33 +21,63 @@ const KNOWN_PRODUCTION_PROJECT_IDS = [
 
 const DEMO_TIMESTAMP = '2026-01-15T09:00:00.000Z';
 
+export const KNOWN_CANONICAL_REQUIREMENT_IDS = [
+  'librarian',
+  'osa_coordinator',
+  'guidance_counselor',
+  'area_chair',
+  'dean',
+] as const;
+
 export interface ResetOptions {
   apply: boolean;
+}
+
+export interface UnexpectedAuthUser {
+  uid: string;
+  email: string;
+  displayName?: string;
+  reason: string;
+}
+
+export interface UnexpectedFirestoreRecord {
+  collection: 'users' | 'publicUsers' | 'students' | 'clearanceRequirements';
+  id: string;
+  reason: string;
+  data?: Record<string, unknown>;
+}
+
+export interface AdviserRecordsFoundSummary {
+  authAccounts: Array<{ uid: string; email: string }>;
+  usersDocs: Array<{ id: string; role?: string; email?: string }>;
+  publicUsersDocs: Array<{ id: string; role?: string }>;
+  requirements: Array<{ id: string; role?: string }>;
+  approvals: Array<{ applicationId: string; approvalId: string; signatoryRole?: string }>;
+  notifications: Array<{ id: string; message?: string }>;
+  activityLogs: Array<{ id: string; action?: string }>;
 }
 
 export interface DryRunReport {
   projectId: string;
   dryRun: boolean;
   authUsersToDelete: Array<{ uid: string; email: string; displayName?: string }>;
-  unexpectedAuthUsers: Array<{ uid: string; email: string; displayName?: string; reason: string }>;
+  unexpectedAuthUsers: UnexpectedAuthUser[];
   usersDocsToDelete: Array<{ id: string; role?: string; email?: string; fullName?: string }>;
   publicUsersDocsToDelete: Array<{ id: string; role?: string; fullName?: string }>;
+  studentDocsToDelete: Array<{ id: string; studentNumber?: string; fullName?: string }>;
   studentsDocsToDelete: Array<{ id: string; studentNumber?: string; fullName?: string }>;
   requirementsToDelete: Array<{ id: string; role?: string; label?: string }>;
   applicationsToDelete: Array<{ id: string; applicationNumber?: string; studentName?: string }>;
+  approvalCount: number;
   approvalsToDeleteCount: number;
+  remarkCount: number;
   remarksToDeleteCount: number;
+  notificationCount: number;
   notificationsToDeleteCount: number;
+  activityLogCount: number;
   activityLogsToDeleteCount: number;
-  adviserRecordsFound: {
-    authAccounts: Array<{ uid: string; email: string }>;
-    usersDocs: Array<{ id: string; role?: string; email?: string }>;
-    publicUsersDocs: Array<{ id: string; role?: string }>;
-    requirements: Array<{ id: string; role?: string }>;
-    approvals: Array<{ applicationId: string; approvalId: string; signatoryRole?: string }>;
-    notifications: Array<{ id: string; message?: string }>;
-    activityLogs: Array<{ id: string; action?: string }>;
-  };
+  adviserRecordsFound: AdviserRecordsFoundSummary;
+  unexpectedFirestoreRecords: UnexpectedFirestoreRecord[];
   deanRecordsToNormalize: Array<{ id: string; fullName?: string; title?: string }>;
 }
 
@@ -61,8 +91,21 @@ export function assertRemoteResetSafety(projectId: string): void {
   const useEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR;
   const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
   const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
+  const storageHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
+  const databaseHost = process.env.FIREBASE_DATABASE_EMULATOR_HOST;
+  const hubHost = process.env.FIREBASE_EMULATOR_HUB;
+  const functionsHost = process.env.FUNCTIONS_EMULATOR;
 
-  if (useEmulator === 'true' || authHost || firestoreHost) {
+  if (
+    useEmulator === 'true' ||
+    useEmulator === '1' ||
+    authHost ||
+    firestoreHost ||
+    storageHost ||
+    databaseHost ||
+    hubHost ||
+    functionsHost
+  ) {
     throw new Error(
       'REFUSING EXECUTION: Remote demo reset cannot run against Firebase emulators. Clear emulator environment variables.'
     );
@@ -74,15 +117,201 @@ export function assertRemoteResetSafety(projectId: string): void {
     );
   }
 
-  if (projectId !== CONFIRMED_REMOTE_DEMO_PROJECT_ID) {
+  const normalizedProjectId = (projectId || '').trim();
+  if (normalizedProjectId !== CONFIRMED_REMOTE_DEMO_PROJECT_ID) {
     throw new Error(
-      `REFUSING EXECUTION: Remote demo reset is restricted to project "${CONFIRMED_REMOTE_DEMO_PROJECT_ID}". Got: "${projectId}".`
+      `REFUSING EXECUTION: Remote demo reset is restricted to project "${CONFIRMED_REMOTE_DEMO_PROJECT_ID}". Got: "${normalizedProjectId}".`
     );
   }
 
-  if (KNOWN_PRODUCTION_PROJECT_IDS.includes(projectId.toLowerCase())) {
+  if (KNOWN_PRODUCTION_PROJECT_IDS.includes(normalizedProjectId.toLowerCase())) {
     throw new Error(
-      `REFUSING EXECUTION: Project ID "${projectId}" is recognized as a production project.`
+      `REFUSING EXECUTION: Project ID "${normalizedProjectId}" is recognized as a production project.`
+    );
+  }
+}
+
+export function isDemoEmail(email?: string): boolean {
+  if (!email || typeof email !== 'string') return false;
+  return email.toLowerCase().trim().endsWith('@example.test');
+}
+
+export function isDemoUid(uid?: string): boolean {
+  if (!uid || typeof uid !== 'string') return false;
+  return uid.startsWith('demo-');
+}
+
+export function classifyAuthUser(user: {
+  uid: string;
+  email?: string;
+  displayName?: string;
+}): { isDemo: boolean; isAdviser: boolean; reason?: string } {
+  const email = (user.email || '').toLowerCase().trim();
+  const uid = user.uid || '';
+  const displayName = (user.displayName || '').toLowerCase();
+
+  const isAdviser =
+    uid === 'demo-adviser-uid' ||
+    email === 'adviser@example.test' ||
+    email.includes('adviser') ||
+    displayName.includes('adviser');
+
+  if (!email || !isDemoEmail(email)) {
+    return {
+      isDemo: false,
+      isAdviser,
+      reason: email
+        ? `Email domain does not match expected demo pattern "@example.test": ${email}`
+        : 'Auth account is missing an email address',
+    };
+  }
+
+  return { isDemo: true, isAdviser };
+}
+
+export function classifyFirestoreUser(
+  id: string,
+  data: Record<string, unknown> = {}
+): { isDemo: boolean; isAdviser: boolean; reason?: string } {
+  const email = typeof data.email === 'string' ? data.email.toLowerCase().trim() : '';
+  const role = typeof data.role === 'string' ? data.role.toLowerCase().trim() : '';
+  const fullName = typeof data.fullName === 'string' ? data.fullName.toLowerCase() : '';
+
+  const isAdviser =
+    id === 'demo-adviser-uid' ||
+    email === 'adviser@example.test' ||
+    role === 'adviser' ||
+    fullName.includes('adviser');
+
+  if (isAdviser) {
+    if (email && !isDemoEmail(email)) {
+      return {
+        isDemo: false,
+        isAdviser: true,
+        reason: `Adviser record with non-demo email domain: ${email}`,
+      };
+    }
+    return { isDemo: true, isAdviser: true };
+  }
+
+  if (email && !isDemoEmail(email)) {
+    return {
+      isDemo: false,
+      isAdviser: false,
+      reason: `User document email domain does not match "@example.test": ${email}`,
+    };
+  }
+
+  if (!isDemoUid(id) && !isDemoEmail(email)) {
+    return {
+      isDemo: false,
+      isAdviser: false,
+      reason: `User doc ID "${id}" does not start with "demo-" and has no demo email`,
+    };
+  }
+
+  return { isDemo: true, isAdviser: false };
+}
+
+export function classifyFirestorePublicUser(
+  id: string,
+  data: Record<string, unknown> = {}
+): { isDemo: boolean; isAdviser: boolean; reason?: string } {
+  const role = typeof data.role === 'string' ? data.role.toLowerCase().trim() : '';
+  const fullName = typeof data.fullName === 'string' ? data.fullName.toLowerCase() : '';
+
+  const isAdviser = id === 'demo-adviser-uid' || role === 'adviser' || fullName.includes('adviser');
+  if (isAdviser) {
+    return { isDemo: true, isAdviser: true };
+  }
+
+  if (!isDemoUid(id)) {
+    return {
+      isDemo: false,
+      isAdviser: false,
+      reason: `PublicUser doc ID "${id}" does not start with "demo-"`,
+    };
+  }
+
+  return { isDemo: true, isAdviser: false };
+}
+
+export function classifyFirestoreStudent(
+  id: string,
+  data: Record<string, unknown> = {}
+): { isDemo: boolean; isAdviser: boolean; reason?: string } {
+  const email = typeof data.email === 'string' ? data.email.toLowerCase().trim() : '';
+  const studentNumber = typeof data.studentNumber === 'string' ? data.studentNumber.trim() : '';
+
+  if (id === 'demo-adviser-uid') {
+    return { isDemo: true, isAdviser: true };
+  }
+
+  if (email && !isDemoEmail(email)) {
+    return {
+      isDemo: false,
+      isAdviser: false,
+      reason: `Student email domain does not match "@example.test": ${email}`,
+    };
+  }
+
+  const isDemoStudentNumber =
+    !studentNumber || studentNumber.startsWith('STUD-') || studentNumber.startsWith('demo-');
+
+  if (!isDemoUid(id) && !isDemoStudentNumber) {
+    return {
+      isDemo: false,
+      isAdviser: false,
+      reason: `Student doc ID "${id}" and studentNumber "${studentNumber}" do not match demo patterns`,
+    };
+  }
+
+  return { isDemo: true, isAdviser: false };
+}
+
+export function classifyFirestoreRequirement(
+  id: string,
+  data: Record<string, unknown> = {}
+): { isDemo: boolean; isAdviser: boolean; reason?: string } {
+  const role = typeof data.role === 'string' ? data.role.toLowerCase().trim() : '';
+  const label = typeof data.label === 'string' ? data.label.toLowerCase() : '';
+
+  const isAdviser = id === 'adviser' || role === 'adviser' || label.includes('adviser');
+  if (isAdviser) {
+    return { isDemo: true, isAdviser: true };
+  }
+
+  if (!KNOWN_CANONICAL_REQUIREMENT_IDS.includes(id as (typeof KNOWN_CANONICAL_REQUIREMENT_IDS)[number])) {
+    return {
+      isDemo: false,
+      isAdviser: false,
+      reason: `Unknown requirement ID "${id}". Expected one of: ${KNOWN_CANONICAL_REQUIREMENT_IDS.join(', ')}, adviser`,
+    };
+  }
+
+  return { isDemo: true, isAdviser: false };
+}
+
+export function assertRecordsSafety(
+  unexpectedAuthUsers: UnexpectedAuthUser[],
+  unexpectedFirestoreRecords: UnexpectedFirestoreRecord[]
+): void {
+  const total = unexpectedAuthUsers.length + unexpectedFirestoreRecords.length;
+  if (total > 0) {
+    if (unexpectedAuthUsers.length > 0) {
+      console.error('🚨 HARD SAFETY GUARD: Unexpected non-demo user accounts detected on remote project:');
+      for (const record of unexpectedAuthUsers) {
+        console.error(`  - UID: ${record.uid} | Email: ${record.email} | Reason: ${record.reason}`);
+      }
+    }
+    if (unexpectedFirestoreRecords.length > 0) {
+      console.error('🚨 HARD SAFETY GUARD: Unexpected non-demo Firestore records detected on remote project:');
+      for (const record of unexpectedFirestoreRecords) {
+        console.error(`  - Collection: ${record.collection} | ID: ${record.id} | Reason: ${record.reason}`);
+      }
+    }
+    throw new Error(
+      `HARD SAFETY STOP: Found ${total} unexpected non-demo record(s) (${unexpectedAuthUsers.length} Auth account(s), ${unexpectedFirestoreRecords.length} Firestore record(s)). Remote destructive operation aborted.`
     );
   }
 }
@@ -133,12 +362,17 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
     unexpectedAuthUsers: [],
     usersDocsToDelete: [],
     publicUsersDocsToDelete: [],
+    studentDocsToDelete: [],
     studentsDocsToDelete: [],
     requirementsToDelete: [],
     applicationsToDelete: [],
+    approvalCount: 0,
     approvalsToDeleteCount: 0,
+    remarkCount: 0,
     remarksToDeleteCount: 0,
+    notificationCount: 0,
     notificationsToDeleteCount: 0,
+    activityLogCount: 0,
     activityLogsToDeleteCount: 0,
     adviserRecordsFound: {
       authAccounts: [],
@@ -149,6 +383,7 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
       notifications: [],
       activityLogs: [],
     },
+    unexpectedFirestoreRecords: [],
     deanRecordsToNormalize: [],
   };
 
@@ -157,15 +392,18 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
   do {
     const list = await auth.listUsers(100, nextPageToken);
     for (const u of list.users) {
-      const email = (u.email || '').toLowerCase();
-      const isDemoPattern = email.endsWith('@example.test');
+      const classification = classifyAuthUser({
+        uid: u.uid,
+        email: u.email,
+        displayName: u.displayName,
+      });
 
-      if (!isDemoPattern) {
+      if (!classification.isDemo) {
         report.unexpectedAuthUsers.push({
           uid: u.uid,
           email: u.email || '(no email)',
           displayName: u.displayName || '(no display name)',
-          reason: `Email domain does not match expected demo pattern "@example.test"`,
+          reason: classification.reason || 'Non-demo account',
         });
       }
 
@@ -175,7 +413,7 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
         displayName: u.displayName,
       });
 
-      if (email.includes('adviser') || (u.displayName || '').toLowerCase().includes('adviser')) {
+      if (classification.isAdviser) {
         report.adviserRecordsFound.authAccounts.push({
           uid: u.uid,
           email: u.email || '',
@@ -189,6 +427,17 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
   const usersSnap = await db.collection('users').get();
   for (const doc of usersSnap.docs) {
     const data = doc.data();
+    const classification = classifyFirestoreUser(doc.id, data);
+
+    if (!classification.isDemo) {
+      report.unexpectedFirestoreRecords.push({
+        collection: 'users',
+        id: doc.id,
+        reason: classification.reason || 'Non-demo user profile',
+        data,
+      });
+    }
+
     report.usersDocsToDelete.push({
       id: doc.id,
       role: data.role,
@@ -196,11 +445,7 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
       fullName: data.fullName,
     });
 
-    if (
-      data.role === 'adviser' ||
-      (data.email && String(data.email).includes('adviser')) ||
-      (data.fullName && String(data.fullName).includes('Adviser'))
-    ) {
+    if (classification.isAdviser) {
       report.adviserRecordsFound.usersDocs.push({
         id: doc.id,
         role: data.role,
@@ -223,12 +468,24 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
   const publicUsersSnap = await db.collection('publicUsers').get();
   for (const doc of publicUsersSnap.docs) {
     const data = doc.data();
+    const classification = classifyFirestorePublicUser(doc.id, data);
+
+    if (!classification.isDemo) {
+      report.unexpectedFirestoreRecords.push({
+        collection: 'publicUsers',
+        id: doc.id,
+        reason: classification.reason || 'Non-demo public user profile',
+        data,
+      });
+    }
+
     report.publicUsersDocsToDelete.push({
       id: doc.id,
       role: data.role,
       fullName: data.fullName,
     });
-    if (data.role === 'adviser' || (data.fullName && String(data.fullName).includes('Adviser'))) {
+
+    if (classification.isAdviser) {
       report.adviserRecordsFound.publicUsersDocs.push({
         id: doc.id,
         role: data.role,
@@ -240,23 +497,48 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
   const studentsSnap = await db.collection('students').get();
   for (const doc of studentsSnap.docs) {
     const data = doc.data();
-    report.studentsDocsToDelete.push({
+    const classification = classifyFirestoreStudent(doc.id, data);
+
+    if (!classification.isDemo) {
+      report.unexpectedFirestoreRecords.push({
+        collection: 'students',
+        id: doc.id,
+        reason: classification.reason || 'Non-demo student record',
+        data,
+      });
+    }
+
+    const studentInfo = {
       id: doc.id,
       studentNumber: data.studentNumber,
       fullName: data.fullName,
-    });
+    };
+    report.studentDocsToDelete.push(studentInfo);
+    report.studentsDocsToDelete.push(studentInfo);
   }
 
   // 5. Inspect clearanceRequirements collection
   const reqsSnap = await db.collection('clearanceRequirements').get();
   for (const doc of reqsSnap.docs) {
     const data = doc.data();
+    const classification = classifyFirestoreRequirement(doc.id, data);
+
+    if (!classification.isDemo) {
+      report.unexpectedFirestoreRecords.push({
+        collection: 'clearanceRequirements',
+        id: doc.id,
+        reason: classification.reason || 'Unexpected clearance requirement',
+        data,
+      });
+    }
+
     report.requirementsToDelete.push({
       id: doc.id,
       role: data.role,
       label: data.label,
     });
-    if (doc.id === 'adviser' || data.role === 'adviser' || (data.label && String(data.label).includes('Adviser'))) {
+
+    if (classification.isAdviser) {
       report.adviserRecordsFound.requirements.push({
         id: doc.id,
         role: data.role,
@@ -275,6 +557,7 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
     });
 
     const approvalsSnap = await doc.ref.collection('approvals').get();
+    report.approvalCount += approvalsSnap.size;
     report.approvalsToDeleteCount += approvalsSnap.size;
     for (const appDoc of approvalsSnap.docs) {
       const appData = appDoc.data();
@@ -288,11 +571,13 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
     }
 
     const remarksSnap = await doc.ref.collection('remarks').get();
+    report.remarkCount += remarksSnap.size;
     report.remarksToDeleteCount += remarksSnap.size;
   }
 
   // 7. Inspect notifications collection
   const notifsSnap = await db.collection('notifications').get();
+  report.notificationCount = notifsSnap.size;
   report.notificationsToDeleteCount = notifsSnap.size;
   for (const doc of notifsSnap.docs) {
     const data = doc.data();
@@ -311,6 +596,7 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
 
   // 8. Inspect activityLogs collection
   const logsSnap = await db.collection('activityLogs').get();
+  report.activityLogCount = logsSnap.size;
   report.activityLogsToDeleteCount = logsSnap.size;
   for (const doc of logsSnap.docs) {
     const data = doc.data();
@@ -325,16 +611,8 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
     }
   }
 
-  // Safety Gate: If unexpected non-demo users found, report and fail before any mutation
-  if (report.unexpectedAuthUsers.length > 0) {
-    console.error('🚨 HARD SAFETY GUARD TRIGGERED: Unexpected non-demo user accounts detected on remote project!');
-    for (const record of report.unexpectedAuthUsers) {
-      console.error(`  - UID: ${record.uid} | Email: ${record.email} | Name: ${record.displayName} | Reason: ${record.reason}`);
-    }
-    throw new Error(
-      `HARD SAFETY STOP: Found ${report.unexpectedAuthUsers.length} unexpected non-demo user account(s). Remote destructive operation aborted.`
-    );
-  }
+  // Hard Safety Assertion: Fail if ANY unexpected non-demo user or Firestore record exists
+  assertRecordsSafety(report.unexpectedAuthUsers, report.unexpectedFirestoreRecords);
 
   if (!options.apply) {
     return report;
@@ -568,6 +846,8 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
   }
 
   console.log('✅ Remote reset complete. Verifying invariants...');
+  // Bridge environment variable so verifySeedInvariants passes in remote mode
+  process.env.ASCS_ALLOW_REMOTE_DEMO_SEED = 'true';
   await verifySeedInvariants();
 
   return report;

@@ -108,8 +108,8 @@ institutional deployment or certification.
      fake handwritten or electronic signature, and the printed page is labelled
      a nonofficial prototype record.
 27d. **Where are Accountant and Dean responsibilities shown?** The Accountant
-     financial gate appears as Step 2 in the six-stage workflow, while Dean
-     Clearance is the sixth stage and fifth required signatory row. Dean access
+     financial gate appears as Step 2 in the six-stage workflow, while Dean of Business Program
+     Clearance is the sixth stage and fifth required signatory row. Dean of Business Program access
      is a separate report scope.
 
 ## Reports and data integrity

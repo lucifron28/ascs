@@ -96,7 +96,7 @@ local emulator and are intentionally fictional.
 | Clearance Signatories / OSA Coordinator | `osa@example.test` | `password123` | Reviews the Office of Student Affairs requirement |
 | Clearance Signatories / Guidance Counselor | `guidance@example.test` | `password123` | Reviews the Guidance requirement |
 | Clearance Signatories / Area Chair | `chair@example.test` | `password123` | Reviews the Academic Department requirement |
-| Clearance Signatories / Dean | `dean@example.test` | `password123` | Reviews and approves Dean Clearance |
+| Clearance Signatories / Dean of Business Program | `dean@example.test` | `password123` | Reviews and approves Dean Clearance |
 | Financial / Oversight / Accountant | `accountant@example.test` | `password123` | Separate financial accountability gate |
 | Administration / System Administrator | `admin@example.test` | `password123` | User lifecycle, assignments, logs, reports |
 
@@ -129,19 +129,19 @@ npm run demo:reset   # or: npm run demo:prepare
    Admin UI does not expose developer-only seed/reset commands; reset the
    fictional emulator dataset before the demonstration.
 2. **Student pending application** — log in as `student.b@example.test`;
-   show the pending signatory checklist (Librarian + OSA approved, 3 pending).
+   show the sequential clearance progress (Stage 1 Librarian approved, Stage 2 Accountant financial gate paid, Stage 3 OSA Coordinator approved, with remaining approval stages pending: Guidance Counselor, Area Chair, and Dean of Business Program).
 3. **Guidance Counselor approval** — log in as `guidance@example.test` and
    approve Student B's unlocked Guidance Counselor Clearance requirement;
    switch back to Student B to show the next stage unlocking.
 4. **Area Chair approval** — log in as `chair@example.test` and approve
-   Student B's Area Chair Clearance requirement. The Dean queue remains empty
+   Student B's Area Chair Clearance requirement. The Dean of Business Program queue remains empty
    until this stage is complete.
 5. **Accountant financial verification** — log in as
    `accountant@example.test`; show that Student D is held in the financial
    queue with an unpaid balance. The Accountant gate is Step 2 and never adds
    a duplicate approval row.
 6. **Dean approval** — as `dean@example.test`, approve Student B's final
-   Dean Clearance requirement in the actionable queue.
+   Dean Clearance requirement (Stage 6 of 6) in the actionable queue.
 7. **Dean reports** — open `/dean/reports`; show Dean-scoped records with no
    financial data.
 8. **Final approved student** — switch back to Student B and confirm

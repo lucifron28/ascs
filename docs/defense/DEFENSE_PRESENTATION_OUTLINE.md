@@ -37,7 +37,7 @@ Talking points:
 
 - Digitize submission and role-scoped review.
 - Integrate an Accountant financial gate.
-- Provide a Dean final approval queue and scoped reports.
+- Provide a Dean of Business Program final approval queue and scoped reports.
 - Preserve a prototype print record for approved cases.
 
 Visual: `05-clearance-workflow.svg`.
@@ -107,11 +107,11 @@ Visual: `08-accountant-financial-dialog.png`.
 Speaker notes: Explain why a separate gate avoids treating financial checking as
 a duplicate signatory row.
 
-## Slide 9 - Dean final approval and reports
+## Slide 9 - Dean of Business Program final approval and reports
 
 Talking points:
 
-- Dean approval sets `deanApproved`.
+- Dean of Business Program approval sets `deanApproved`.
 - Dean queue is actionable; Dean reports use the Dean-approved scope.
 - Dean reports exclude financial summaries and financial detail.
 
