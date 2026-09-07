@@ -15,10 +15,10 @@ the normal Firebase login form and no remote password is exposed client-side.
 | --- | --- |
 | Vercel project | `ron-cada-projects/ascs` |
 | Deployment URL | <https://ascs-one.vercel.app> |
-| Latest production deployment | <https://ascs-hqa4eu7u9-ron-cada-projects.vercel.app> |
-| Deployment ID | `dpl_6fH8ddsKDMfXStwxR7PkW63x4qua` |
-| Deployment date | 2026-08-17 |
-| Deployed Git SHA | `f58904ed90a005c55f6197c5184a960b6d54b420` (local `main` at deployment time) |
+| Latest production deployment | <https://ascs-np6pl6du6-ron-cada-projects.vercel.app> |
+| Deployment ID | `dpl_7d7XiJL9BxB2SNybayYMaPM4hfi5` |
+| Deployment date | 2026-09-07 |
+| Deployed Git SHA | `b45920bb582bfc1c42bb5f3a3c2d0a748b2e8f94` (merged `main`) |
 | Firebase demo project | `ascs11` (fictional demo data) |
 | Firestore database | `(default)` in `asia-southeast1` |
 | Demo mode | `NEXT_PUBLIC_DEMO_MODE=true` |
@@ -32,11 +32,11 @@ project `ascs11`. Public checks for `/` and `/login` returned HTTP 200. The
 Production Firebase Admin variables are configured as encrypted Vercel
 variables, and emulator host variables are absent.
 
-The post-merge Firestore verification confirmed five ordered active roles
-(Librarian, OSA Coordinator, Guidance Counselor, Area Chair, and Dean), an
-inactive legacy Adviser requirement, five migrated applications with five
-active approval roles each, retained legacy Adviser rows, Dean/Auth role
-alignment, zero active `users`/`publicUsers` role mismatches, and a successful
+The post-merge Firestore verification confirmed five ordered active approval roles
+(Librarian, OSA Coordinator, Guidance Counselor, Area Chair, and Dean of Business Program),
+complete retirement of the legacy clearance Adviser role, canonical applications with five
+active approval roles each, Dean of Business Program Auth/Firestore role alignment,
+zero active `users`/`publicUsers` role mismatches, and a successful
 `approvals.status == pending` collection-group query.
 
 Vercel SSO protection is intentionally still enabled. The public
@@ -147,8 +147,9 @@ The procedure used for the verified deployment was:
       `127.0.0.1:9099`.
 - [x] Demo/Fictional Data banner is visible on an authenticated dashboard.
 - [x] Firestore indexes are deployed, including the `approvals` collection-group
-      `status` index and `deanApproved` application indexes.
-- [x] Guarded Adviser-to-Dean migration applied and verified against `ascs11`.
+      composite index (`status ASC`, `signatoryRole ASC`, `__name__ ASC`) in `READY` state.
+- [x] Canonical clearance workflow verified: six stages with Accountant financial gate and
+      five signatory approval roles (Librarian, OSA, Guidance, Area Chair, Dean of Business Program).
 - [x] Remote demo credentials are not present in the repository or public
       documentation.
 
