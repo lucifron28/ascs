@@ -96,7 +96,7 @@ behavior is covered by `lib/auth/password-transition.test.ts` and
 
 ## 4. Roles and authorization model
 
-The nine implemented roles are:
+The eight implemented roles are:
 
 | Role | High-level responsibility |
 | --- | --- |
@@ -132,7 +132,7 @@ approved | pending | not_approved
 `lib/clearance/status.ts` derives the overall status from the five required
 signatory approval rows and `financialStatus`. The canonical workflow exposes
 six ordered stages: Librarian (1), Accountant financial gate (2), OSA
-Coordinator (3), Guidance Counselor (4), Area Chair (5), and Dean (6):
+Coordinator (3), Guidance Counselor (4), Area Chair (5), and Dean of Business Program (6):
 
 - Any required `not_approved` row produces `not_approved`.
 - All required signatories approved plus `paid` produces `approved`.
@@ -145,7 +145,7 @@ Coordinator (3), Guidance Counselor (4), Area Chair (5), and Dean (6):
   Reviewed columns. The Accountant row is a financial gate rather than an
   approval signature. No handwritten or electronic signatures are reproduced.
 
-The Dean is the sixth workflow stage and fifth active approval row. A successful
+The Dean of Business Program is the sixth workflow stage and fifth active approval row. A successful
 Dean action writes `deanApproved`, recomputes the application counters, and
 keeps Dean reports separately scoped.
 

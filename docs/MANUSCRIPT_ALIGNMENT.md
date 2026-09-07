@@ -18,7 +18,7 @@ term, identity block, office checklist, remarks, dates, and closing note; the
 digital system restructures those fields into readable status data rather than
 reproducing handwritten signatures or personal paper details. It provides a
 single workflow for student submission, role-scoped signatory decisions, a
-  separate Accountant financial gate, Dean signatory approval, notifications,
+separate Accountant financial gate, Dean of Business Program signatory approval, notifications,
 audit logs, and scoped reports.
 
 Evidence: `app/actions/clearance.ts`, `components/student/`,
@@ -27,7 +27,7 @@ Evidence: `app/actions/clearance.ts`, `components/student/`,
 ## 3. System scope
 
 The MVP covers student clearance submission and tracking, six ordered workflow
-stages (five required signatory requirements with an Accountant financial gate), Dean final approval,
+stages (five required signatory requirements with an Accountant financial gate), Dean of Business Program final approval,
 Admin account/requirement management, Admin and Dean reports, CSV
 exports, in-app notifications, activity logs, and a print-friendly prototype
 record. It is a capstone demonstration system using fictional data.
@@ -143,7 +143,7 @@ Evidence: `lib/auth/session.ts`, `lib/auth/edge-session.ts`, `proxy.ts`,
 The student submits one application per academic year/semester. The server
 models six ordered stages: (1) Librarian Clearance, (2) Accountant Clearance
 as a financial gate, (3) OSA Coordinator Clearance, (4) Guidance Counselor
-Clearance, (5) Area Chair Clearance, and (6) Dean Clearance. It creates five
+Clearance, (5) Area Chair Clearance, and (6) Dean of Business Program Clearance. It creates five
 signatory approval rows for the non-financial stages; Accountant status is
 stored directly on the application. Each stage is visible and actionable only
 after its predecessor is complete. Dean approval writes the `deanApproved`

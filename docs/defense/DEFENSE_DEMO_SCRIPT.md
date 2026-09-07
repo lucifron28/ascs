@@ -57,14 +57,14 @@ Use `osa@example.test`, `guidance@example.test`, and
 `chair@example.test` in order. Approve each unlocked queue item and point out
 that later stages remain locked until the previous stage is complete.
 
-### 5:00 - Dean approval
+### 5:00 - Dean of Business Program approval
 
-Log in as `dean@example.test`, approve the Dean Clearance requirement, and
+Log in as `dean@example.test`, approve the Dean of Business Program Clearance requirement, and
 explain that this is the sixth workflow stage and fifth approval row, sets
 `deanApproved`, and recomputes the application status. If
 the live submission is taking too long, switch to the pre-seeded Dean queue.
 
-### 6:00 - Dean reports
+### 6:00 - Dean of Business Program reports
 
 Log in as `dean@example.test`. Show the actionable Dean queue and open
 `/dean/reports`; point out that the
