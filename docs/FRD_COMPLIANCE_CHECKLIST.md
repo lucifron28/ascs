@@ -41,7 +41,6 @@
 | **OSA Coordinator** | `Implemented` | Accesses role-scoped queue for Office of Student Affairs clearance sign-off. |
 | **Guidance Counselor** | `Implemented` | Accesses role-scoped queue for guidance department clearance sign-off. |
 | **Area Chair** | `Implemented` | Accesses role-scoped queue for academic program clearance sign-off. |
-| **Adviser (legacy)** | `Compatibility only` | Historical Adviser accounts and approval rows remain readable but cannot be newly created or assigned. |
 | **Dean of Business Program** | `Implemented` | Reviews and approves the sixth and final Dean Clearance row in the actionable signatory queue. |
 | **System Administrator** | `Implemented` | Manages system user roles, assigns requirement signatories, seeds demo accounts, and inspects activity audit logs. |
 
@@ -62,7 +61,6 @@
 | **Accountant paid / unpaid verification** | `Implemented` | `updateFinancialStatusAction` updates direct application fields `financialStatus` and `financialVerifiedAt`. |
 | **Unpaid blocks approval** | `Implemented` | `lib/clearance/status.ts` forces overall status to `not_approved` whenever `financialStatus === 'unpaid'`. |
 | **Dean approves final clearance** | `Implemented` | Dean acts on the sixth workflow stage (the fifth approval row); the server writes `deanApproved` and recomputes application counters/status. |
-| **Adviser legacy compatibility** | `Implemented` | Adviser is excluded from active requirements, staff creation, assignment candidates, and new demo data; historical rows remain preserved. |
 | **Printable clearance after full approval** | `Implemented` | `fetchClearanceCertificateAction` blocks certificate generation unless `printableAvailable === true`. |
 | **Notifications** | `Implemented` | Notifications are emitted sequentially: submission to Librarian, Librarian approval to Accountant, paid financial verification to OSA, and each subsequent approval to the next office. |
 | **Activity logging** | `Implemented` | Server actions write audit events in atomic Firestore batches and sanitize sensitive credential metadata via `sanitizeAuditMetadata`. |

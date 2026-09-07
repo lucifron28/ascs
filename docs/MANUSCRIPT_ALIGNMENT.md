@@ -45,7 +45,6 @@ production readiness.
 | OSA Coordinator | OSA requirement review. |
 | Guidance Counselor | Guidance requirement review. |
 | Area Chair | Academic area requirement review. |
-| Adviser (legacy) | Historical compatibility only; excluded from new flow. |
 | Accountant | Financial gate (`pending`, `paid`, `unpaid`), not a duplicate approval row. |
 | Dean of Business Program | Dean Clearance approval and Dean reports. |
 | System Administrator | Account lifecycle, roles, assignments, logs, and institution reports. |

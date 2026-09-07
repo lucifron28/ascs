@@ -105,7 +105,6 @@ The nine implemented roles are:
 | OSA Coordinator | Review the Office of Student Affairs requirement queue. |
 | Guidance Counselor | Review the guidance requirement queue. |
 | Area Chair | Review the program/area requirement queue. |
-| Adviser (legacy) | Preserved for historical records only; cannot be newly created or assigned. |
 | Accountant | Verify `financialStatus`; this is a financial gate, not a duplicate approval row. |
 | Dean of Business Program | Review and approve the sixth Dean Clearance stage (the fifth approval row); access Dean-scoped reports separately. |
 | System Administrator | Manage accounts, roles, requirement assignments, activity logs, and institution-wide reports. |
@@ -148,8 +147,7 @@ Coordinator (3), Guidance Counselor (4), Area Chair (5), and Dean (6):
 
 The Dean is the sixth workflow stage and fifth active approval row. A successful
 Dean action writes `deanApproved`, recomputes the application counters, and
-keeps Dean reports separately scoped. Historical Adviser rows and the optional
-`adviserApproved` field remain readable during migration but are not counted.
+keeps Dean reports separately scoped.
 
 ## 6. Firestore data model
 

@@ -6,5 +6,4 @@ export type UserRole =
   | 'osa_coordinator'
   | 'guidance_counselor'
   | 'area_chair'
-  | 'adviser'
   | 'dean';

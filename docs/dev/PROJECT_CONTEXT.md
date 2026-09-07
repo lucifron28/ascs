@@ -39,7 +39,6 @@
 | OSA Coordinator | Review Office of Student Affairs clearance |
 | Guidance Counselor | Review guidance clearance |
 | Area Chair | Review area/department clearance |
-| Adviser (legacy) | Historical compatibility only; not available for new assignments |
 | Dean of Business Program | Approve Dean Clearance and access Dean-scoped reports |
 | Admin | Manage profiles, roles, requirement assignments, activity logs, and institution clearance reports |
 ## Workflow and status rules

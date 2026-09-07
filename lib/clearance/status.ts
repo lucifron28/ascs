@@ -44,8 +44,8 @@ export function getClearanceStatusSummary(
 ): ClearanceStatusSummary {
   // Model one effective status for each of the five active roles. Missing,
   // malformed, or conflicting rows are conservative: pending wins over
-  // approved, and not_approved wins over every other status. Accountant and
-  // legacy Adviser rows remain outside the active signatory workflow.
+  // approved, and not_approved wins over every other status. Non-signatory
+  // rows remain outside the active signatory workflow.
   const effectiveStatuses = new Map<string, 'approved' | 'pending' | 'not_approved'>();
   const seenRoles = new Set<string>();
   for (const role of REQUIRED_SIGNATORY_ROLES) {
