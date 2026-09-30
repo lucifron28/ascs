@@ -274,6 +274,14 @@ export default function AccountantDashboard() {
           >
             Completed History ({historyCount})
           </button>
+          {statusFilter === 'history' && (
+            <button
+              onClick={() => setStatusFilter('all')}
+              className="btn btn-sm min-h-11 btn-secondary text-secondary-content rounded-lg px-3 text-xs font-semibold"
+            >
+              Back to Action Queue
+            </button>
+          )}
         </div>
       </div>
 
