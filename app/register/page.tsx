@@ -3,7 +3,7 @@
 import { FormEvent, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Mail, Phone, UserRound } from 'lucide-react';
+import { ArrowRight, BookOpen, Clock, Mail, Phone, UserRound } from 'lucide-react';
 import ThemeSelector from '@/components/ui/ThemeSelector';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { registerStudentAccountAction } from '@/app/actions/registration';
@@ -89,22 +89,27 @@ export default function RegisterPage() {
         <div className="card w-full rounded-2xl border border-base-content/15 bg-base-100 p-6 shadow-lg sm:p-8">
           {registeredEmail ? (
             <div className="space-y-5 text-center" role="status" aria-live="polite">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/15 text-success">
-                <ArrowRight className="h-6 w-6 -rotate-45" aria-hidden="true" />
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning/15 text-warning border border-warning/30 shadow-sm">
+                <Clock className="h-7 w-7" aria-hidden="true" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-base-content">Account created</h2>
-                <p className="mt-2 text-sm text-base-content/70">
-                  Your student account for <span className="font-semibold text-base-content">{registeredEmail}</span> is ready. Sign in to continue.
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold text-base-content">Registration Submitted</h2>
+                <p className="mt-2 text-sm text-base-content/75 max-w-md mx-auto">
+                  Your student account for <span className="font-semibold text-base-content">{registeredEmail}</span> has been submitted and is <span className="font-bold text-warning">waiting for administrator approval</span>.
+                </p>
+                <p className="text-xs text-base-content/60 max-w-sm mx-auto">
+                  You will be able to access the clearance portal once your registration is confirmed by the administration.
                 </p>
               </div>
-              <Link
-                href="/login"
-                className="btn btn-primary min-h-11 w-full rounded-xl font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                Continue to sign in
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
+              <div className="pt-2">
+                <Link
+                  href="/login"
+                  className="btn btn-primary min-h-11 w-full rounded-xl font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  Return to Sign In
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">

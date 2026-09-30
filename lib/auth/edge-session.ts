@@ -3,6 +3,7 @@ import { decodeProtectedHeader, importX509, jwtVerify, type JWTPayload } from 'j
 export interface VerifiedSessionPayload extends JWTPayload {
   uid: string;
   role: string;
+  accountStatus?: string;
   mustChangePassword?: boolean;
   auth_time?: number;
 }

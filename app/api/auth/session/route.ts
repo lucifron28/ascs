@@ -29,8 +29,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Confirm account is active
+    // 4. Confirm account is active and approved
     const user = userDoc.data();
+    if (user?.accountStatus === 'pending_approval') {
+      return NextResponse.json(
+        { error: 'Waiting for Administrator Approval. Your account registration is pending review by the system administrator.' },
+        { status: 403 }
+      );
+    }
     if (user?.accountStatus === 'inactive' || user?.isActive === false) {
       return NextResponse.json(
         { error: 'Account is deactivated. Access denied.' },

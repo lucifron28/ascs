@@ -84,6 +84,11 @@ export default function LoginPage() {
 
         if (!sessionRes.ok) {
           const sessionBody = await readJsonResponse(sessionRes);
+          try {
+            await signOut(auth);
+          } catch {
+            // Ignore client signout error
+          }
           throw new Error(typeof sessionBody.error === 'string' ? sessionBody.error : 'Failed to establish session.');
         }
 
