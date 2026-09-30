@@ -15,10 +15,10 @@ the normal Firebase login form and no remote password is exposed client-side.
 | --- | --- |
 | Vercel project | `ron-cada-projects/ascs` |
 | Deployment URL | <https://ascs-one.vercel.app> |
-| Latest production deployment | <https://ascs-np6pl6du6-ron-cada-projects.vercel.app> |
-| Deployment ID | `dpl_7d7XiJL9BxB2SNybayYMaPM4hfi5` |
-| Deployment date | 2026-09-07 |
-| Deployed Git SHA | `b45920bb582bfc1c42bb5f3a3c2d0a748b2e8f94` (merged `main`) |
+| Latest production deployment | <https://ascs-iozf7extr-ron-cada-projects.vercel.app> |
+| Deployment ID | `dpl_2kesFjtk9UtASX9nyRhEyz7muUe1` |
+| Deployment date | 2026-09-30 |
+| Deployed Git SHA | `60a3c6b706255f5b39cb3b0ee3796a9d54d4db02` (merged `main`) |
 | Firebase demo project | `ascs11` (fictional demo data) |
 | Firestore database | `(default)` in `asia-southeast1` |
 | Demo mode | `NEXT_PUBLIC_DEMO_MODE=true` |
