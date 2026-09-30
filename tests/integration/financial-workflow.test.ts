@@ -4,6 +4,7 @@ import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-a
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { fetchFinancialQueueAction, updateFinancialStatusAction } from '@/app/actions/clearance';
+import { filterFinancialRecords } from '@/lib/clearance/financial-ui';
 
 describe('Financial Workflow Integration Tests', () => {
   let accountantSession: string;
@@ -191,5 +192,45 @@ describe('Financial Workflow Integration Tests', () => {
 
     const roles = approvalsSnap.docs.map((d) => d.data().signatoryRole);
     assert.equal(roles.includes('accountant'), false);
+  });
+
+  it('10. Accountant filters partition distinct datasets and search within selected category', async () => {
+    process.env.TEST_SESSION_COOKIE = accountantSession;
+    const queueRes = await fetchFinancialQueueAction();
+    assert.equal(queueRes.success, true);
+    if (!queueRes.success) return;
+
+    assert.ok(queueRes.allRecords, 'allRecords should be returned alongside queue and history');
+    const allRecords = (queueRes.allRecords || []) as unknown as Parameters<typeof filterFinancialRecords>[0];
+    assert.ok(allRecords.length >= 2, 'Should contain multiple eligible financial records');
+
+    // 1. All filter returns all eligible records
+    const allFiltered = filterFinancialRecords(allRecords, 'all');
+    assert.equal(allFiltered.length, allRecords.length);
+
+    // 2. Pending filter
+    const pendingFiltered = filterFinancialRecords(allRecords, 'pending');
+    assert.ok(pendingFiltered.every((r) => r.status === 'pending'));
+
+    // 3. Paid filter
+    const paidFiltered = filterFinancialRecords(allRecords, 'paid');
+    assert.ok(paidFiltered.every((r) => r.status === 'paid'));
+
+    // 4. Completed History filter
+    const historyFiltered = filterFinancialRecords(allRecords, 'history');
+    assert.ok(historyFiltered.every((r) => r.status === 'paid' || r.is_history === true || r.overall_status === 'approved'));
+
+    // Verify All and Pending are distinct when paid records exist
+    if (paidFiltered.length > 0) {
+      assert.notEqual(allFiltered.length, pendingFiltered.length, 'All and Pending must not be identical when paid records exist');
+    }
+
+    // 5. Search within filter
+    const firstRecord = allRecords[0];
+    if (firstRecord && firstRecord.student_name) {
+      const searched = filterFinancialRecords(allRecords, 'all', firstRecord.student_name);
+      assert.ok(searched.length >= 1);
+      assert.ok(searched.some((r) => r.student_name === firstRecord.student_name));
+    }
   });
 });
