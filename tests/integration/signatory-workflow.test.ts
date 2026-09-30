@@ -3,7 +3,12 @@ import assert from 'node:assert/strict';
 import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-auth';
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminFirestore } from '@/lib/firebase/admin';
-import { fetchPendingApprovalsAction, signClearanceAction } from '@/app/actions/clearance';
+import {
+  fetchPendingApprovalsAction,
+  fetchApprovedHistoryAction,
+  signClearanceAction,
+  reopenClearanceAction,
+} from '@/app/actions/clearance';
 
 describe('Signatory Workflow Integration Tests', () => {
   let librarianSession: string;
@@ -109,12 +114,12 @@ describe('Signatory Workflow Integration Tests', () => {
     assert.equal(areaChairUnlocks.docs.filter((doc) => doc.data().type === 'workflow_stage_unlocked' && doc.data().relatedApplicationId === 'app-student-b').length, 1);
   });
 
-  it('5. Pending requires remarks & 6. Not_approved requires remarks', async () => {
+  it('5. Pending requires remarks', async () => {
     process.env.TEST_SESSION_COOKIE = areaChairSession;
     const resNoRemarks = await signClearanceAction({
       applicationId: 'app-student-b',
       approvalId: 'area_chair',
-      status: 'not_approved',
+      status: 'pending',
       remarks: '   ',
     });
 
@@ -129,7 +134,7 @@ describe('Signatory Workflow Integration Tests', () => {
     const resWithRemarks = await signClearanceAction({
       applicationId: 'app-student-b',
       approvalId: 'area_chair',
-      status: 'not_approved',
+      status: 'pending',
       remarks: 'Area Chair review requires an updated clearance note.',
     });
 
@@ -161,5 +166,58 @@ describe('Signatory Workflow Integration Tests', () => {
       .where('recipientId', '==', 'demo-dean-uid')
       .get();
     assert.equal(deanUnlocks.docs.filter((doc) => doc.data().type === 'workflow_stage_unlocked' && doc.data().relatedApplicationId === 'app-student-b').length, 0);
+  });
+
+  it('10. Direct Not Approved action is rejected by server action', async () => {
+    process.env.TEST_SESSION_COOKIE = areaChairSession;
+    const res = await signClearanceAction({
+      applicationId: 'app-student-b',
+      approvalId: 'area_chair',
+      status: 'not_approved' as never,
+      remarks: 'Attempting not approved',
+    });
+    assert.equal(res.success, false);
+    if (!res.success) {
+      assert.match(res.error, /invalid clearance approval status/i);
+    }
+  });
+
+  it('11. fetchApprovedHistoryAction returns approved applications for signatory', async () => {
+    process.env.TEST_SESSION_COOKIE = librarianSession;
+    const historyRes = await fetchApprovedHistoryAction();
+    assert.equal(historyRes.success, true);
+    if (historyRes.success) {
+      assert.ok(Array.isArray(historyRes.approvedHistory));
+      assert.ok(historyRes.approvedHistory.some((item) => item.student_id_number === 'STUD-2026-0001'));
+    }
+  });
+
+  it('12. reopenClearanceAction returns approved requirement to pending and recomputes overall status', async () => {
+    process.env.TEST_SESSION_COOKIE = librarianSession;
+    const reopenRes = await reopenClearanceAction({
+      applicationId: 'app-student-a',
+      approvalId: 'librarian',
+      remarks: 'Accidental approval corrected - student has unreturned library book.',
+    });
+    assert.equal(reopenRes.success, true);
+
+    const appDoc = await getAdminFirestore().collection('clearanceApplications').doc('app-student-a').get();
+    assert.equal(appDoc.data()?.overallStatus, 'pending');
+    assert.equal(appDoc.data()?.printableAvailable, false);
+    assert.equal(appDoc.data()?.approvedCount, 4);
+    assert.equal(appDoc.data()?.pendingCount, 1);
+
+    const approvalDoc = await getAdminFirestore().collection('clearanceApplications').doc('app-student-a').collection('approvals').doc('librarian').get();
+    assert.equal(approvalDoc.data()?.status, 'pending');
+    assert.equal(approvalDoc.data()?.remarksLatest, 'Accidental approval corrected - student has unreturned library book.');
+
+    // Unauthorized role cannot reopen
+    process.env.TEST_SESSION_COOKIE = osaSession;
+    const failReopen = await reopenClearanceAction({
+      applicationId: 'app-student-a',
+      approvalId: 'librarian',
+      remarks: 'Wrong role attempting reopen',
+    });
+    assert.equal(failReopen.success, false);
   });
 });

@@ -11,6 +11,14 @@ test('clearance infrastructure errors map to operation-specific safe copy', () =
     mapClearanceActionError('fetchFinancialQueue', { code: 'internal', message: 'Firestore stack trace' }),
     'Unable to load financial records. Please try again.',
   );
+  assert.equal(
+    mapClearanceActionError('fetchApprovedHistory', new Error('gRPC error')),
+    'Unable to load approved clearance history. Please try again.',
+  );
+  assert.equal(
+    mapClearanceActionError('reopenClearance', new Error('Network error')),
+    'Unable to return clearance requirement to pending. Please try again.',
+  );
 });
 
 test('clearance business validation errors remain specific', () => {
@@ -40,5 +48,17 @@ test('clearance business validation errors remain specific', () => {
   assert.equal(
     mapClearanceActionError('signClearance', new Error('This clearance stage is no longer actionable.')),
     'This clearance stage is no longer actionable.',
+  );
+  assert.equal(
+    mapClearanceActionError('reopenClearance', new Error('A reason or remark is required when returning an approved clearance to pending.')),
+    'A reason or remark is required when returning an approved clearance to pending.',
+  );
+  assert.equal(
+    mapClearanceActionError('reopenClearance', new Error('Only approved clearance requirements can be returned to pending.')),
+    'Only approved clearance requirements can be returned to pending.',
+  );
+  assert.equal(
+    mapClearanceActionError('signClearance', new Error('Invalid clearance approval status. Only approve and mark pending are permitted.')),
+    'Invalid clearance approval status. Only approve and mark pending are permitted.',
   );
 });
