@@ -1,8 +1,10 @@
 type ClearanceActionFallbacks = {
   fetchStudentDashboard: 'Unable to load your clearance status. Please try again.';
   fetchPendingApprovals: 'Unable to load the pending evaluation queue. Please try again.';
+  fetchApprovedHistory: 'Unable to load approved clearance history. Please try again.';
   fetchFinancialQueue: 'Unable to load financial records. Please try again.';
   signClearance: 'Unable to update the clearance decision. Please try again.';
+  reopenClearance: 'Unable to return clearance requirement to pending. Please try again.';
   updateFinancialStatus: 'Unable to update the financial status. Please try again.';
 };
 
@@ -27,8 +29,11 @@ const SAFE_BUSINESS_MESSAGES = [
   /^(?:accountant clearance has already been completed\.)$/i,
   /^(?:this clearance decision has already been finalized\.)$/i,
   /^(?:this clearance stage is no longer actionable\.)$/i,
+  /^(?:a reason or remark is required when returning an approved clearance to pending\.)$/i,
+  /^(?:only approved clearance requirements can be returned to pending\.)$/i,
+  /^(?:invalid clearance approval status\. only approve and mark pending are permitted\.)$/i,
+  /^(?:remarks are required when marking an approval as pending\.)$/i,
 ];
-
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === 'object' && error !== null && 'message' in error) {
@@ -54,8 +59,10 @@ export function mapClearanceActionError<T extends ClearanceAction>(
   return {
     fetchStudentDashboard: 'Unable to load your clearance status. Please try again.',
     fetchPendingApprovals: 'Unable to load the pending evaluation queue. Please try again.',
+    fetchApprovedHistory: 'Unable to load approved clearance history. Please try again.',
     fetchFinancialQueue: 'Unable to load financial records. Please try again.',
     signClearance: 'Unable to update the clearance decision. Please try again.',
+    reopenClearance: 'Unable to return clearance requirement to pending. Please try again.',
     updateFinancialStatus: 'Unable to update the financial status. Please try again.',
   }[action];
 }

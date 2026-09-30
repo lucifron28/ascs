@@ -11,8 +11,11 @@ import {
   deactivateUserAccountAction,
   reactivateUserAccountAction,
   resetUserTemporaryPasswordAction,
+  deleteUserAccountAction,
+  approveStudentRegistrationAction,
+  rejectStudentRegistrationAction,
 } from '@/app/actions/admin-accounts';
-import { fetchSignatoryCandidatesAction } from '@/app/actions/admin';
+import { fetchAdminUsersAction, fetchSignatoryCandidatesAction } from '@/app/actions/admin';
 
 describe('Account Lifecycle Integration Tests', () => {
   let adminSession: string;
@@ -236,16 +239,18 @@ describe('Account Lifecycle Integration Tests', () => {
     const uid = res.user.uid;
     const authUser = await getAdminAuth().getUser(uid);
     assert.equal(authUser.customClaims?.role, 'student');
+    assert.equal(authUser.customClaims?.accountStatus, 'pending_approval');
     assert.equal(authUser.customClaims?.mustChangePassword, false);
 
     const userDoc = await getAdminFirestore().collection('users').doc(uid).get();
+    assert.equal(userDoc.data()?.accountStatus, 'pending_approval');
+    assert.equal(userDoc.data()?.isActive, false);
     assert.equal(userDoc.data()?.createdBy, 'self_registration');
     assert.equal(userDoc.data()?.mustChangePassword, false);
 
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.data()?.studentNumber, registrationData.studentNumber);
     assert.equal(studentDoc.data()?.program, registrationData.program);
-
     const auditLogs = await getAdminFirestore()
       .collection('activityLogs')
       .where('action', '==', 'self_register_student_account')
@@ -380,5 +385,144 @@ describe('Account Lifecycle Integration Tests', () => {
 
     const userDoc = await getAdminFirestore().collection('users').doc('demo-student-f-uid').get();
     assert.equal(userDoc.data()?.accountStatus, 'inactive');
+  });
+
+  it('15. Student self-registration requires Admin approval before gaining clearance access', async () => {
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const regData = {
+      email: 'student.approval@example.test',
+      fullName: 'Approval Required Student',
+      studentNumber: 'STUD-2026-9993',
+      program: 'BSMA',
+      yearLevel: '2nd Year',
+      section: 'B',
+      password: 'student-password123',
+      confirmPassword: 'student-password123',
+    };
+
+    const regRes = await registerStudentAccountAction(regData);
+    assert.equal(regRes.success, true);
+    if (!regRes.success) return;
+    const studentUid = regRes.user.uid;
+
+    // 1. Admin sees pending registration in user list
+    const usersRes = await fetchAdminUsersAction();
+    assert.equal(usersRes.success, true);
+    if (usersRes.success) {
+      const found = usersRes.users.find((u) => u.uid === studentUid);
+      assert.ok(found);
+      assert.equal(found?.accountStatus, 'pending_approval');
+    }
+
+    // 2. Admin approves registration
+    const approveRes = await approveStudentRegistrationAction({ userId: studentUid });
+    assert.equal(approveRes.success, true);
+
+    // 3. Status is now active and student claims are synchronized
+    const updatedDoc = await getAdminFirestore().collection('users').doc(studentUid).get();
+    assert.equal(updatedDoc.data()?.accountStatus, 'active');
+    assert.equal(updatedDoc.data()?.isActive, true);
+
+    const updatedAuth = await getAdminAuth().getUser(studentUid);
+    assert.equal(updatedAuth.customClaims?.accountStatus, 'active');
+
+    const studentSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
+    assert.ok(studentSession);
+  });
+
+  it('16. Admin can permanently delete user and related application records', async () => {
+    process.env.TEST_SESSION_COOKIE = adminSession;
+
+    // Create a temporary student with an application
+    const tempStudent = await createStudentAccountAction({
+      email: 'deleteme@example.test',
+      fullName: 'Student To Delete',
+      studentNumber: 'STUD-DELETE-001',
+      program: 'BSAIS',
+      yearLevel: '1st Year',
+      section: 'A',
+    });
+    assert.equal(tempStudent.success, true);
+    if (!tempStudent.success) return;
+    const targetUid = tempStudent.user!.uid;
+
+    // Create a clearance application for this student
+    const appRef = getAdminFirestore().collection('clearanceApplications').doc(`app-${targetUid}`);
+    await appRef.set({
+      applicationNumber: 'CLR-DEL-001',
+      studentUid: targetUid,
+      overallStatus: 'pending',
+    });
+    await appRef.collection('approvals').doc('librarian').set({ status: 'pending' });
+    await appRef.collection('remarks').doc('rem1').set({ content: 'Test remark' });
+
+    // Admin permanently deletes the user
+    const delRes = await deleteUserAccountAction({ userId: targetUid });
+    assert.equal(delRes.success, true);
+
+    // Verify user is gone from Auth
+    await assert.rejects(
+      async () => getAdminAuth().getUser(targetUid),
+      /no user record|user-not-found/i
+    );
+
+    // Verify user is gone from Firestore collections
+    const userDoc = await getAdminFirestore().collection('users').doc(targetUid).get();
+    assert.equal(userDoc.exists, false);
+    const publicDoc = await getAdminFirestore().collection('publicUsers').doc(targetUid).get();
+    assert.equal(publicDoc.exists, false);
+    const studentDoc = await getAdminFirestore().collection('students').doc(targetUid).get();
+    assert.equal(studentDoc.exists, false);
+
+    // Verify application and subcollections are gone
+    const deletedApp = await appRef.get();
+    assert.equal(deletedApp.exists, false);
+    const deletedApprovals = await appRef.collection('approvals').get();
+    assert.equal(deletedApprovals.size, 0);
+  });
+
+  it('17. Admin self-deletion and final admin deletion are blocked', async () => {
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const currentAdminAuth = await getAdminAuth().getUserByEmail('admin@example.test');
+
+    // Self-deletion blocked
+    const selfDelRes = await deleteUserAccountAction({ userId: currentAdminAuth.uid });
+    assert.equal(selfDelRes.success, false);
+    if (!selfDelRes.success) {
+      assert.match(selfDelRes.error, /cannot perform deletion on your own administrator account/i);
+    }
+  });
+
+  it('18. Admin can reject pending student registration and delete account', async () => {
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const regData = {
+      email: 'student.reject@example.test',
+      fullName: 'Rejected Student',
+      studentNumber: 'STUD-2026-9994',
+      program: 'CRIM',
+      yearLevel: '3rd Year',
+      section: 'A',
+      password: 'student-password123',
+      confirmPassword: 'student-password123',
+    };
+
+    const regRes = await registerStudentAccountAction(regData);
+    assert.equal(regRes.success, true);
+    if (!regRes.success) return;
+    const studentUid = regRes.user.uid;
+
+    const rejectRes = await rejectStudentRegistrationAction({
+      userId: studentUid,
+      reason: 'Invalid enrollment credentials provided.',
+    });
+    assert.equal(rejectRes.success, true);
+
+    // Account must be completely deleted
+    await assert.rejects(
+      async () => getAdminAuth().getUser(studentUid),
+      /no user record|user-not-found/i
+    );
+    const userDoc = await getAdminFirestore().collection('users').doc(studentUid).get();
+    assert.equal(userDoc.exists, false);
   });
 });

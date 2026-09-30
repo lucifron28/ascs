@@ -153,7 +153,8 @@ test.describe('Responsive Layout & Horizontal Overflow Audit', () => {
     expect(scrollMetrics.overflowY).toBe('auto');
     expect(scrollMetrics.scrollHeight).toBeGreaterThanOrEqual(scrollMetrics.clientHeight);
 
-    for (const label of [/mark not approved/i, /mark pending/i, /approve clearance/i]) {
+    await expect(dialog.getByRole('button', { name: /mark not approved/i })).toHaveCount(0);
+    for (const label of [/mark pending/i, /approve clearance/i]) {
       const action = dialog.getByRole('button', { name: label });
       await action.scrollIntoViewIfNeeded();
       await expect(action).toBeVisible();

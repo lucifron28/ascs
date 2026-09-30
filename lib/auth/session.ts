@@ -65,6 +65,9 @@ export async function getAuthenticatedUserForPasswordChange(session?: string) {
   }
 
   const user = userDoc.data()!;
+  if (user.accountStatus === 'pending_approval') {
+    throw new Error('Unauthorized: Account is pending administrator approval.');
+  }
   if (user.accountStatus === 'inactive' || user.isActive === false) {
     throw new Error('Unauthorized: Account is inactive or deactivated.');
   }

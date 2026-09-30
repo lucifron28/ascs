@@ -248,8 +248,8 @@ export function sanitizeAuditMetadata<T extends Record<string, unknown>>(metadat
 }
 
 /** Synchronize accountStatus string and isActive boolean. */
-export function getAccountStatusFlags(status: 'active' | 'inactive'): {
-  accountStatus: 'active' | 'inactive';
+export function getAccountStatusFlags(status: 'active' | 'inactive' | 'pending_approval'): {
+  accountStatus: 'active' | 'inactive' | 'pending_approval';
   isActive: boolean;
 } {
   const isActive = status === 'active';
@@ -261,7 +261,7 @@ export function shouldRedirectToChangePassword(
   user: { mustChangePassword?: boolean; accountStatus?: string; isActive?: boolean } | null | undefined
 ): boolean {
   if (!user) return false;
-  if (user.accountStatus === 'inactive' || user.isActive === false) return false;
+  if (user.accountStatus === 'inactive' || user.accountStatus === 'pending_approval' || user.isActive === false) return false;
   return user.mustChangePassword === true;
 }
 

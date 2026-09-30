@@ -466,12 +466,12 @@ describe('Sequential Clearance Workflow Repairs Integration Tests', () => {
     const notApprovedRes = await signClearanceAction({
       applicationId,
       approvalId: 'librarian',
-      status: 'not_approved',
+      status: 'not_approved' as never,
       remarks: 'Direct reversal to rejected.',
     });
     assert.equal(notApprovedRes.success, false);
     if (!notApprovedRes.success) {
-      assert.match(notApprovedRes.error, /This clearance decision has already been finalized\./i);
+      assert.match(notApprovedRes.error, /finalized|invalid clearance approval status/i);
     }
   });
 

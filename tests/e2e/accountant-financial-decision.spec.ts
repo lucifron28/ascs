@@ -48,7 +48,7 @@ test.describe('Accountant financial decision state', () => {
       const paidRow = page.locator('tr', { hasText: 'STUD-2026-0001' });
       await expect(paidRow).toContainText('Completed');
       await expect(paidRow.getByRole('button', { name: /update/i })).toHaveCount(0);
-      await page.getByRole('button', { name: /back to action queue/i }).click();
+      await page.getByRole('button', { name: /back to action queue|all/i }).first().click();
       const unpaidRow = page.locator('tr', { hasText: 'STUD-2026-0004' });
       await unpaidRow.getByRole('button', { name: /update financial status/i }).click();
       await expect(page.getByRole('dialog').getByLabel(/mark unpaid dues/i)).toBeChecked();

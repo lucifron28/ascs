@@ -35,6 +35,7 @@ export async function proxy(request: NextRequest) {
 
   let role = 'student';
   let mustChangePassword = false;
+  let isPendingApproval = false;
 
   const isDevEmulator =
     !process.env.VERCEL &&
@@ -48,12 +49,14 @@ export async function proxy(request: NextRequest) {
     const devPayload = decodeDevelopmentJwt(session);
     role = (devPayload?.role as string) || 'student';
     mustChangePassword = devPayload?.mustChangePassword === true;
+    isPendingApproval = devPayload?.accountStatus === 'pending_approval';
   } else {
     try {
       const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'ascs11';
       const verifiedPayload = await verifyFirebaseSessionCookie(session, projectId);
       role = verifiedPayload.role || 'student';
       mustChangePassword = verifiedPayload.mustChangePassword === true;
+      isPendingApproval = verifiedPayload.accountStatus === 'pending_approval';
     } catch (verifyError: unknown) {
       const message = verifyError instanceof Error ? verifyError.message : 'Session verification error';
       console.error('Middleware session verification failed:', message);
@@ -73,6 +76,14 @@ export async function proxy(request: NextRequest) {
       return redirectRes;
     }
   }
+  // 0. Pending approval routing enforcement
+  if (isPendingApproval) {
+    url.pathname = '/login';
+    const redirectRes = NextResponse.redirect(url);
+    redirectRes.cookies.delete(sessionCookieName);
+    return redirectRes;
+  }
+
   // 1. Mandatory password change routing enforcement
   if (mustChangePassword) {
     const isAllowedPasswordChangePath =

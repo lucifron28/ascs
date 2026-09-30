@@ -19,6 +19,7 @@ import {
   type WorkflowState,
 } from '@/lib/clearance/workflow';
 import { logClearanceActionError, mapClearanceActionError } from '@/lib/clearance/action-errors';
+import { sanitizeAuditMetadata } from '@/lib/admin/lifecycle-validation';
 import type {
   QueryDocumentSnapshot,
   DocumentSnapshot,
@@ -461,11 +462,73 @@ export async function fetchPendingApprovalsAction() {
   }
 }
 
+// 3b. Fetch Approved Clearance History (Signatory)
+export async function fetchApprovedHistoryAction() {
+  try {
+    const { uid: userId, user } = await getAuthenticatedUser();
+    const role = user.role;
+
+    if (!(REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(role)) {
+      throw new Error('Unauthorized: Only active clearance signatories can access approved history.');
+    }
+
+    const firestore = getAdminFirestore();
+    const approvalsQuery = await firestore.collectionGroup('approvals')
+      .where('status', '==', 'approved')
+      .where('signatoryRole', '==', role)
+      .get();
+
+    const approvedHistory: Array<Record<string, unknown>> = [];
+
+    for (const approvalDoc of approvalsQuery.docs) {
+      const approvalData = approvalDoc.data();
+      if (approvalData.assignedSignatoryId && approvalData.assignedSignatoryId !== userId) continue;
+
+      const appRef = approvalDoc.ref.parent.parent;
+      if (!appRef) continue;
+      const appSnap = await appRef.get();
+      if (!appSnap.exists) continue;
+      const appData = appSnap.data()!;
+
+      approvedHistory.push({
+        approval_id: approvalDoc.id,
+        signatory_role: approvalData.signatoryRole,
+        status: approvalData.status,
+        remarks: approvalData.remarksLatest || null,
+        acted_at: approvalData.actedAt || approvalData.updatedAt || null,
+        acted_by_name: approvalData.actedByName || null,
+        application_id: appSnap.id,
+        application_number: appData.applicationNumber,
+        academic_year: appData.academicYear,
+        semester: appData.semester,
+        purpose: appData.purpose,
+        submitted_at: appData.submittedAt,
+        student_id_number: appData.studentNumber,
+        student_name: appData.studentName,
+        program: appData.program || null,
+        year_level: appData.yearLevel || null,
+        overall_status: appData.overallStatus,
+      });
+    }
+
+    approvedHistory.sort((a, b) => {
+      const timeA = a.acted_at ? new Date(a.acted_at as string).getTime() : 0;
+      const timeB = b.acted_at ? new Date(b.acted_at as string).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    return { success: true, role, approvedHistory };
+  } catch (error: unknown) {
+    logClearanceActionError('fetchApprovedHistory', error);
+    return { success: false, error: mapClearanceActionError('fetchApprovedHistory', error) };
+  }
+}
+
 // 4. Sign/Action Clearance Approval (Signatory)
 export async function signClearanceAction(data: {
   applicationId: string;
   approvalId: string;
-  status: 'approved' | 'pending' | 'not_approved';
+  status: 'approved' | 'pending';
   remarks: string;
 }) {
   try {
@@ -477,16 +540,15 @@ export async function signClearanceAction(data: {
       throw new Error('Application and approval identifiers are required.');
     }
 
-    const validApprovalStatuses = ['approved', 'pending', 'not_approved'] as const;
+    const validApprovalStatuses = ['approved', 'pending'] as const;
     if (!validApprovalStatuses.includes(data.status as unknown as (typeof validApprovalStatuses)[number])) {
-      throw new Error('Invalid clearance approval status.');
+      throw new Error('Invalid clearance approval status. Only approve and mark pending are permitted.');
     }
 
     const trimmedRemarks = data.remarks?.trim() || '';
-    if (data.status !== 'approved' && !trimmedRemarks) {
-      throw new Error('Remarks are required when marking an approval as pending or not approved.');
+    if (data.status === 'pending' && !trimmedRemarks) {
+      throw new Error('Remarks are required when marking an approval as pending.');
     }
-
     const firestore = getAdminFirestore();
     const appRef = firestore.collection('clearanceApplications').doc(data.applicationId);
     const approvalRef = appRef.collection('approvals').doc(data.approvalId);
@@ -636,6 +698,134 @@ export async function signClearanceAction(data: {
   }
 }
 
+// 4b. Reopen / Return Clearance Approval to Pending (Signatory)
+export async function reopenClearanceAction(data: {
+  applicationId: string;
+  approvalId: string;
+  remarks: string;
+}) {
+  try {
+    const { uid: signatoryId, user } = await getAuthenticatedUser();
+    if (!(REQUIRED_SIGNATORY_ROLES as readonly string[]).includes(user.role)) {
+      throw new Error('Unauthorized: This account is not an active clearance signatory.');
+    }
+    if (!data.applicationId || !data.approvalId) {
+      throw new Error('Application and approval identifiers are required.');
+    }
+
+    const trimmedRemarks = data.remarks?.trim() || '';
+    if (!trimmedRemarks) {
+      throw new Error('A reason or remark is required when returning an approved clearance to pending.');
+    }
+
+    const firestore = getAdminFirestore();
+    const appRef = firestore.collection('clearanceApplications').doc(data.applicationId);
+    const approvalRef = appRef.collection('approvals').doc(data.approvalId);
+
+    await firestore.runTransaction(async (transaction: Transaction) => {
+      const appSnap = await transaction.get(appRef);
+      const approvalSnap = await transaction.get(approvalRef);
+      const approvalsSnap = await transaction.get(appRef.collection('approvals'));
+
+      if (!appSnap.exists || !approvalSnap.exists) {
+        throw new Error('Clearance approval record not found.');
+      }
+
+      const appData = appSnap.data()!;
+      const approvalData = approvalSnap.data()!;
+
+      if (approvalData.signatoryRole !== user.role) {
+        throw new Error('Unauthorized: Evaluator department mismatch.');
+      }
+      if (approvalData.assignedSignatoryId && approvalData.assignedSignatoryId !== signatoryId) {
+        throw new Error('Unauthorized: This approval is assigned to another signatory.');
+      }
+      if (approvalData.status !== 'approved') {
+        throw new Error('Only approved clearance requirements can be returned to pending.');
+      }
+
+      const now = new Date().toISOString();
+
+      // 1. Revert approval status to pending and record remark
+      transaction.update(approvalRef, {
+        status: 'pending',
+        remarksLatest: trimmedRemarks,
+        actedAt: null,
+        reopenedAt: now,
+        reopenedBy: signatoryId,
+        reopenedByName: user.fullName,
+        updatedAt: now,
+      });
+
+      // 2. Append to remarks subcollection
+      const remarkRef = appRef.collection('remarks').doc();
+      transaction.set(remarkRef, {
+        approvalId: data.approvalId,
+        authorId: signatoryId,
+        authorName: user.fullName,
+        authorRole: user.role,
+        content: `[Reopened / Returned to Pending]: ${trimmedRemarks}`,
+        createdAt: now,
+      });
+
+      // 3. Recompute overall status & counters
+      const updatedApprovals = approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({
+        status: doc.id === data.approvalId ? 'pending' : doc.data().status,
+        signatoryRole: doc.id === data.approvalId ? approvalData.signatoryRole : doc.data().signatoryRole,
+      }));
+
+      const summary = getClearanceStatusSummary(updatedApprovals, appData.financialStatus);
+      const deanRows = updatedApprovals.filter((approval) => approval.signatoryRole === 'dean');
+      const deanApproved = deanRows.length > 0 && deanRows.every((approval) => approval.status === 'approved');
+
+      transaction.update(appRef, {
+        overallStatus: summary.overallStatus,
+        approvedCount: summary.approvedCount,
+        pendingCount: summary.pendingCount,
+        notApprovedCount: summary.notApprovedCount,
+        printableAvailable: summary.printableAvailable,
+        deanApproved,
+        updatedAt: now,
+      });
+
+      // 4. Send notification to student
+      const notifRef = firestore.collection('notifications').doc();
+      const stage = getWorkflowStageForRole(user.role);
+      transaction.set(notifRef, {
+        recipientId: appData.studentUid,
+        type: 'clearance_reopened',
+        message: `Your clearance requirement (${stage?.label || user.role}) has been returned to pending: ${trimmedRemarks}`,
+        relatedApplicationId: data.applicationId,
+        isRead: false,
+        createdAt: now,
+      });
+
+      // 5. Activity log
+      const logRef = firestore.collection('activityLogs').doc();
+      transaction.set(logRef, {
+        actorId: signatoryId,
+        actorName: user.fullName,
+        actorRole: user.role,
+        action: 'reopen_clearance_approval',
+        entityType: 'clearance_application',
+        entityId: data.applicationId,
+        metadata: sanitizeAuditMetadata({
+          applicationNumber: appData.applicationNumber,
+          approvalId: data.approvalId,
+          signatoryRole: user.role,
+          reason: trimmedRemarks,
+        }),
+        createdAt: now,
+      });
+    });
+
+    return { success: true, message: 'Clearance requirement has been returned to pending.' };
+  } catch (error: unknown) {
+    logClearanceActionError('reopenClearance', error);
+    return { success: false, error: mapClearanceActionError('reopenClearance', error) };
+  }
+}
+
 // 5. Fetch Accountant Financial Queue
 export async function fetchFinancialQueueAction() {
   try {
@@ -674,13 +864,14 @@ export async function fetchFinancialQueueAction() {
         student_name: data.studentName,
         student_id_number: data.studentNumber,
         is_actionable: actionable,
+        is_history: !actionable,
       });
     }
 
     const financialQueue = allEligibleRecords.filter((record) => record.is_actionable === true);
     const financialHistory = allEligibleRecords.filter((record) => record.is_actionable !== true);
 
-    return { success: true, financialQueue, financialHistory };
+    return { success: true, financialQueue, financialHistory, allRecords: allEligibleRecords };
   } catch (error: unknown) {
     logClearanceActionError('fetchFinancialQueue', error);
     return { success: false, error: mapClearanceActionError('fetchFinancialQueue', error) };

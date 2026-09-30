@@ -8,7 +8,9 @@ import {
   canSaveFinancialDecision,
   getFinancialNotesDisplay,
   getInitialFinancialDecision,
+  filterFinancialRecords,
   type FinancialDecision,
+  type AccountantFilterKey,
 } from '@/lib/clearance/financial-ui';
 
 interface FinancialRecord {
@@ -29,15 +31,15 @@ interface FinancialRecord {
   is_actionable?: boolean;
 }
 
+type AccountantFilter = AccountantFilterKey;
+
 export default function AccountantDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [records, setRecords] = useState<FinancialRecord[]>([]);
-  const [historyRecords, setHistoryRecords] = useState<FinancialRecord[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [allRecords, setAllRecords] = useState<FinancialRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-
+  const [statusFilter, setStatusFilter] = useState<AccountantFilter>('all');
   // Modal State
   const [selectedRecord, setSelectedRecord] = useState<FinancialRecord | null>(null);
   const [statusInput, setStatusInput] = useState<FinancialDecision>(null);
@@ -55,8 +57,11 @@ export default function AccountantDashboard() {
       const res = await fetchFinancialQueueAction();
       if (isMounted.current) {
         if (res.success) {
-          setRecords((res.financialQueue || []) as unknown as FinancialRecord[]);
-          setHistoryRecords((res.financialHistory || []) as unknown as FinancialRecord[]);
+          const queue = (res.financialQueue || []) as unknown as FinancialRecord[];
+          const history = (res.financialHistory || []) as unknown as FinancialRecord[];
+          const combined = (res.allRecords || [...queue, ...history]) as unknown as FinancialRecord[];
+          setRecords(queue);
+          setAllRecords(combined);
         } else {
           setError(res.error || 'Unable to load financial records. Please try again.');
         }
@@ -82,7 +87,7 @@ export default function AccountantDashboard() {
   }, []);
 
   const handleOpenUpdate = (rec: FinancialRecord) => {
-    if (showHistory || rec.is_actionable === false || rec.status === 'paid') return;
+    if (rec.is_actionable === false || rec.status === 'paid') return;
     setSelectedRecord(rec);
     setStatusInput(getInitialFinancialDecision(rec.status));
     setNotesInput(rec.notes || '');
@@ -131,23 +136,13 @@ export default function AccountantDashboard() {
     }
   };
 
-  // Filtered List
-  const visibleRecords = showHistory ? historyRecords : records;
-  const filteredRecords = visibleRecords.filter((rec) => {
-    const matchesSearch =
-      rec.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rec.student_id_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rec.application_number.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filtered List based on selected category and search query
+  const filteredRecords = filterFinancialRecords(allRecords, statusFilter, searchQuery);
 
-    const matchesStatus = statusFilter === 'all' || rec.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  const pendingCount = records.filter((r) => r.status === 'pending').length;
-  const unpaidCount = records.filter((r) => r.status === 'unpaid').length;
-  const paidCount = historyRecords.filter((r) => r.status === 'paid').length;
-
+  const pendingCount = allRecords.filter((r) => r.status === 'pending').length;
+  const unpaidCount = allRecords.filter((r) => r.status === 'unpaid').length;
+  const paidCount = allRecords.filter((r) => r.status === 'paid').length;
+  const historyCount = allRecords.filter((r) => r.status === 'paid' || r.is_actionable === false || r.overall_status === 'approved').length;
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-base-content font-sans">
@@ -228,7 +223,7 @@ export default function AccountantDashboard() {
         </div>
 
         {/* Status Filter */}
-        <div className="flex gap-2 w-full md:w-auto shrink-0 justify-end">
+        <div className="flex flex-wrap gap-2 w-full md:w-auto shrink-0 justify-end">
           <button
             onClick={() => setStatusFilter('all')}
             className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
@@ -237,7 +232,7 @@ export default function AccountantDashboard() {
                 : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
-            All
+            All ({allRecords.length})
           </button>
           <button
             onClick={() => setStatusFilter('pending')}
@@ -247,7 +242,7 @@ export default function AccountantDashboard() {
                 : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
-            Pending
+            Pending ({pendingCount})
           </button>
           <button
             onClick={() => setStatusFilter('unpaid')}
@@ -257,7 +252,7 @@ export default function AccountantDashboard() {
                 : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
-            Unpaid Dues
+            Unpaid Dues ({unpaidCount})
           </button>
           <button
             onClick={() => setStatusFilter('paid')}
@@ -267,21 +262,26 @@ export default function AccountantDashboard() {
                 : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
-            Paid / Cleared
+            Paid / Cleared ({paidCount})
           </button>
           <button
-            onClick={() => {
-              setShowHistory((current) => !current);
-              setStatusFilter('all');
-            }}
+            onClick={() => setStatusFilter('history')}
             className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
-              showHistory
-                ? 'bg-secondary text-secondary-content hover:bg-secondary/90'
+              statusFilter === 'history'
+                ? 'bg-primary text-primary-content hover:bg-primary/90'
                 : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
             }`}
           >
-            {showHistory ? 'Back to Action Queue' : `Completed History (${paidCount})`}
+            Completed History ({historyCount})
           </button>
+          {statusFilter === 'history' && (
+            <button
+              onClick={() => setStatusFilter('all')}
+              className="btn btn-sm min-h-11 btn-secondary text-secondary-content rounded-lg px-3 text-xs font-semibold"
+            >
+              Back to Action Queue
+            </button>
+          )}
         </div>
       </div>
 
@@ -289,8 +289,20 @@ export default function AccountantDashboard() {
       {filteredRecords.length === 0 ? (
         <div className="card bg-base-100 border border-base-content/15 p-12 rounded-xl text-center space-y-2 shadow-sm">
           <CircleEllipsis className="w-8 h-8 text-base-content/50 mx-auto" aria-hidden="true" />
-          <h3 className="text-base-content font-bold text-sm">{showHistory ? 'No Completed Financial Reviews' : 'No Actionable Accounts'}</h3>
-          <p className="text-base-content/70 text-xs font-medium">{showHistory ? 'No paid records are available in the completed history.' : 'Students appear here after Librarian Clearance is approved.'}</p>
+          <h3 className="text-base-content font-bold text-sm">
+            {statusFilter === 'all'
+              ? 'No Financial Records'
+              : statusFilter === 'pending'
+              ? 'No Pending Financial Reviews'
+              : statusFilter === 'unpaid'
+              ? 'No Unpaid Accounts'
+              : statusFilter === 'paid'
+              ? 'No Paid / Cleared Records'
+              : 'No Completed Financial History'}
+          </h3>
+          <p className="text-base-content/70 text-xs font-medium">
+            {searchQuery ? 'No records match your search criteria.' : 'Students appear here after Librarian Clearance is approved.'}
+          </p>
         </div>
       ) : (
         <div className="card bg-base-100 border border-base-content/15 shadow-sm p-6 rounded-xl">
@@ -337,7 +349,7 @@ export default function AccountantDashboard() {
                       {rec.verified_at ? new Date(rec.verified_at).toLocaleDateString() : '--'}
                     </td>
                     <td className="py-4 rounded-r-xl pr-4 text-right">
-                      {showHistory || rec.is_actionable === false || rec.status === 'paid' ? (
+                      {rec.is_actionable === false || rec.status === 'paid' ? (
                         <span className="text-xs font-semibold text-base-content/60 inline-flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5 text-success" aria-hidden="true" /> Completed
                         </span>

@@ -839,3 +839,274 @@ export async function completeMandatoryPasswordChangeAction() {
     error: 'Direct completion action is deprecated. Use the secure /api/auth/change-password endpoint.',
   };
 }
+
+// 7. Permanent User Deletion (Admin only)
+export async function deleteUserAccountAction(data: {
+  userId: string;
+  isRejection?: boolean;
+  rejectionReason?: string;
+}) {
+  try {
+    const { uid: adminUid, user: adminUser } = await getAuthenticatedAdmin();
+    if (!data.userId) {
+      throw new Error('User ID is required.');
+    }
+
+    checkSelfOperation(adminUid, data.userId, 'deletion');
+
+    const auth = getAdminAuth();
+    const firestore = getAdminFirestore();
+
+    const userRef = firestore.collection('users').doc(data.userId);
+    const userSnap = await userRef.get();
+
+    let targetEmail = '';
+    let targetRole: UserRole | 'unknown' = 'unknown';
+    let targetFullName = '';
+
+    if (userSnap.exists) {
+      const u = userSnap.data()!;
+      targetEmail = u.email || '';
+      targetRole = u.role || 'unknown';
+      targetFullName = u.fullName || '';
+
+      if (targetRole === 'admin') {
+        const activeAdminsSnap = await firestore
+          .collection('users')
+          .where('role', '==', 'admin')
+          .where('accountStatus', '==', 'active')
+          .get();
+        checkFinalActiveAdmin(activeAdminsSnap.size);
+      }
+    } else {
+      try {
+        const authUser = await auth.getUser(data.userId);
+        targetEmail = authUser.email || '';
+        const claimsRole = (authUser.customClaims?.role as UserRole) || 'unknown';
+        targetRole = claimsRole;
+        if (targetRole === 'admin') {
+          const activeAdminsSnap = await firestore
+            .collection('users')
+            .where('role', '==', 'admin')
+            .where('accountStatus', '==', 'active')
+            .get();
+          checkFinalActiveAdmin(activeAdminsSnap.size);
+        }
+      } catch (authErr: unknown) {
+        if ((authErr as { code?: string }).code === 'auth/user-not-found') {
+          throw new Error('User account not found.');
+        }
+        throw authErr;
+      }
+    }
+
+    // 1. Delete associated student records (applications, approvals, remarks, notifications)
+    if (targetRole === 'student' || targetRole === 'unknown') {
+      const appsSnap = await firestore
+        .collection('clearanceApplications')
+        .where('studentUid', '==', data.userId)
+        .get();
+
+      for (const appDoc of appsSnap.docs) {
+        const approvalsSnap = await appDoc.ref.collection('approvals').get();
+        for (const appr of approvalsSnap.docs) {
+          await appr.ref.delete().catch(() => {});
+        }
+        const remarksSnap = await appDoc.ref.collection('remarks').get();
+        for (const rem of remarksSnap.docs) {
+          await rem.ref.delete().catch(() => {});
+        }
+        await appDoc.ref.delete().catch(() => {});
+      }
+
+      const notifsSnap = await firestore
+        .collection('notifications')
+        .where('recipientId', '==', data.userId)
+        .get();
+      for (const notif of notifsSnap.docs) {
+        await notif.ref.delete().catch(() => {});
+      }
+
+      await firestore.collection('students').doc(data.userId).delete().catch(() => {});
+    }
+
+    // 2. Unassign from requirements if staff
+    if (targetRole !== 'student') {
+      const reqsSnap = await firestore
+        .collection('clearanceRequirements')
+        .where('assignedSignatoryId', '==', data.userId)
+        .get();
+      for (const reqDoc of reqsSnap.docs) {
+        await reqDoc.ref.update({
+          assignedSignatoryId: null,
+          assignedSignatoryName: null,
+          updatedAt: new Date().toISOString(),
+        }).catch(() => {});
+      }
+    }
+
+    // 3. Delete Firestore identity profiles
+    await firestore.collection('publicUsers').doc(data.userId).delete().catch(() => {});
+    await userRef.delete().catch(() => {});
+
+    // 4. Delete Auth user
+    try {
+      await auth.deleteUser(data.userId);
+    } catch (authDeleteErr: unknown) {
+      if ((authDeleteErr as { code?: string }).code !== 'auth/user-not-found') {
+        logSafeAuthError('delete_user_auth', authDeleteErr, data.userId);
+      }
+    }
+
+    // 5. Activity log
+    const now = new Date().toISOString();
+    const actionName = data.isRejection ? 'reject_student_registration' : 'delete_user_account';
+    const logRef = firestore.collection('activityLogs').doc();
+    await logRef.set({
+      actorId: adminUid,
+      actorName: adminUser.fullName || 'Administrator',
+      actorRole: 'admin',
+      action: actionName,
+      entityType: 'user',
+      entityId: data.userId,
+      metadata: sanitizeAuditMetadata({
+        deletedEmail: targetEmail,
+        deletedRole: targetRole,
+        deletedFullName: targetFullName,
+        reason: data.rejectionReason || null,
+      }),
+      createdAt: now,
+    });
+
+    return {
+      success: true,
+      message: data.isRejection
+        ? 'Student registration rejected and account deleted.'
+        : 'User account permanently deleted.',
+    };
+  } catch (error: unknown) {
+    logSafeAuthError('delete_user_account', error, data.userId);
+    return { success: false, error: mapLifecycleError(error, 'Failed to delete user account.') };
+  }
+}
+
+// 8. Approve Student Self-Registration (Admin only)
+export async function approveStudentRegistrationAction(data: { userId: string }) {
+  try {
+    const { uid: adminUid, user: adminUser } = await getAuthenticatedAdmin();
+    if (!data.userId) {
+      throw new Error('User ID is required.');
+    }
+
+    const firestore = getAdminFirestore();
+    const auth = getAdminAuth();
+    const userRef = firestore.collection('users').doc(data.userId);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists) {
+      throw new Error('User profile not found.');
+    }
+
+    const userData = userSnap.data()!;
+    if (userData.accountStatus !== 'pending_approval') {
+      throw new Error(`Cannot approve registration: Account status is '${userData.accountStatus}'.`);
+    }
+
+    try {
+      await auth.updateUser(data.userId, { disabled: false });
+      await auth.setCustomUserClaims(data.userId, {
+        role: 'student',
+        accountStatus: 'active',
+        mustChangePassword: false,
+      });
+    } catch (authErr: unknown) {
+      logSafeAuthError('approve_student_auth_update', authErr, data.userId);
+      throw new Error('Failed to update authentication claims for approved student.');
+    }
+
+    const now = new Date().toISOString();
+    const batch = firestore.batch();
+
+    batch.update(userRef, {
+      accountStatus: 'active',
+      isActive: true,
+      updatedAt: now,
+      approvedAt: now,
+      approvedBy: adminUid,
+    });
+
+    const publicRef = firestore.collection('publicUsers').doc(data.userId);
+    batch.update(publicRef, {
+      accountStatus: 'active',
+      isActive: true,
+      updatedAt: now,
+    });
+
+    const studentRef = firestore.collection('students').doc(data.userId);
+    const studentSnap = await studentRef.get();
+    if (studentSnap.exists) {
+      batch.update(studentRef, {
+        accountStatus: 'active',
+        updatedAt: now,
+      });
+    }
+
+    const logRef = firestore.collection('activityLogs').doc();
+    batch.set(logRef, {
+      actorId: adminUid,
+      actorName: adminUser.fullName || 'Administrator',
+      actorRole: 'admin',
+      action: 'approve_student_registration',
+      entityType: 'user',
+      entityId: data.userId,
+      metadata: sanitizeAuditMetadata({
+        email: userData.email,
+        fullName: userData.fullName,
+        studentNumber: userData.studentNumber,
+      }),
+      createdAt: now,
+    });
+
+    const notifRef = firestore.collection('notifications').doc();
+    batch.set(notifRef, {
+      recipientId: data.userId,
+      type: 'registration_approved',
+      message: 'Your student registration has been approved. You can now log in and submit your clearance application.',
+      isRead: false,
+      createdAt: now,
+    });
+
+    await batch.commit();
+    return { success: true, message: 'Student registration approved successfully.' };
+  } catch (error: unknown) {
+    logSafeAuthError('approve_student_registration', error, data.userId);
+    return { success: false, error: mapLifecycleError(error, 'Failed to approve student registration.') };
+  }
+}
+
+// 9. Reject Student Self-Registration (Admin only)
+export async function rejectStudentRegistrationAction(data: { userId: string; reason?: string }) {
+  try {
+    const firestore = getAdminFirestore();
+    const userRef = firestore.collection('users').doc(data.userId);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists) {
+      throw new Error('User profile not found.');
+    }
+
+    const userData = userSnap.data()!;
+    if (userData.accountStatus !== 'pending_approval') {
+      throw new Error(`Cannot reject registration: Account status is '${userData.accountStatus}'.`);
+    }
+
+    return await deleteUserAccountAction({
+      userId: data.userId,
+      isRejection: true,
+      rejectionReason: data.reason,
+    });
+  } catch (error: unknown) {
+    logSafeAuthError('reject_student_registration', error, data.userId);
+    return { success: false, error: mapLifecycleError(error, 'Failed to reject student registration.') };
+  }
+}

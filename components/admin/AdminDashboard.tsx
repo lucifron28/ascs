@@ -15,6 +15,9 @@ import {
   deactivateUserAccountAction,
   reactivateUserAccountAction,
   resetUserTemporaryPasswordAction,
+  deleteUserAccountAction,
+  approveStudentRegistrationAction,
+  rejectStudentRegistrationAction,
 } from '@/app/actions/admin-accounts';
 import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
@@ -40,6 +43,8 @@ import {
   UserCheck2,
   Copy,
   Check,
+  Trash2,
+  Clock,
 } from 'lucide-react';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
 interface UserRecord {
@@ -155,6 +160,16 @@ export default function AdminDashboard() {
     warning?: string;
   } | null>(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
+  // User Status Filtering
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending_approval' | 'inactive'>('all');
+
+  // Delete / Reject User Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserRecord | null>(null);
+  const [deleteActionType, setDeleteActionType] = useState<'delete' | 'reject'>('delete');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
   // Requirement Assignment Modal State
   const [selectedReq, setSelectedReq] = useState<RequirementRecord | null>(null);
   const [signatorySearch, setSignatorySearch] = useState('');
@@ -353,6 +368,62 @@ export default function AdminDashboard() {
       setModalLoading(false);
     }
   };
+  // Handle Delete / Reject User
+  const handleOpenDeleteModal = (user: UserRecord, type: 'delete' | 'reject' = 'delete') => {
+    setUserToDelete(user);
+    setDeleteActionType(type);
+    setDeleteError(null);
+    setDeleteSuccess(false);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const res = deleteActionType === 'reject'
+        ? await rejectStudentRegistrationAction({ userId: userToDelete.uid })
+        : await deleteUserAccountAction({ userId: userToDelete.uid });
+
+      if (res.success) {
+        setDeleteSuccess(true);
+        setTimeout(() => {
+          setDeleteModalOpen(false);
+          setUserToDelete(null);
+          loadData();
+        }, 800);
+      } else {
+        setDeleteError(res.error || 'Operation failed.');
+      }
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : 'Operation error.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Handle Approve Student Registration
+  const handleApproveStudent = async (user: UserRecord) => {
+    if (!window.confirm(`Approve registration for ${user.fullName} (${user.email})? The student will immediately gain clearance portal access.`)) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await approveStudentRegistrationAction({ userId: user.uid });
+      if (res.success) {
+        await loadData();
+      } else {
+        setError(res.error || 'Failed to approve registration.');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Approval error.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   // Handle Role Change
   const handleOpenRoleModal = (u: UserRecord) => {
@@ -456,14 +527,18 @@ export default function AdminDashboard() {
     }
   };
 
+  const pendingRegistrationsCount = users.filter((u) => u.accountStatus === 'pending_approval').length;
+
   // Filtered Users
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.fullName.toLowerCase().includes(userSearch.toLowerCase()) ||
       u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+      (u.studentNumber || '').toLowerCase().includes(userSearch.toLowerCase()) ||
       (u.username || '').toLowerCase().includes(userSearch.toLowerCase());
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-    return matchesSearch && matchesRole;
+    const matchesStatus = statusFilter === 'all' || u.accountStatus === statusFilter;
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
   // Eligible signatories for assignment modal (users with non-student role matching requirement role)
@@ -549,6 +624,31 @@ export default function AdminDashboard() {
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Pending Registrations Alert */}
+          {pendingRegistrationsCount > 0 && (
+            <div className="alert alert-warning shadow-sm border border-warning/30 flex items-center justify-between p-4 rounded-xl">
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-warning shrink-0" />
+                <div>
+                  <p className="font-bold text-sm text-base-content">
+                    {pendingRegistrationsCount} student registration(s) awaiting approval
+                  </p>
+                  <p className="text-xs text-base-content/70">
+                    New self-registered students require administrator confirmation before they can log in.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setActiveTab('users');
+                  setStatusFilter('pending_approval');
+                }}
+                className="btn btn-sm min-h-11 btn-warning font-semibold text-xs rounded-xl"
+              >
+                Review Registrations
+              </button>
+            </div>
+          )}
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="stat bg-base-100 border border-base-content/15 rounded-xl shadow-sm">
@@ -643,6 +743,52 @@ export default function AdminDashboard() {
               </button>
             </div>
           </div>
+          {/* Status Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-1 bg-base-100 p-2 rounded-xl border border-base-content/15 shadow-sm">
+            <span className="text-xs font-semibold text-base-content/60 mr-2 ml-1">Status:</span>
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`btn btn-xs min-h-9 px-3 rounded-lg border-none text-xs font-semibold ${
+                statusFilter === 'all'
+                  ? 'bg-primary text-primary-content hover:bg-primary/90'
+                  : 'bg-base-200 text-base-content/70 hover:bg-base-300'
+              }`}
+            >
+              All Users ({users.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('active')}
+              className={`btn btn-xs min-h-9 px-3 rounded-lg border-none text-xs font-semibold ${
+                statusFilter === 'active'
+                  ? 'bg-primary text-primary-content hover:bg-primary/90'
+                  : 'bg-base-200 text-base-content/70 hover:bg-base-300'
+              }`}
+            >
+              Active ({users.filter((u) => u.accountStatus === 'active').length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('pending_approval')}
+              className={`btn btn-xs min-h-9 px-3 rounded-lg border-none text-xs font-semibold ${
+                statusFilter === 'pending_approval'
+                  ? 'bg-warning text-warning-content hover:bg-warning/90'
+                  : pendingRegistrationsCount > 0
+                  ? 'bg-warning/20 text-warning hover:bg-warning/30 font-bold'
+                  : 'bg-base-200 text-base-content/70 hover:bg-base-300'
+              }`}
+            >
+              Pending Approval ({pendingRegistrationsCount})
+            </button>
+            <button
+              onClick={() => setStatusFilter('inactive')}
+              className={`btn btn-xs min-h-9 px-3 rounded-lg border-none text-xs font-semibold ${
+                statusFilter === 'inactive'
+                  ? 'bg-primary text-primary-content hover:bg-primary/90'
+                  : 'bg-base-200 text-base-content/70 hover:bg-base-300'
+              }`}
+            >
+              Inactive ({users.filter((u) => u.accountStatus === 'inactive' || u.isActive === false).length})
+            </button>
+          </div>
 
           {/* Users Table */}
           <p className="sm:hidden mb-2 text-xs text-base-content/60">Swipe horizontally to view all columns.</p>
@@ -687,12 +833,14 @@ export default function AdminDashboard() {
                       <td>
                         <span
                           className={`badge text-xs capitalize ${
-                            u.accountStatus === 'active'
+                            u.accountStatus === 'pending_approval'
+                              ? 'badge-warning border-warning/20 bg-warning/10 text-warning font-bold'
+                              : u.accountStatus === 'active'
                               ? 'badge-success border-success/20 bg-success/10 text-success'
                               : 'badge-error border-error/20 bg-error/10 text-error'
                           }`}
                         >
-                          {u.accountStatus || 'active'}
+                          {u.accountStatus === 'pending_approval' ? 'Pending Approval' : (u.accountStatus || 'active')}
                         </span>
                       </td>
                       <td>
@@ -706,58 +854,91 @@ export default function AdminDashboard() {
                       </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleOpenRoleModal(u)}
-                            disabled={u.uid === currentAdminUid}
-                            className="btn btn-sm min-h-11 btn-primary text-primary-content font-bold rounded-lg flex items-center gap-1"
-                            title="Change User Role"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                            <span className="hidden md:inline">Role</span>
-                          </button>
-
-                          {u.accountStatus === 'inactive' || u.isActive === false ? (
-                            <button
-                              onClick={() => {
-                                setTargetActionUser(u);
-                                setActionType('reactivate');
-                                setModalError(null);
-                              }}
-                              className="btn btn-sm min-h-11 btn-success text-success-content font-bold rounded-lg flex items-center gap-1"
-                              title="Reactivate Account"
-                            >
-                              <UserCheck2 className="w-3.5 h-3.5" />
-                              <span className="hidden md:inline">Reactivate</span>
-                            </button>
+                          {u.accountStatus === 'pending_approval' ? (
+                            <>
+                              <button
+                                onClick={() => handleApproveStudent(u)}
+                                className="btn btn-sm min-h-11 btn-success text-success-content font-bold rounded-lg flex items-center gap-1"
+                                title="Approve Student Registration"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Approve</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenDeleteModal(u, 'reject')}
+                                className="btn btn-sm min-h-11 btn-error text-error-content font-bold rounded-lg flex items-center gap-1"
+                                title="Reject Student Registration"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Reject</span>
+                              </button>
+                            </>
                           ) : (
-                            <button
-                              onClick={() => {
-                                setTargetActionUser(u);
-                                setActionType('deactivate');
-                                setModalError(null);
-                              }}
-                              disabled={u.uid === currentAdminUid}
-                              className="btn btn-sm min-h-11 btn-error text-error-content font-bold rounded-lg flex items-center gap-1"
-                              title="Deactivate Account"
-                            >
-                              <UserX className="w-3.5 h-3.5" />
-                              <span className="hidden md:inline">Deactivate</span>
-                            </button>
-                          )}
+                            <>
+                              <button
+                                onClick={() => handleOpenRoleModal(u)}
+                                disabled={u.uid === currentAdminUid}
+                                className="btn btn-sm min-h-11 btn-primary text-primary-content font-bold rounded-lg flex items-center gap-1"
+                                title="Change User Role"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                <span className="hidden md:inline">Role</span>
+                              </button>
 
-                          <button
-                            onClick={() => {
-                              setTargetActionUser(u);
-                              setActionType('reset_password');
-                              setModalError(null);
-                            }}
-                            disabled={u.uid === currentAdminUid}
-                            className="btn btn-sm min-h-11 btn-warning text-warning-content font-bold rounded-lg flex items-center gap-1"
-                            title="Reset Temporary Password"
-                          >
-                            <KeyRound className="w-3.5 h-3.5" />
-                            <span className="hidden md:inline">Reset Password</span>
-                          </button>
+                              {u.accountStatus === 'inactive' || u.isActive === false ? (
+                                <button
+                                  onClick={() => {
+                                    setTargetActionUser(u);
+                                    setActionType('reactivate');
+                                    setModalError(null);
+                                  }}
+                                  className="btn btn-sm min-h-11 btn-success text-success-content font-bold rounded-lg flex items-center gap-1"
+                                  title="Reactivate Account"
+                                >
+                                  <UserCheck2 className="w-3.5 h-3.5" />
+                                  <span className="hidden md:inline">Reactivate</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setTargetActionUser(u);
+                                    setActionType('deactivate');
+                                    setModalError(null);
+                                  }}
+                                  disabled={u.uid === currentAdminUid}
+                                  className="btn btn-sm min-h-11 btn-error text-error-content font-bold rounded-lg flex items-center gap-1"
+                                  title="Deactivate Account"
+                                >
+                                  <UserX className="w-3.5 h-3.5" />
+                                  <span className="hidden md:inline">Deactivate</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => {
+                                  setTargetActionUser(u);
+                                  setActionType('reset_password');
+                                  setModalError(null);
+                                }}
+                                disabled={u.uid === currentAdminUid}
+                                className="btn btn-sm min-h-11 btn-warning text-warning-content font-bold rounded-lg flex items-center gap-1"
+                                title="Reset Temporary Password"
+                              >
+                                <KeyRound className="w-3.5 h-3.5" />
+                                <span className="hidden md:inline">Reset</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleOpenDeleteModal(u, 'delete')}
+                                disabled={u.uid === currentAdminUid}
+                                className="btn btn-sm min-h-11 btn-outline border-error/40 text-error hover:bg-error hover:text-error-content font-bold rounded-lg flex items-center gap-1"
+                                title="Permanently Delete User"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span className="hidden md:inline">Delete</span>
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1473,6 +1654,91 @@ export default function AdminDashboard() {
             >
               Done & Close
             </button>
+          </div>
+        )}
+      </AccessibleDialog>
+      {/* Delete / Reject Accessible Dialog */}
+      <AccessibleDialog
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          if (!deleteLoading) {
+            setDeleteModalOpen(false);
+            setUserToDelete(null);
+          }
+        }}
+        title={deleteActionType === 'reject' ? 'Reject Student Registration' : 'Permanently Delete User Account'}
+        description={
+          deleteActionType === 'reject'
+            ? 'Reject and remove this pending student registration.'
+            : 'Permanently remove this user account from the system.'
+        }
+        preventClose={deleteLoading}
+        maxWidthClass="max-w-md"
+      >
+        {userToDelete && (
+          <div className="space-y-4">
+            {deleteSuccess ? (
+              <div role="status" aria-live="polite" className="alert alert-success text-success-content rounded-xl flex items-center gap-2 p-3 text-xs font-medium">
+                <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>{deleteActionType === 'reject' ? 'Registration rejected.' : 'User permanently deleted.'}</span>
+              </div>
+            ) : (
+              <>
+                <div className="alert alert-error text-error-content rounded-xl flex items-start gap-2.5 p-3.5 text-xs font-medium">
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" />
+                  <div>
+                    <p className="font-bold">Permanent Deletion Warning</p>
+                    <p className="mt-0.5 text-error-content/90">
+                      {deleteActionType === 'reject'
+                        ? 'This registration will be permanently removed. The student will not be able to access the clearance portal.'
+                        : 'This action is irreversible. All Auth credentials, Firestore profiles, and associated clearance records will be permanently removed.'}
+                    </p>
+                  </div>
+                </div>
+
+                {deleteError && (
+                  <div role="alert" className="alert alert-error text-error-content rounded-xl flex items-center gap-2 p-3 text-xs font-medium">
+                    <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>{deleteError}</span>
+                  </div>
+                )}
+
+                <div className="bg-base-200 border border-base-content/15 p-3 rounded-xl space-y-1 text-xs">
+                  <div><span className="text-base-content/60">Name:</span> <span className="font-semibold text-base-content">{userToDelete.fullName}</span></div>
+                  <div><span className="text-base-content/60">Email:</span> <span className="font-mono text-base-content">{userToDelete.email}</span></div>
+                  <div><span className="text-base-content/60">Role:</span> <span className="font-semibold text-base-content capitalize">{formatRoleLabel(userToDelete.role)}</span></div>
+                  {userToDelete.studentNumber && (
+                    <div><span className="text-base-content/60">Student #:</span> <span className="font-mono text-base-content">{userToDelete.studentNumber}</span></div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-base-content/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteModalOpen(false);
+                      setUserToDelete(null);
+                    }}
+                    disabled={deleteLoading}
+                    className="btn btn-sm min-h-11 btn-ghost rounded-xl text-xs font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    disabled={deleteLoading}
+                    className="btn btn-sm min-h-11 btn-error text-error-content rounded-xl text-xs font-semibold"
+                  >
+                    {deleteLoading
+                      ? 'Deleting...'
+                      : deleteActionType === 'reject'
+                      ? 'Confirm Rejection'
+                      : 'Permanently Delete User'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </AccessibleDialog>

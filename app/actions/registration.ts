@@ -61,6 +61,7 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
     try {
       await auth.setCustomUserClaims(createdUid, {
         role: 'student',
+        accountStatus: 'pending_approval',
         mustChangePassword: false,
       });
 
@@ -72,8 +73,8 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
         email: input.email,
         fullName: input.fullName,
         role: 'student',
-        accountStatus: 'active',
-        isActive: true,
+        accountStatus: 'pending_approval',
+        isActive: false,
         mustChangePassword: false,
         studentNumber: input.studentNumber,
         contactNumber: input.contactNumber,
@@ -88,8 +89,8 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
         email: input.email,
         fullName: input.fullName,
         role: 'student',
-        accountStatus: 'active',
-        isActive: true,
+        accountStatus: 'pending_approval',
+        isActive: false,
       });
 
       const studentRef = firestore.collection('students').doc(createdUid);
@@ -104,6 +105,7 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
         contactNumber: input.contactNumber,
         createdAt: now,
         updatedAt: now,
+        accountStatus: 'pending_approval',
       });
 
       const logRef = firestore.collection('activityLogs').doc();
@@ -119,6 +121,7 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
           studentNumber: input.studentNumber,
           program: input.program,
           role: 'student',
+          accountStatus: 'pending_approval',
           registrationType: 'self_registration',
         }),
         createdAt: now,
