@@ -212,17 +212,18 @@ describe('Financial Workflow Integration Tests', () => {
     const pendingFiltered = filterFinancialRecords(allRecords, 'pending');
     assert.ok(pendingFiltered.every((r) => r.status === 'pending'));
 
-    // 3. Paid filter
+    // 3. Paid / Cleared filter: paid but overall clearance is not yet fully approved
     const paidFiltered = filterFinancialRecords(allRecords, 'paid');
-    assert.ok(paidFiltered.every((r) => r.status === 'paid'));
+    assert.ok(paidFiltered.every((r) => r.status === 'paid' && r.overall_status !== 'approved'));
 
-    // 4. Completed History filter
+    // 4. Completed History filter: final completed clearance records where overall_status === 'approved'
     const historyFiltered = filterFinancialRecords(allRecords, 'history');
-    assert.ok(historyFiltered.every((r) => r.status === 'paid' || r.is_history === true || r.overall_status === 'approved'));
+    assert.ok(historyFiltered.every((r) => r.overall_status === 'approved'));
 
-    // Verify All and Pending are distinct when paid records exist
-    if (paidFiltered.length > 0) {
-      assert.notEqual(allFiltered.length, pendingFiltered.length, 'All and Pending must not be identical when paid records exist');
+    // Verify Paid / Cleared and Completed History have zero overlap
+    const paidIds = new Set(paidFiltered.map((r) => r.student_id_number));
+    for (const h of historyFiltered) {
+      assert.equal(paidIds.has(h.student_id_number), false, 'Paid record must not appear in Completed History');
     }
 
     // 5. Search within filter

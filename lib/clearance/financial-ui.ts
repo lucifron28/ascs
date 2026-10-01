@@ -54,12 +54,10 @@ export function filterFinancialRecords<T extends FilterableFinancialRecord>(
       categoryMatches = records.filter((r) => r.status === 'unpaid');
       break;
     case 'paid':
-      categoryMatches = records.filter((r) => r.status === 'paid');
+      categoryMatches = records.filter((r) => r.status === 'paid' && r.overall_status !== 'approved');
       break;
     case 'history':
-      categoryMatches = records.filter(
-        (r) => r.is_history === true || r.status === 'paid' || r.overall_status === 'approved'
-      );
+      categoryMatches = records.filter((r) => r.overall_status === 'approved');
       break;
     default:
       categoryMatches = records;

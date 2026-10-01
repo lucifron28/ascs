@@ -44,6 +44,7 @@ test.describe('Accountant financial decision state', () => {
       await expect(save).toBeEnabled();
       await dialog.getByRole('button', { name: /close dialog/i }).click();
 
+      await page.getByRole('button', { name: /paid \/ cleared/i }).click();
       await page.getByRole('button', { name: /completed history/i }).click();
       const paidRow = page.locator('tr', { hasText: 'STUD-2026-0001' });
       await expect(paidRow).toContainText('Completed');

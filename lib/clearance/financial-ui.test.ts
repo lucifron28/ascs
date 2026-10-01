@@ -30,58 +30,80 @@ test('financial queue copy reflects pending, paid, and unpaid semantics', () => 
 
 test('filterFinancialRecords partitions distinct datasets for each filter', () => {
   const sampleRecords: FilterableFinancialRecord[] = [
+    // 1. Pending student: awaiting Accountant decision
     {
       status: 'pending',
       is_actionable: true,
+      overall_status: 'pending',
       student_name: 'Alice Reyes',
       student_id_number: 'STUD-001',
       application_number: 'CLR-2026-001',
       program: 'BSAIS',
     },
+    // 2. Unpaid student: outstanding balance recorded
     {
       status: 'unpaid',
       is_actionable: true,
+      overall_status: 'not_approved',
       student_name: 'Bob Santos',
       student_id_number: 'STUD-002',
       application_number: 'CLR-2026-002',
       program: 'BSMA',
     },
+    // 3. Paid but later stages incomplete: cleared at Accountant, awaiting subsequent signatories
     {
       status: 'paid',
       is_actionable: false,
-      is_history: true,
-      overall_status: 'approved',
-      student_name: 'Charlie Cruz',
+      overall_status: 'pending',
+      student_name: 'Clara Diaz',
       student_id_number: 'STUD-003',
       application_number: 'CLR-2026-003',
+      program: 'CRIM',
+    },
+    // 4. Fully completed student: entire 6-stage workflow approved
+    {
+      status: 'paid',
+      is_actionable: false,
+      overall_status: 'approved',
+      student_name: 'Daniel Cruz',
+      student_id_number: 'STUD-004',
+      application_number: 'CLR-2026-004',
       program: 'BEED',
     },
   ];
 
-  // 1. All returns all 3 records
+  // 1. All returns all 4 records
   const all = filterFinancialRecords(sampleRecords, 'all');
-  assert.equal(all.length, 3);
+  assert.equal(all.length, 4);
 
-  // 2. Pending returns only pending
+  // 2. Pending returns only pending student
   const pending = filterFinancialRecords(sampleRecords, 'pending');
   assert.equal(pending.length, 1);
   assert.equal(pending[0].student_name, 'Alice Reyes');
-  assert.notEqual(all.length, pending.length);
 
-  // 3. Unpaid returns only unpaid
+  // 3. Unpaid returns only unpaid student
   const unpaid = filterFinancialRecords(sampleRecords, 'unpaid');
   assert.equal(unpaid.length, 1);
   assert.equal(unpaid[0].student_name, 'Bob Santos');
 
-  // 4. Paid returns only paid
+  // 4. Paid / Cleared returns only paid students whose clearance is not yet fully completed
   const paid = filterFinancialRecords(sampleRecords, 'paid');
   assert.equal(paid.length, 1);
-  assert.equal(paid[0].student_name, 'Charlie Cruz');
+  assert.equal(paid[0].student_name, 'Clara Diaz');
 
-  // 5. History returns completed history records
+  // 5. Completed History returns only finalized completed clearance records (overall_status === approved)
   const history = filterFinancialRecords(sampleRecords, 'history');
   assert.equal(history.length, 1);
-  assert.equal(history[0].student_name, 'Charlie Cruz');
+  assert.equal(history[0].student_name, 'Daniel Cruz');
+
+  // Verify Paid / Cleared and Completed History are not duplicates and have zero overlap
+  const paidIds = new Set(paid.map((r) => r.student_id_number));
+  const historyIds = new Set(history.map((r) => r.student_id_number));
+  for (const id of paidIds) {
+    assert.equal(historyIds.has(id), false, `Paid ID ${id} must not appear in Completed History`);
+  }
+  assert.notEqual(all.length, pending.length);
+  assert.notEqual(paid.length, history.length === 0);
 });
 
 test('filterFinancialRecords searches accurately inside the selected filter', () => {
