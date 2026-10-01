@@ -314,10 +314,19 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
   }
   if (
     lowerMsg.includes('user not found') ||
+    lowerMsg.includes('user account not found') ||
+    lowerMsg.includes('user profile not found') ||
     lowerMsg.includes('user-not-found') ||
     lowerCode.includes('user-not-found')
   ) {
     return 'Target user or authentication account not found.';
+  }
+  if (
+    lowerMsg.includes('outside a request scope') ||
+    lowerMsg.includes('session cookie') ||
+    lowerMsg.includes('no session cookie')
+  ) {
+    return 'Unauthorized: Session authentication required.';
   }
   if (
     lowerMsg.includes('weak-password') ||
@@ -337,6 +346,9 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
     lowerMsg.includes('action blocked') ||
     lowerMsg.includes('unauthorized') ||
     lowerMsg.includes('cannot deactivate') ||
+    lowerMsg.includes('cannot reject') ||
+    lowerMsg.includes('user account deletion') ||
+    lowerMsg.includes('could not be completed') ||
     lowerMsg.includes('final active') ||
     lowerMsg.includes('requires explicit confirmation') ||
     lowerMsg.includes('manual intervention') ||

@@ -139,10 +139,10 @@ export default function AccountantDashboard() {
   // Filtered List based on selected category and search query
   const filteredRecords = filterFinancialRecords(allRecords, statusFilter, searchQuery);
 
-  const pendingCount = allRecords.filter((r) => r.status === 'pending').length;
-  const unpaidCount = allRecords.filter((r) => r.status === 'unpaid').length;
-  const paidCount = allRecords.filter((r) => r.status === 'paid').length;
-  const historyCount = allRecords.filter((r) => r.status === 'paid' || r.is_actionable === false || r.overall_status === 'approved').length;
+  const pendingCount = filterFinancialRecords(allRecords, 'pending').length;
+  const unpaidCount = filterFinancialRecords(allRecords, 'unpaid').length;
+  const paidCount = filterFinancialRecords(allRecords, 'paid').length;
+  const historyCount = filterFinancialRecords(allRecords, 'history').length;
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-base-content font-sans">

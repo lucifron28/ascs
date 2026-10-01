@@ -42,8 +42,9 @@ async function main() {
 
   const responseRoot = await fetch(`${baseUrl}/`);
   const responseLogin = await fetch(`${baseUrl}/login`);
-  if (!responseRoot.ok || !responseLogin.ok) {
-    throw new Error(`Public page check failed: /=${responseRoot.status}, /login=${responseLogin.status}`);
+  const responseRegister = await fetch(`${baseUrl}/register`);
+  if (!responseRoot.ok || !responseLogin.ok || !responseRegister.ok) {
+    throw new Error(`Public page check failed: /=${responseRoot.status}, /login=${responseLogin.status}, /register=${responseRegister.status}`);
   }
 
   requirePair(studentEmail, studentPassword, 'STUDENT');
@@ -86,6 +87,10 @@ async function main() {
     await page.getByRole('button', { name: /review clearance/i }).first().click();
     await page.getByRole('dialog', { name: /evaluate clearance requirement/i }).waitFor();
     await page.getByRole('button', { name: /approve clearance/i }).waitFor();
+    const notApprovedCount = await page.getByRole('dialog').getByRole('button', { name: /mark not approved/i }).count();
+    if (notApprovedCount > 0) {
+      throw new Error('Mark Not Approved button should not be present in the signatory review dialog.');
+    }
     await page.getByRole('dialog').getByRole('button', { name: /close dialog/i }).click();
     await page.getByRole('button', { name: /logout/i }).click();
     await page.waitForURL('**/login');
@@ -100,7 +105,7 @@ async function main() {
     if (localRequests.length > 0) {
       throw new Error(`Deployed browser attempted emulator requests: ${localRequests.join(', ')}`);
     }
-    console.log(`Vercel smoke test passed for ${baseUrl}: public pages, Student login/dashboard/logout, Librarian and Dean queues, Admin reports/logout, demo banner, and no emulator requests.`);
+    console.log(`Vercel smoke test passed for ${baseUrl}: public pages (/ , /login, /register), Student login/dashboard/logout, Librarian and Dean of Business Program queues, Admin reports/logout, demo banner, and no emulator requests.`);
   } finally {
     await browser.close();
   }

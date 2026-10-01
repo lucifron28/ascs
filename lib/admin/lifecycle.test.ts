@@ -180,6 +180,14 @@ test('13. Sensitive error mapping helper sanitizes internal errors', () => {
     'Action blocked: Cannot deactivate or demote the final active system administrator.'
   );
   assert.equal(
+    mapLifecycleError(new Error('User account deletion could not be completed for all associated records (auth_user). Manual review required.')),
+    'User account deletion could not be completed for all associated records (auth_user). Manual review required.'
+  );
+  assert.equal(
+    mapLifecycleError(new Error("Cannot reject registration: Account status is 'active'.")),
+    "Cannot reject registration: Account status is 'active'."
+  );
+  assert.equal(
     mapLifecycleError(new Error('Firestore transaction partial failure during sync')),
     'Operation encountered a synchronization issue. Check system audit logs.'
   );
