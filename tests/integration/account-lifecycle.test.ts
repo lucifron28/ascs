@@ -16,6 +16,8 @@ import {
   rejectStudentRegistrationAction,
 } from '@/app/actions/admin-accounts';
 import { fetchAdminUsersAction, fetchSignatoryCandidatesAction } from '@/app/actions/admin';
+import { getAuthenticatedUser } from '@/lib/auth/session';
+import { submitApplicationAction } from '@/app/actions/clearance';
 
 describe('Account Lifecycle Integration Tests', () => {
   let adminSession: string;
@@ -405,7 +407,27 @@ describe('Account Lifecycle Integration Tests', () => {
     if (!regRes.success) return;
     const studentUid = regRes.user.uid;
 
-    // 1. Admin sees pending registration in user list
+    // 1. Verify session/login is BLOCKED before approval
+    const preApprovalSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
+    process.env.TEST_SESSION_COOKIE = preApprovalSession;
+
+    await assert.rejects(
+      async () => getAuthenticatedUser(),
+      /pending administrator approval/i
+    );
+
+    const submitAttempt = await submitApplicationAction({
+      academicYear: '2026-2027',
+      semester: '1st Semester',
+      purpose: 'Enrollment',
+    });
+    assert.equal(submitAttempt.success, false);
+    assert.match(submitAttempt.error, /pending administrator approval/i);
+
+    // Switch back to Admin session
+    process.env.TEST_SESSION_COOKIE = adminSession;
+
+    // 2. Admin sees pending registration in user list
     const usersRes = await fetchAdminUsersAction();
     assert.equal(usersRes.success, true);
     if (usersRes.success) {
@@ -414,11 +436,11 @@ describe('Account Lifecycle Integration Tests', () => {
       assert.equal(found?.accountStatus, 'pending_approval');
     }
 
-    // 2. Admin approves registration
+    // 3. Admin approves registration
     const approveRes = await approveStudentRegistrationAction({ userId: studentUid });
     assert.equal(approveRes.success, true);
 
-    // 3. Status is now active and student claims are synchronized
+    // 4. Status is now active and student claims are synchronized
     const updatedDoc = await getAdminFirestore().collection('users').doc(studentUid).get();
     assert.equal(updatedDoc.data()?.accountStatus, 'active');
     assert.equal(updatedDoc.data()?.isActive, true);
@@ -426,8 +448,12 @@ describe('Account Lifecycle Integration Tests', () => {
     const updatedAuth = await getAdminAuth().getUser(studentUid);
     assert.equal(updatedAuth.customClaims?.accountStatus, 'active');
 
-    const studentSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
-    assert.ok(studentSession);
+    // 5. Approved student session now succeeds
+    const postApprovalSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
+    process.env.TEST_SESSION_COOKIE = postApprovalSession;
+    const authUserSession = await getAuthenticatedUser();
+    assert.equal(authUserSession.uid, studentUid);
+    assert.equal(authUserSession.user.accountStatus, 'active');
   });
 
   it('16. Admin can permanently delete user and related application records', async () => {
@@ -511,6 +537,26 @@ describe('Account Lifecycle Integration Tests', () => {
     if (!regRes.success) return;
     const studentUid = regRes.user.uid;
 
+    // A. Unauthenticated caller cannot reject
+    delete process.env.TEST_SESSION_COOKIE;
+    const unauthReject = await rejectStudentRegistrationAction({ userId: studentUid });
+    assert.equal(unauthReject.success, false);
+    assert.match(unauthReject.error, /unauthorized|session/i);
+
+    // B. Non-Admin (student) cannot reject
+    const studentSession = await getSessionCookieForUser('student.b@example.test', 'password123');
+    process.env.TEST_SESSION_COOKIE = studentSession;
+    const nonAdminReject = await rejectStudentRegistrationAction({ userId: studentUid });
+    assert.equal(nonAdminReject.success, false);
+    assert.match(nonAdminReject.error, /unauthorized|only system administrators/i);
+
+    // C. Admin cannot reject an active account via registration rejection flow
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const activeReject = await rejectStudentRegistrationAction({ userId: 'demo-student-a-uid' });
+    assert.equal(activeReject.success, false);
+    assert.match(activeReject.error, /cannot reject registration.*account status is 'active'/i);
+
+    // D. Admin rejects pending registration
     const rejectRes = await rejectStudentRegistrationAction({
       userId: studentUid,
       reason: 'Invalid enrollment credentials provided.',
@@ -524,5 +570,52 @@ describe('Account Lifecycle Integration Tests', () => {
     );
     const userDoc = await getAdminFirestore().collection('users').doc(studentUid).get();
     assert.equal(userDoc.exists, false);
+  });
+
+  it('19. Permanent staff deletion unassigns requirements and non-existent user fails safely', async () => {
+    process.env.TEST_SESSION_COOKIE = adminSession;
+
+    // 1. Create a staff member and assign to a requirement
+    const staffRes = await createStaffAccountAction({
+      email: 'guidance.temp@example.test',
+      fullName: 'Temporary Guidance Staff',
+      role: 'guidance_counselor',
+    });
+    assert.equal(staffRes.success, true);
+    if (!staffRes.success) return;
+    const staffUid = staffRes.user!.uid;
+
+    // Assign staff to guidance_counselor requirement
+    const assignRes = await updateRequirementAssignmentAction({
+      requirementId: 'guidance_counselor',
+      assignedSignatoryId: staffUid,
+      assignedSignatoryName: 'Temporary Guidance Staff',
+    });
+    assert.equal(assignRes.success, true);
+
+    // Verify requirement has assigned staff
+    const reqBefore = await getAdminFirestore().collection('clearanceRequirements').doc('guidance_counselor').get();
+    assert.equal(reqBefore.data()?.assignedSignatoryId, staffUid);
+
+    // Delete staff account permanently
+    const delRes = await deleteUserAccountAction({ userId: staffUid });
+    assert.equal(delRes.success, true);
+
+    // Verify requirement is unassigned
+    const reqAfter = await getAdminFirestore().collection('clearanceRequirements').doc('guidance_counselor').get();
+    assert.equal(reqAfter.data()?.assignedSignatoryId, null);
+    assert.equal(reqAfter.data()?.assignedSignatoryName, null);
+
+    // Re-assign back to demo guidance counselor for deterministic seed state
+    await updateRequirementAssignmentAction({
+      requirementId: 'guidance_counselor',
+      assignedSignatoryId: 'demo-guidance-uid',
+      assignedSignatoryName: 'Guidance Counselor',
+    });
+
+    // 2. Deleting a non-existent user fails safely
+    const nonExistentRes = await deleteUserAccountAction({ userId: 'non-existent-user-uid' });
+    assert.equal(nonExistentRes.success, false);
+    assert.match(nonExistentRes.error, /user account not found|target user/i);
   });
 });
