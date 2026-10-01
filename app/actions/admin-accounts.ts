@@ -900,66 +900,131 @@ export async function deleteUserAccountAction(data: {
       }
     }
 
-    // 1. Delete associated student records (applications, approvals, remarks, notifications)
+    const failedSteps: Array<{ step: string; error: string }> = [];
+
+    async function executeStep(stepName: string, operation: () => Promise<unknown>) {
+      try {
+        await operation();
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        failedSteps.push({ step: stepName, error: errorMsg });
+        logSafeAuthError(`delete_user_step_${stepName}`, err, data.userId);
+      }
+    }
+
+    // 1. Delete associated student records (applications, approvals, remarks)
     if (targetRole === 'student' || targetRole === 'unknown') {
-      const appsSnap = await firestore
-        .collection('clearanceApplications')
-        .where('studentUid', '==', data.userId)
-        .get();
+      await executeStep('applications_and_approvals', async () => {
+        const appsSnap = await firestore
+          .collection('clearanceApplications')
+          .where('studentUid', '==', data.userId)
+          .get();
 
-      for (const appDoc of appsSnap.docs) {
-        const approvalsSnap = await appDoc.ref.collection('approvals').get();
-        for (const appr of approvalsSnap.docs) {
-          await appr.ref.delete().catch(() => {});
+        for (const appDoc of appsSnap.docs) {
+          const approvalsSnap = await appDoc.ref.collection('approvals').get();
+          for (const appr of approvalsSnap.docs) {
+            await appr.ref.delete();
+          }
+          const remarksSnap = await appDoc.ref.collection('remarks').get();
+          for (const rem of remarksSnap.docs) {
+            await rem.ref.delete();
+          }
+          await appDoc.ref.delete();
         }
-        const remarksSnap = await appDoc.ref.collection('remarks').get();
-        for (const rem of remarksSnap.docs) {
-          await rem.ref.delete().catch(() => {});
+      });
+
+      await executeStep('student_notifications', async () => {
+        const notifsSnap = await firestore
+          .collection('notifications')
+          .where('recipientId', '==', data.userId)
+          .get();
+        for (const notif of notifsSnap.docs) {
+          await notif.ref.delete();
         }
-        await appDoc.ref.delete().catch(() => {});
-      }
+      });
 
-      const notifsSnap = await firestore
-        .collection('notifications')
-        .where('recipientId', '==', data.userId)
-        .get();
-      for (const notif of notifsSnap.docs) {
-        await notif.ref.delete().catch(() => {});
-      }
-
-      await firestore.collection('students').doc(data.userId).delete().catch(() => {});
+      await executeStep('students_profile', async () => {
+        const studentRef = firestore.collection('students').doc(data.userId);
+        const studentDoc = await studentRef.get();
+        if (studentDoc.exists) {
+          await studentRef.delete();
+        }
+      });
     }
 
     // 2. Unassign from requirements if staff
     if (targetRole !== 'student') {
-      const reqsSnap = await firestore
-        .collection('clearanceRequirements')
-        .where('assignedSignatoryId', '==', data.userId)
-        .get();
-      for (const reqDoc of reqsSnap.docs) {
-        await reqDoc.ref.update({
-          assignedSignatoryId: null,
-          assignedSignatoryName: null,
-          updatedAt: new Date().toISOString(),
-        }).catch(() => {});
-      }
+      await executeStep('requirement_unassignment', async () => {
+        const reqsSnap = await firestore
+          .collection('clearanceRequirements')
+          .where('assignedSignatoryId', '==', data.userId)
+          .get();
+        for (const reqDoc of reqsSnap.docs) {
+          await reqDoc.ref.update({
+            assignedSignatoryId: null,
+            assignedSignatoryName: null,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      });
     }
 
     // 3. Delete Firestore identity profiles
-    await firestore.collection('publicUsers').doc(data.userId).delete().catch(() => {});
-    await userRef.delete().catch(() => {});
+    await executeStep('public_users_profile', async () => {
+      const publicRef = firestore.collection('publicUsers').doc(data.userId);
+      const publicDoc = await publicRef.get();
+      if (publicDoc.exists) {
+        await publicRef.delete();
+      }
+    });
+
+    await executeStep('users_profile', async () => {
+      const targetUserDoc = await userRef.get();
+      if (targetUserDoc.exists) {
+        await userRef.delete();
+      }
+    });
 
     // 4. Delete Auth user
-    try {
-      await auth.deleteUser(data.userId);
-    } catch (authDeleteErr: unknown) {
-      if ((authDeleteErr as { code?: string }).code !== 'auth/user-not-found') {
-        logSafeAuthError('delete_user_auth', authDeleteErr, data.userId);
+    await executeStep('auth_user', async () => {
+      try {
+        await auth.deleteUser(data.userId);
+      } catch (authDeleteErr: unknown) {
+        if ((authDeleteErr as { code?: string }).code !== 'auth/user-not-found') {
+          throw authDeleteErr;
+        }
       }
+    });
+
+    const now = new Date().toISOString();
+
+    // 5. If any cleanup step failed, report safe failure and record audit log
+    if (failedSteps.length > 0) {
+      const failureLogRef = firestore.collection('activityLogs').doc();
+      await failureLogRef.set({
+        actorId: adminUid,
+        actorName: adminUser.fullName || 'Administrator',
+        actorRole: 'admin',
+        action: 'delete_user_account_failed',
+        entityType: 'user',
+        entityId: data.userId,
+        metadata: sanitizeAuditMetadata({
+          deletedEmail: targetEmail,
+          deletedRole: targetRole,
+          failedSteps: failedSteps.map((s) => s.step),
+          partialCleanup: true,
+        }),
+        createdAt: now,
+      }).catch(() => {});
+
+      logSafeAuthError('delete_user_account_partial_failure', { failedSteps }, data.userId);
+      return {
+        success: false,
+        error: `User account deletion could not be completed for all associated records (${failedSteps.map((s) => s.step).join(', ')}). Manual review required.`,
+      };
     }
 
-    // 5. Activity log
-    const now = new Date().toISOString();
+    // 6. All steps succeeded: record success activity log
     const actionName = data.isRejection ? 'reject_student_registration' : 'delete_user_account';
     const logRef = firestore.collection('activityLogs').doc();
     await logRef.set({
@@ -1087,6 +1152,11 @@ export async function approveStudentRegistrationAction(data: { userId: string })
 // 9. Reject Student Self-Registration (Admin only)
 export async function rejectStudentRegistrationAction(data: { userId: string; reason?: string }) {
   try {
+    await getAuthenticatedAdmin();
+    if (!data?.userId) {
+      throw new Error('User ID is required.');
+    }
+
     const firestore = getAdminFirestore();
     const userRef = firestore.collection('users').doc(data.userId);
     const userSnap = await userRef.get();
