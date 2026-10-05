@@ -58,7 +58,7 @@ test('filterFinancialRecords partitions distinct datasets for each filter', () =
       student_name: 'Clara Diaz',
       student_id_number: 'STUD-003',
       application_number: 'CLR-2026-003',
-      program: 'CRIM',
+      program: 'BSAIS',
     },
     // 4. Fully completed student: entire 6-stage workflow approved
     {
@@ -68,7 +68,7 @@ test('filterFinancialRecords partitions distinct datasets for each filter', () =
       student_name: 'Daniel Cruz',
       student_id_number: 'STUD-004',
       application_number: 'CLR-2026-004',
-      program: 'BEED',
+      program: 'BSMA',
     },
   ];
 
@@ -122,7 +122,7 @@ test('filterFinancialRecords searches accurately inside the selected filter', ()
       student_name: 'Juan dela Cruz',
       student_id_number: 'STUD-102',
       application_number: 'CLR-2026-102',
-      program: 'CRIM',
+      program: 'BSMA',
     },
     {
       status: 'paid',
@@ -150,7 +150,7 @@ test('filterFinancialRecords searches accurately inside the selected filter', ()
   assert.equal(searchApp[0].student_name, 'Maria Clara');
 
   // Search by program code inside all
-  const searchProg = filterFinancialRecords(sampleRecords, 'all', 'CRIM');
+  const searchProg = filterFinancialRecords(sampleRecords, 'all', 'BSMA');
   assert.equal(searchProg.length, 1);
   assert.equal(searchProg[0].student_name, 'Juan dela Cruz');
 

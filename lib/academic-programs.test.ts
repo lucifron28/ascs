@@ -7,6 +7,8 @@ import {
   formatProgramNameFirst,
   getProgramName,
   isAcademicProgramCode,
+  ACTIVE_STUDENT_PROGRAM_CODES,
+  isActiveStudentProgramCode,
 } from './academic-programs';
 
 test('PKM program catalog contains exactly the ten supported codes', () => {
@@ -23,6 +25,13 @@ test('PKM program catalog contains exactly the ten supported codes', () => {
     'FSM',
   ]);
   assert.equal(Object.keys(ACADEMIC_PROGRAMS).length, 10);
+});
+
+test('new student accounts expose only the two active program codes', () => {
+  assert.deepEqual(ACTIVE_STUDENT_PROGRAM_CODES, ['BSAIS', 'BSMA']);
+  assert.equal(isActiveStudentProgramCode('BSAIS'), true);
+  assert.equal(isActiveStudentProgramCode('BSMA'), true);
+  assert.equal(isActiveStudentProgramCode('BEED'), false);
 });
 
 test('PKM program code mappings and display helpers are canonical', () => {

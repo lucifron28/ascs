@@ -1,4 +1,4 @@
-import type { AcademicProgramCode } from '@/lib/academic-programs';
+import type { ActiveStudentProgramCode } from '@/lib/academic-programs';
 import type { UserRole } from '@/lib/types/roles';
 
 export const DEMO_ACCOUNT_GROUPS = [
@@ -20,7 +20,7 @@ export interface DemoAccountDefinition {
   role: UserRole;
   group: DemoAccountGroup;
   description: string;
-  program?: AcademicProgramCode;
+  program?: ActiveStudentProgramCode;
 }
 
 export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] = [
@@ -54,7 +54,7 @@ export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] = [
     fullName: 'Student C (Not Approved)',
     role: 'student',
     group: 'Students',
-    program: 'BEED',
+    program: 'BSAIS',
     description: 'Demonstrates a rejected requirement and visible remarks.',
   },
   {
@@ -65,7 +65,7 @@ export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] = [
     fullName: 'Student D (Unpaid Hold)',
     role: 'student',
     group: 'Students',
-    program: 'CRIM',
+    program: 'BSMA',
     description: 'Demonstrates how financial accountability can block final clearance.',
   },
   {
@@ -76,7 +76,7 @@ export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] = [
     fullName: 'Student E (Temp Pass)',
     role: 'student',
     group: 'Students',
-    program: 'ENGLISH',
+    program: 'BSAIS',
     description: 'Demonstrates mandatory password-change enforcement.',
   },
   {
@@ -87,7 +87,7 @@ export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] = [
     fullName: 'Student F (Inactive)',
     role: 'student',
     group: 'Students',
-    program: 'ACP',
+    program: 'BSMA',
     description: 'Demonstrates blocked account access.',
   },
   {
@@ -98,7 +98,7 @@ export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] = [
     fullName: 'Student G (Live Journey)',
     role: 'student',
     group: 'Students',
-    program: 'FSM',
+    program: 'BSAIS',
     description: 'Used for the complete end-to-end defense workflow from clearance submission through final approval.',
   },
   {

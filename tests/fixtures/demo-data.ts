@@ -1,7 +1,8 @@
 import { UserRole } from '@/lib/types/roles';
 import { ClearanceStatus, FinancialStatus, AccountStatus } from '@/lib/types/status';
 import { getDemoAccountById } from '@/lib/demo/demo-accounts';
-import type { AcademicProgramCode } from '@/lib/academic-programs';
+import type { ActiveStudentProgramCode } from '@/lib/academic-programs';
+import type { StudentProfileSemester, StudentYearLevel } from '@/lib/student-profile-options';
 
 export const DEMO_EMULATOR_PASSWORD = 'password123';
 
@@ -14,8 +15,9 @@ export interface DemoUserFixture {
   accountStatus: AccountStatus;
   mustChangePassword?: boolean;
   studentNumber?: string;
-  program?: AcademicProgramCode;
-  yearLevel?: string;
+  program?: ActiveStudentProgramCode;
+  yearLevel?: StudentYearLevel;
+  semester?: StudentProfileSemester;
   section?: string;
 }
 
@@ -60,6 +62,7 @@ export const DEMO_STUDENT_FIXTURES: DemoUserFixture[] = [
       studentNumber: 'STUD-2026-0001',
       program: 'BSAIS',
       yearLevel: '4th Year',
+      semester: '1st Semester',
       section: 'A',
     }),
   },
@@ -68,30 +71,34 @@ export const DEMO_STUDENT_FIXTURES: DemoUserFixture[] = [
       studentNumber: 'STUD-2026-0002',
       program: 'BSMA',
       yearLevel: '3rd Year',
+      semester: '1st Semester',
       section: 'B',
     }),
   },
   {
     ...buildDemoUser('student-c', {
       studentNumber: 'STUD-2026-0003',
-      program: 'BEED',
+      program: 'BSAIS',
       yearLevel: '4th Year',
+      semester: '2nd Semester',
       section: 'A',
     }),
   },
   {
     ...buildDemoUser('student-d', {
       studentNumber: 'STUD-2026-0004',
-      program: 'CRIM',
+      program: 'BSMA',
       yearLevel: '2nd Year',
+      semester: '2nd Semester',
       section: 'B',
     }),
   },
   {
     ...buildDemoUser('student-e', {
       studentNumber: 'STUD-2026-0005',
-      program: 'ENGLISH',
+      program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
       mustChangePassword: true,
     }),
@@ -99,8 +106,9 @@ export const DEMO_STUDENT_FIXTURES: DemoUserFixture[] = [
   {
     ...buildDemoUser('student-f', {
       studentNumber: 'STUD-2026-0006',
-      program: 'ACP',
+      program: 'BSMA',
       yearLevel: '4th Year',
+      semester: '2nd Semester',
       section: 'B',
       accountStatus: 'inactive',
     }),
@@ -108,15 +116,16 @@ export const DEMO_STUDENT_FIXTURES: DemoUserFixture[] = [
   {
     ...buildDemoUser('student-g', {
       studentNumber: 'STUD-2026-0007',
-      program: 'FSM',
+      program: 'BSAIS',
       yearLevel: '3rd Year',
+      semester: '1st Semester',
       section: 'A',
       mustChangePassword: false,
     }),
   },
 ];
 
-function studentProgram(id: string): AcademicProgramCode {
+function studentProgram(id: string): ActiveStudentProgramCode {
   const account = getDemoAccountById(id);
   const student = DEMO_STUDENT_FIXTURES.find((fixture) => fixture.uid === account?.uid);
   if (!student?.program) throw new Error(`Missing program for demo student: ${id}`);
@@ -129,7 +138,7 @@ export interface DemoApplicationFixture {
   studentUid: string;
   studentNumber: string;
   studentName: string;
-  program: AcademicProgramCode;
+  program: ActiveStudentProgramCode;
   yearLevel: string;
   section: string;
   academicYear: string;

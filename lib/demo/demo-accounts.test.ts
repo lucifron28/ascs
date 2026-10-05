@@ -6,6 +6,8 @@ import {
   shouldShowDemoAccountPicker,
 } from './demo-accounts';
 import { DEMO_APPLICATION_FIXTURES, DEMO_STUDENT_FIXTURES } from '@/tests/fixtures/demo-data';
+import { isActiveStudentProgramCode } from '@/lib/academic-programs';
+import { isStudentProfileSemester, isStudentYearLevel } from '@/lib/student-profile-options';
 
 test('demo account picker is restricted to Demo Mode plus Firebase Emulator Mode', () => {
   assert.equal(shouldShowDemoAccountPicker(true, true), true);
@@ -48,17 +50,18 @@ test('student fixtures use PKM programs and applications match their profiles', 
   const expected = new Map([
     ['student.a@example.test', 'BSAIS'],
     ['student.b@example.test', 'BSMA'],
-    ['student.c@example.test', 'BEED'],
-    ['student.d@example.test', 'CRIM'],
-    ['student.e@example.test', 'ENGLISH'],
-    ['student.f@example.test', 'ACP'],
-    ['student.g@example.test', 'FSM'],
+    ['student.c@example.test', 'BSAIS'],
+    ['student.d@example.test', 'BSMA'],
+    ['student.e@example.test', 'BSAIS'],
+    ['student.f@example.test', 'BSMA'],
+    ['student.g@example.test', 'BSAIS'],
   ]);
 
   for (const student of DEMO_STUDENT_FIXTURES) {
     assert.ok(student.program);
-    const legacyPlaceholders = ['BS' + 'IT', 'BS' + 'CS', 'BS' + 'IS'];
-    assert.ok(!legacyPlaceholders.includes(student.program));
+    assert.ok(isActiveStudentProgramCode(student.program));
+    assert.ok(isStudentYearLevel(student.yearLevel));
+    assert.ok(isStudentProfileSemester(student.semester));
     assert.equal(student.program, expected.get(student.email));
   }
 

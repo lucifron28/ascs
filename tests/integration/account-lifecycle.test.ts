@@ -36,6 +36,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-2026-9991',
       program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
       contactNumber: '09123456789',
     };
@@ -56,15 +57,23 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(userDoc.data()?.role, 'student');
     assert.equal(userDoc.data()?.mustChangePassword, true);
     assert.equal(userDoc.data()?.accountStatus, 'active');
+    assert.equal(userDoc.data()?.program, studentData.program);
+    assert.equal(userDoc.data()?.yearLevel, studentData.yearLevel);
+    assert.equal(userDoc.data()?.semester, studentData.semester);
 
     const publicDoc = await getAdminFirestore().collection('publicUsers').doc(uid).get();
     assert.equal(publicDoc.exists, true);
     assert.equal(publicDoc.data()?.role, 'student');
+    assert.equal(publicDoc.data()?.program, studentData.program);
+    assert.equal(publicDoc.data()?.yearLevel, studentData.yearLevel);
+    assert.equal(publicDoc.data()?.semester, studentData.semester);
 
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.exists, true);
     assert.equal(studentDoc.data()?.studentNumber, studentData.studentNumber);
     assert.equal(studentDoc.data()?.program, 'BSAIS');
+    assert.equal(studentDoc.data()?.yearLevel, studentData.yearLevel);
+    assert.equal(studentDoc.data()?.semester, studentData.semester);
   });
 
   it('2. Admin can create a staff account without creating a student profile', async () => {
@@ -228,6 +237,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-2026-9992',
       program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
       contactNumber: '09123456789',
       password: 'student-password',
@@ -249,10 +259,19 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(userDoc.data()?.isActive, false);
     assert.equal(userDoc.data()?.createdBy, 'self_registration');
     assert.equal(userDoc.data()?.mustChangePassword, false);
+    assert.equal(userDoc.data()?.program, registrationData.program);
+    assert.equal(userDoc.data()?.yearLevel, registrationData.yearLevel);
+    assert.equal(userDoc.data()?.semester, registrationData.semester);
 
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.data()?.studentNumber, registrationData.studentNumber);
     assert.equal(studentDoc.data()?.program, registrationData.program);
+    assert.equal(studentDoc.data()?.yearLevel, registrationData.yearLevel);
+    assert.equal(studentDoc.data()?.semester, registrationData.semester);
+    const publicDoc = await getAdminFirestore().collection('publicUsers').doc(uid).get();
+    assert.equal(publicDoc.data()?.program, registrationData.program);
+    assert.equal(publicDoc.data()?.yearLevel, registrationData.yearLevel);
+    assert.equal(publicDoc.data()?.semester, registrationData.semester);
     const auditLogs = await getAdminFirestore()
       .collection('activityLogs')
       .where('action', '==', 'self_register_student_account')
@@ -269,6 +288,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-2026-0001',
       program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
       contactNumber: '09123456789',
     };
@@ -397,6 +417,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-2026-9993',
       program: 'BSMA',
       yearLevel: '2nd Year',
+      semester: '2nd Semester',
       section: 'B',
       password: 'student-password123',
       confirmPassword: 'student-password123',
@@ -466,6 +487,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-DELETE-001',
       program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
     });
     assert.equal(tempStudent.success, true);
@@ -525,8 +547,9 @@ describe('Account Lifecycle Integration Tests', () => {
       email: 'student.reject@example.test',
       fullName: 'Rejected Student',
       studentNumber: 'STUD-2026-9994',
-      program: 'CRIM',
+      program: 'BSAIS',
       yearLevel: '3rd Year',
+      semester: '1st Semester',
       section: 'A',
       password: 'student-password123',
       confirmPassword: 'student-password123',

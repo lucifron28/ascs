@@ -25,7 +25,8 @@ test('1. Student account input validation sanitizes inputs', () => {
     studentNumber: ' stud-2026-0001 ',
     fullName: ' Juan Dela Cruz ',
     program: ' BSAIS ',
-    yearLevel: ' 4 ',
+    yearLevel: ' 4th Year ',
+    semester: ' 1st Semester ',
     section: ' A ',
   });
 
@@ -33,7 +34,8 @@ test('1. Student account input validation sanitizes inputs', () => {
   assert.equal(input.studentNumber, 'STUD-2026-0001');
   assert.equal(input.fullName, 'Juan Dela Cruz');
   assert.equal(input.program, 'BSAIS');
-  assert.equal(input.yearLevel, '4');
+  assert.equal(input.yearLevel, '4th Year');
+  assert.equal(input.semester, '1st Semester');
   assert.equal(input.section, 'A');
 });
 
@@ -81,11 +83,11 @@ test('4. Cryptographically generated temporary password satisfies security shape
 
 test('5. Student-required fields must be non-empty', () => {
   assert.throws(
-    () => validateStudentInput({ email: 's@pkm.edu.ph', studentNumber: 'S-1', fullName: '', program: 'BSAIS', yearLevel: '1', section: 'A' }),
+    () => validateStudentInput({ email: 's@pkm.edu.ph', studentNumber: 'S-1', fullName: '', program: 'BSAIS', yearLevel: '1st Year', semester: '1st Semester', section: 'A' }),
     /Full name is required/
   );
   assert.throws(
-    () => validateStudentInput({ email: 's@pkm.edu.ph', studentNumber: 'S-1', fullName: 'Name', program: '', yearLevel: '1', section: 'A' }),
+    () => validateStudentInput({ email: 's@pkm.edu.ph', studentNumber: 'S-1', fullName: 'Name', program: '', yearLevel: '1st Year', semester: '1st Semester', section: 'A' }),
     /Program is required/
   );
 });
@@ -200,6 +202,7 @@ test('14. Public student registration normalizes profile fields and keeps the ch
     fullName: ' New Student ',
     program: ' bsais ',
     yearLevel: ' 1st Year ',
+    semester: ' 2nd Semester ',
     section: ' A ',
     contactNumber: ' 09123456789 ',
     password: 'student-password',
@@ -210,6 +213,8 @@ test('14. Public student registration normalizes profile fields and keeps the ch
   assert.equal(input.studentNumber, 'STUD-2026-0042');
   assert.equal(input.fullName, 'New Student');
   assert.equal(input.program, 'BSAIS');
+  assert.equal(input.yearLevel, '1st Year');
+  assert.equal(input.semester, '2nd Semester');
   assert.equal(input.contactNumber, '09123456789');
   assert.equal(input.password, 'student-password');
 });
@@ -226,10 +231,90 @@ test('15. Public registration rejects weak or mismatched passwords', () => {
       fullName: 'Student',
       program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
       password: 'student-password',
       confirmPassword: 'different-password',
     }),
     /Passwords do not match/
+  );
+});
+
+test('16. New student profiles accept only active programs, canonical year levels, and profile semesters', () => {
+  for (const program of ['BSAIS', 'BSMA']) {
+    assert.doesNotThrow(() => validateStudentInput({
+      email: 'student@pkm.edu.ph',
+      studentNumber: 'STUD-2026-0044',
+      fullName: 'Student',
+      program,
+      yearLevel: '2nd Year',
+      semester: '1st Semester',
+      section: 'A',
+    }));
+  }
+
+  for (const program of ['BEED', 'CRIM', 'ENGLISH', '']) {
+    assert.throws(
+      () => validateStudentInput({
+        email: 'student@pkm.edu.ph',
+        studentNumber: 'STUD-2026-0045',
+        fullName: 'Student',
+        program,
+        yearLevel: '2nd Year',
+        semester: '1st Semester',
+        section: 'A',
+      }),
+      program ? /New students may only use BSAIS or BSMA/ : /Program is required/
+    );
+  }
+
+  for (const yearLevel of ['1st Year', '2nd Year', '3rd Year', '4th Year']) {
+    assert.doesNotThrow(() => validateStudentInput({
+      email: 'student@pkm.edu.ph',
+      studentNumber: 'STUD-2026-0046',
+      fullName: 'Student',
+      program: 'BSAIS',
+      yearLevel,
+      semester: '2nd Semester',
+      section: 'A',
+    }));
+  }
+
+  assert.throws(
+    () => validateStudentInput({
+      email: 'student@pkm.edu.ph',
+      studentNumber: 'STUD-2026-0047',
+      fullName: 'Student',
+      program: 'BSAIS',
+      yearLevel: '1',
+      semester: '1st Semester',
+      section: 'A',
+    }),
+    /Invalid year level/
+  );
+
+  for (const semester of ['1st Semester', '2nd Semester']) {
+    assert.doesNotThrow(() => validateStudentInput({
+      email: 'student@pkm.edu.ph',
+      studentNumber: 'STUD-2026-0048',
+      fullName: 'Student',
+      program: 'BSMA',
+      yearLevel: '3rd Year',
+      semester,
+      section: 'A',
+    }));
+  }
+
+  assert.throws(
+    () => validateStudentInput({
+      email: 'student@pkm.edu.ph',
+      studentNumber: 'STUD-2026-0049',
+      fullName: 'Student',
+      program: 'BSMA',
+      yearLevel: '3rd Year',
+      semester: 'Summer',
+      section: 'A',
+    }),
+    /Invalid semester/
   );
 });
