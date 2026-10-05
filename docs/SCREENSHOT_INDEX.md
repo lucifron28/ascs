@@ -12,7 +12,7 @@ defense, not production monitoring evidence.
 | `01-login.png` | `/login` | Public | Fictional sign-in with emulator-only account selector | Interface / authentication | Title or security |
 | `02-student-dashboard-approved.png` | `/student/dashboard` | Student | Student A approved + paid (BSAIS) | Results / workflow | Student workflow |
 | `03-student-dashboard-pending.png` | `/student/dashboard` | Student | Student B pending (BSMA) | Results / status derivation | Pending state |
-| `04-student-submit-clearance.png` | `/student/dashboard` | Student | Student G no application (FSM) | Functional interface | Submission step |
+| `04-student-submit-clearance.png` | `/student/dashboard` | Student | Student G no application (BSAIS) | Functional interface | Submission step |
 | `05-signatory-dashboard.png` | `/guidance_counselor/dashboard` | Guidance Counselor | Pending evaluation queue | Signatory workflow | Signatory workflow |
 | `06-signatory-review-dialog.png` | `/guidance_counselor/dashboard` | Guidance Counselor | Review dialog open | Dialog evidence | Signatory dialog |
 | `07-accountant-dashboard.png` | `/accountant/dashboard` | Accountant | Financial queue | Financial accountability | Accountant workflow |
@@ -24,7 +24,7 @@ defense, not production monitoring evidence.
 | `13-admin-reports.png` | `/admin/reports` | Admin | Institution report with normalized PKM programs | Reporting | Admin reports |
 | `14-dean-reports.png` | `/dean/reports` | Dean | Dean-approved report with normalized PKM programs | Reporting privacy | Dean reports |
 | `15-printable-clearance-prototype.png` | `/student/clearance/app-student-a/print` | Student | A4 PKM-slip-inspired prototype record (BSAIS): six ordered workflow rows, including the Step 2 financial gate | Output | Printable output |
-| `16-not-approved-student-view.png` | `/student/dashboard` | Student | Student C (BEED) remark / rejection | Status and limitations | Not-approved state |
+| `16-not-approved-student-view.png` | `/student/dashboard` | Student | Student C (BSAIS) remark / rejection | Status and limitations | Not-approved state |
 
 Reproduce with:
 

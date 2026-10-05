@@ -47,7 +47,7 @@ Purpose: Shows progress tracking and unavailable print output.
 
 Route: `/student/dashboard`
 Role: Student
-Fixture: Student G, active with no application (FSM - Food Service Management)
+Fixture: Student G, active with no application (BSAIS - Accounting Information System)
 Theme: Corporate
 Viewport: 1440x900
 Purpose: Shows the new clearance submission form.
@@ -184,7 +184,7 @@ reproduced signatures and is not an official certificate.
 
 Route: `/student/dashboard`
 Role: Student
-Fixture: Student C (BEED - Bachelor of Elementary Education) with Librarian rejection remark
+Fixture: Student C (BSAIS - Accounting Information System) with Librarian rejection remark
 Theme: Corporate
 Viewport: 1440px wide, full-page (base viewport 1440x900)
 Purpose: Shows visible remarks and blocked printability.

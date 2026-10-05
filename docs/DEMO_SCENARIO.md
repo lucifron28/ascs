@@ -87,11 +87,11 @@ local emulator and are intentionally fictional.
 | --- | --- | --- | --- |
 | Students / Student A - Approved | `student.a@example.test` | `password123` | `BSAIS` - Accounting Information System; approved + paid, printable record |
 | Students / Student B - Pending | `student.b@example.test` | `password123` | `BSMA` - Management Accounting; 2 approved / 3 pending |
-| Students / Student C - Not Approved | `student.c@example.test` | `password123` | `BEED` - Bachelor of Elementary Education; librarian remark |
-| Students / Student D - Unpaid Hold | `student.d@example.test` | `password123` | `CRIM` - Bachelor of Science in Criminology; financial hold |
-| Students / Student E - Temporary Password | `student.e@example.test` | `password123` | `ENGLISH` - Bachelor of Arts in English; forced password change |
-| Students / Student F - Inactive | `student.f@example.test` | `password123` | `ACP` - Agriculture Crop Production; Auth-disabled account |
-| Students / Student G - Live Journey | `student.g@example.test` | `password123` | `FSM` - Food Service Management; end-to-end defense workflow |
+| Students / Student C - Not Approved | `student.c@example.test` | `password123` | `BSAIS` - Accounting Information System; librarian remark |
+| Students / Student D - Unpaid Hold | `student.d@example.test` | `password123` | `BSMA` - Management Accounting; financial hold |
+| Students / Student E - Temporary Password | `student.e@example.test` | `password123` | `BSAIS` - Accounting Information System; forced password change |
+| Students / Student F - Inactive | `student.f@example.test` | `password123` | `BSMA` - Management Accounting; Auth-disabled account |
+| Students / Student G - Live Journey | `student.g@example.test` | `password123` | `BSAIS` - Accounting Information System; end-to-end defense workflow |
 | Clearance Signatories / Librarian | `librarian@example.test` | `password123` | Reviews the Library requirement |
 | Clearance Signatories / OSA Coordinator | `osa@example.test` | `password123` | Reviews the Office of Student Affairs requirement |
 | Clearance Signatories / Guidance Counselor | `guidance@example.test` | `password123` | Reviews the Guidance requirement |
