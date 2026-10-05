@@ -7,7 +7,13 @@ import { ArrowRight, BookOpen, Clock, Mail, Phone, UserRound } from 'lucide-reac
 import ThemeSelector from '@/components/ui/ThemeSelector';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { registerStudentAccountAction } from '@/app/actions/registration';
-import { ACADEMIC_PROGRAM_CODES, ACADEMIC_PROGRAMS } from '@/lib/academic-programs';
+import { ACTIVE_STUDENT_PROGRAM_CODES, ACADEMIC_PROGRAMS } from '@/lib/academic-programs';
+import {
+  STUDENT_PROFILE_SEMESTERS,
+  STUDENT_YEAR_LEVELS,
+  type StudentProfileSemester,
+  type StudentYearLevel,
+} from '@/lib/student-profile-options';
 
 const inputClassName =
   'input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl placeholder-base-content/40 text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary';
@@ -15,13 +21,25 @@ const inputClassName =
 const selectClassName =
   'select select-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl text-sm min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
-const initialForm = {
+const initialForm: {
+  fullName: string;
+  studentNumber: string;
+  email: string;
+  contactNumber: string;
+  program: string;
+  yearLevel: StudentYearLevel;
+  semester: StudentProfileSemester;
+  section: string;
+  password: string;
+  confirmPassword: string;
+} = {
   fullName: '',
   studentNumber: '',
   email: '',
   contactNumber: '',
   program: 'BSAIS',
   yearLevel: '1st Year',
+  semester: '1st Semester',
   section: 'A',
   password: '',
   confirmPassword: '',
@@ -221,7 +239,7 @@ export default function RegisterPage() {
                       required
                       className={`${selectClassName} pl-10`}
                     >
-                      {ACADEMIC_PROGRAM_CODES.map((code) => (
+                      {ACTIVE_STUDENT_PROGRAM_CODES.map((code) => (
                         <option key={code} value={code}>
                           {code} — {ACADEMIC_PROGRAMS[code]}
                         </option>
@@ -230,7 +248,7 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="form-control">
                     <label htmlFor="register-year-level" className="label py-1">
                       <span className="label-text text-xs font-semibold text-base-content/80">Year level</span>
@@ -244,8 +262,26 @@ export default function RegisterPage() {
                       required
                       className={selectClassName}
                     >
-                      {['1st Year', '2nd Year', '3rd Year', '4th Year'].map((year) => (
+                      {STUDENT_YEAR_LEVELS.map((year) => (
                         <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-control">
+                    <label htmlFor="register-semester" className="label py-1">
+                      <span className="label-text text-xs font-semibold text-base-content/80">Semester</span>
+                    </label>
+                    <select
+                      id="register-semester"
+                      name="semester"
+                      value={form.semester}
+                      onChange={(event) => updateField('semester', event.target.value)}
+                      disabled={loading}
+                      required
+                      className={selectClassName}
+                    >
+                      {STUDENT_PROFILE_SEMESTERS.map((semester) => (
+                        <option key={semester} value={semester}>{semester}</option>
                       ))}
                     </select>
                   </div>

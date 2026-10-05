@@ -1,6 +1,11 @@
 import { randomInt } from 'node:crypto';
 import type { UserRole } from '@/lib/types/roles';
-import { isAcademicProgramCode } from '@/lib/academic-programs';
+import { isActiveStudentProgramCode } from '@/lib/academic-programs';
+import {
+  isStudentProfileSemester,
+  isStudentYearLevel,
+  type StudentProfileSemester,
+} from '@/lib/student-profile-options';
 
 export interface StudentAccountInput {
   email: string;
@@ -8,6 +13,7 @@ export interface StudentAccountInput {
   fullName: string;
   program: string;
   yearLevel: string;
+  semester: string;
   section: string;
   contactNumber?: string | null;
   temporaryPassword?: string;
@@ -103,6 +109,7 @@ export function validateStudentInput(input: Partial<StudentAccountInput>): {
   fullName: string;
   program: string;
   yearLevel: string;
+  semester: StudentProfileSemester;
   section: string;
   contactNumber: string | null;
   temporaryPassword?: string;
@@ -117,11 +124,22 @@ export function validateStudentInput(input: Partial<StudentAccountInput>): {
     throw new Error('Program is required.');
   }
   const program = input.program.trim().toUpperCase();
-  if (!isAcademicProgramCode(program)) {
-    throw new Error(`Invalid Program Code: ${program}.`);
+  if (!isActiveStudentProgramCode(program)) {
+    throw new Error(`Invalid program. New students may only use BSAIS or BSMA.`);
   }
   if (typeof input.yearLevel !== 'string' || !input.yearLevel.trim()) {
     throw new Error('Year level is required.');
+  }
+  const yearLevel = input.yearLevel.trim();
+  if (!isStudentYearLevel(yearLevel)) {
+    throw new Error('Invalid year level. Choose 1st Year, 2nd Year, 3rd Year, or 4th Year.');
+  }
+  if (typeof input.semester !== 'string' || !input.semester.trim()) {
+    throw new Error('Semester is required.');
+  }
+  const semester = input.semester.trim();
+  if (!isStudentProfileSemester(semester)) {
+    throw new Error('Invalid semester. Student profiles may only use 1st Semester or 2nd Semester.');
   }
   if (typeof input.section !== 'string' || !input.section.trim()) {
     throw new Error('Section is required.');
@@ -137,7 +155,8 @@ export function validateStudentInput(input: Partial<StudentAccountInput>): {
     studentNumber,
     fullName: input.fullName.trim(),
     program,
-    yearLevel: input.yearLevel.trim(),
+    yearLevel,
+    semester,
     section: input.section.trim(),
     contactNumber: input.contactNumber?.trim() || null,
     temporaryPassword,
@@ -151,6 +170,7 @@ export function validateStudentRegistrationInput(input: Partial<StudentRegistrat
   fullName: string;
   program: string;
   yearLevel: string;
+  semester: StudentProfileSemester;
   section: string;
   contactNumber: string | null;
   password: string;
@@ -168,6 +188,7 @@ export function validateStudentRegistrationInput(input: Partial<StudentRegistrat
     fullName: student.fullName,
     program: student.program,
     yearLevel: student.yearLevel,
+    semester: student.semester,
     section: student.section,
     contactNumber: student.contactNumber,
     password,
@@ -369,7 +390,11 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
     lowerMsg.includes('full name is required') ||
     lowerMsg.includes('program is required') ||
     lowerMsg.includes('invalid program code') ||
+    lowerMsg.includes('invalid program') ||
     lowerMsg.includes('year level is required') ||
+    lowerMsg.includes('invalid year level') ||
+    lowerMsg.includes('semester is required') ||
+    lowerMsg.includes('invalid semester') ||
     lowerMsg.includes('section is required')
   ) {
     return message;

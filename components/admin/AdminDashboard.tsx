@@ -22,7 +22,8 @@ import {
 import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
 import { CLEARANCE_WORKFLOW_STAGES } from '@/lib/clearance/workflow';
-import { ACADEMIC_PROGRAM_CODES, ACADEMIC_PROGRAMS, formatProgram } from '@/lib/academic-programs';
+import { ACTIVE_STUDENT_PROGRAM_CODES, ACADEMIC_PROGRAMS, formatProgram } from '@/lib/academic-programs';
+import { STUDENT_PROFILE_SEMESTERS, STUDENT_YEAR_LEVELS } from '@/lib/student-profile-options';
 import { formatAuditTimestamp } from '@/lib/audit/timestamp';
 import {
   Users,
@@ -130,7 +131,8 @@ export default function AdminDashboard() {
     studentNumber: '',
     fullName: '',
     program: 'BSAIS',
-    yearLevel: '1',
+    yearLevel: '1st Year',
+    semester: '1st Semester',
     section: 'A',
     contactNumber: '',
     temporaryPassword: '',
@@ -242,7 +244,8 @@ export default function AdminDashboard() {
           studentNumber: '',
           fullName: '',
           program: 'BSAIS',
-          yearLevel: '1',
+          yearLevel: '1st Year',
+          semester: '1st Semester',
           section: 'A',
           contactNumber: '',
           temporaryPassword: '',
@@ -1292,7 +1295,7 @@ export default function AdminDashboard() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="form-control">
               <label htmlFor="create-student-program" className="label py-0.5">
                 <span className="label-text text-xs font-semibold">Program</span>
@@ -1304,7 +1307,7 @@ export default function AdminDashboard() {
                 onChange={(e) => setStudentForm({ ...studentForm, program: e.target.value })}
                 className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                {ACADEMIC_PROGRAM_CODES.map((code) => (
+                {ACTIVE_STUDENT_PROGRAM_CODES.map((code) => (
                   <option key={code} value={code}>
                     {code} — {ACADEMIC_PROGRAMS[code]}
                   </option>
@@ -1315,15 +1318,33 @@ export default function AdminDashboard() {
               <label htmlFor="create-student-year" className="label py-0.5">
                 <span className="label-text text-xs font-semibold">Year Level</span>
               </label>
-              <input
+              <select
                 id="create-student-year"
-                type="text"
                 required
-                placeholder="4"
                 value={studentForm.yearLevel}
                 onChange={(e) => setStudentForm({ ...studentForm, yearLevel: e.target.value })}
-                className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              />
+                className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                {STUDENT_YEAR_LEVELS.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-control">
+              <label htmlFor="create-student-semester" className="label py-0.5">
+                <span className="label-text text-xs font-semibold">Semester</span>
+              </label>
+              <select
+                id="create-student-semester"
+                required
+                value={studentForm.semester}
+                onChange={(e) => setStudentForm({ ...studentForm, semester: e.target.value })}
+                className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                {STUDENT_PROFILE_SEMESTERS.map((semester) => (
+                  <option key={semester} value={semester}>{semester}</option>
+                ))}
+              </select>
             </div>
             <div className="form-control">
               <label htmlFor="create-student-section" className="label py-0.5">

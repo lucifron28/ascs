@@ -217,6 +217,9 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         isActive: true,
         mustChangePassword: true,
         studentNumber: input.studentNumber,
+        program: input.program,
+        yearLevel: input.yearLevel,
+        semester: input.semester,
         contactNumber: input.contactNumber,
         createdAt: now,
         updatedAt: now,
@@ -231,6 +234,10 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         role: 'student',
         accountStatus: 'active',
         isActive: true,
+        studentNumber: input.studentNumber,
+        program: input.program,
+        yearLevel: input.yearLevel,
+        semester: input.semester,
       });
 
       const studentRef = firestore.collection('students').doc(uid);
@@ -241,6 +248,7 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         email: input.email,
         program: input.program,
         yearLevel: input.yearLevel,
+        semester: input.semester,
         section: input.section,
         contactNumber: input.contactNumber,
         createdAt: now,
@@ -265,6 +273,31 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
       });
 
       await batch.commit();
+
+      const [authRecord, userProfileSnap, publicProfileSnap, studentProfileSnap] = await Promise.all([
+        auth.getUser(uid),
+        firestore.collection('users').doc(uid).get(),
+        firestore.collection('publicUsers').doc(uid).get(),
+        firestore.collection('students').doc(uid).get(),
+      ]);
+      const userProfile = userProfileSnap.data();
+      const publicProfile = publicProfileSnap.data();
+      const studentProfile = studentProfileSnap.data();
+      if (
+        authRecord.customClaims?.role !== 'student' ||
+        authRecord.disabled === true ||
+        userProfile?.role !== 'student' ||
+        userProfile?.accountStatus !== 'active' ||
+        userProfile?.isActive === false ||
+        publicProfile?.role !== 'student' ||
+        publicProfile?.accountStatus !== 'active' ||
+        publicProfile?.isActive === false ||
+        studentProfile?.program !== input.program ||
+        studentProfile?.yearLevel !== input.yearLevel ||
+        studentProfile?.semester !== input.semester
+      ) {
+        throw new Error('Student account synchronization verification failed across Auth, users, publicUsers, and students.');
+      }
     } catch (dbErr: unknown) {
       let deleted = false;
       try {

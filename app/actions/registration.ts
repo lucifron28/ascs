@@ -77,6 +77,9 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
         isActive: false,
         mustChangePassword: false,
         studentNumber: input.studentNumber,
+        program: input.program,
+        yearLevel: input.yearLevel,
+        semester: input.semester,
         contactNumber: input.contactNumber,
         createdAt: now,
         updatedAt: now,
@@ -91,6 +94,10 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
         role: 'student',
         accountStatus: 'pending_approval',
         isActive: false,
+        studentNumber: input.studentNumber,
+        program: input.program,
+        yearLevel: input.yearLevel,
+        semester: input.semester,
       });
 
       const studentRef = firestore.collection('students').doc(createdUid);
@@ -101,6 +108,7 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
         email: input.email,
         program: input.program,
         yearLevel: input.yearLevel,
+        semester: input.semester,
         section: input.section,
         contactNumber: input.contactNumber,
         createdAt: now,
@@ -128,6 +136,31 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
       });
 
       await batch.commit();
+
+      const [authRecord, userProfileSnap, publicProfileSnap, studentProfileSnap] = await Promise.all([
+        auth.getUser(createdUid),
+        firestore.collection('users').doc(createdUid).get(),
+        firestore.collection('publicUsers').doc(createdUid).get(),
+        firestore.collection('students').doc(createdUid).get(),
+      ]);
+      const userProfile = userProfileSnap.data();
+      const publicProfile = publicProfileSnap.data();
+      const studentProfile = studentProfileSnap.data();
+      if (
+        authRecord.customClaims?.role !== 'student' ||
+        authRecord.customClaims?.accountStatus !== 'pending_approval' ||
+        userProfile?.role !== 'student' ||
+        userProfile?.accountStatus !== 'pending_approval' ||
+        userProfile?.isActive !== false ||
+        publicProfile?.role !== 'student' ||
+        publicProfile?.accountStatus !== 'pending_approval' ||
+        publicProfile?.isActive !== false ||
+        studentProfile?.program !== input.program ||
+        studentProfile?.yearLevel !== input.yearLevel ||
+        studentProfile?.semester !== input.semester
+      ) {
+        throw new Error('Student registration synchronization verification failed across Auth, users, publicUsers, and students.');
+      }
     } catch {
       let deleted = false;
       try {

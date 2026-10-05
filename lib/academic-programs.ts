@@ -24,8 +24,17 @@ export const ACADEMIC_PROGRAM_CODES = Object.keys(ACADEMIC_PROGRAMS) as Academic
 
 export const DEFAULT_ACADEMIC_PROGRAM_CODE: AcademicProgramCode = 'BSAIS';
 
+/** Programs available when creating a new student account. */
+export const ACTIVE_STUDENT_PROGRAM_CODES = ['BSAIS', 'BSMA'] as const satisfies readonly AcademicProgramCode[];
+
+export type ActiveStudentProgramCode = (typeof ACTIVE_STUDENT_PROGRAM_CODES)[number];
+
 export function isAcademicProgramCode(value: unknown): value is AcademicProgramCode {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(ACADEMIC_PROGRAMS, value);
+}
+
+export function isActiveStudentProgramCode(value: unknown): value is ActiveStudentProgramCode {
+  return typeof value === 'string' && ACTIVE_STUDENT_PROGRAM_CODES.includes(value as ActiveStudentProgramCode);
 }
 
 /** Return the canonical display name, falling back safely for legacy/unknown values. */
