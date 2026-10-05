@@ -63,10 +63,12 @@ describe('Account Lifecycle Integration Tests', () => {
 
     const publicDoc = await getAdminFirestore().collection('publicUsers').doc(uid).get();
     assert.equal(publicDoc.exists, true);
-    assert.equal(publicDoc.data()?.role, 'student');
-    assert.equal(publicDoc.data()?.program, studentData.program);
-    assert.equal(publicDoc.data()?.yearLevel, studentData.yearLevel);
-    assert.equal(publicDoc.data()?.semester, studentData.semester);
+    const publicData = publicDoc.data();
+    assert.equal(publicData?.role, 'student');
+    assert.equal(publicData?.studentNumber, undefined);
+    assert.equal(publicData?.program, undefined);
+    assert.equal(publicData?.yearLevel, undefined);
+    assert.equal(publicData?.semester, undefined);
 
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.exists, true);
@@ -269,9 +271,12 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(studentDoc.data()?.yearLevel, registrationData.yearLevel);
     assert.equal(studentDoc.data()?.semester, registrationData.semester);
     const publicDoc = await getAdminFirestore().collection('publicUsers').doc(uid).get();
-    assert.equal(publicDoc.data()?.program, registrationData.program);
-    assert.equal(publicDoc.data()?.yearLevel, registrationData.yearLevel);
-    assert.equal(publicDoc.data()?.semester, registrationData.semester);
+    const publicData = publicDoc.data();
+    assert.equal(publicData?.role, 'student');
+    assert.equal(publicData?.studentNumber, undefined);
+    assert.equal(publicData?.program, undefined);
+    assert.equal(publicData?.yearLevel, undefined);
+    assert.equal(publicData?.semester, undefined);
     const auditLogs = await getAdminFirestore()
       .collection('activityLogs')
       .where('action', '==', 'self_register_student_account')

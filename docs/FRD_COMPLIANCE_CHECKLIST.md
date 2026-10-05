@@ -36,7 +36,7 @@
 | Role | Status | Description & Evidence |
 | --- | --- | --- |
 | **Student** | `Implemented` | Can submit applications, view clearance status, track requirement checklist, read remarks, and print clearance certificate. |
-| **Librarian** | `Implemented` | Accesses role-scoped pending queue for library requirements to approve, mark pending, or set not approved with mandatory remarks. |
+| **Librarian** | `Implemented` | Accesses the role-scoped pending queue for library requirements to **Mark Pending** or **Approve Clearance**. A controlled **Reopen / Return to Pending** action is available for correcting an accidental approval. |
 | **Accountant** | `Implemented` | Financial gate only: accesses financial queue to verify student financial status and update status to `paid` or `unpaid`. |
 | **OSA Coordinator** | `Implemented` | Accesses role-scoped queue for Office of Student Affairs clearance sign-off. |
 | **Guidance Counselor** | `Implemented` | Accesses role-scoped queue for guidance department clearance sign-off. |
@@ -51,13 +51,13 @@
 | Requirement | Status | Description & Evidence |
 | --- | --- | --- |
 | **Admin-created accounts** | `Implemented` | `createStudentAccountAction` and `createStaffAccountAction` execute atomic Firestore batches (`users`, `publicUsers`, `students`, `activityLogs`), feature full Auth deletion compensation on custom claim or Firestore write failure, use cryptographically secure passwords (`crypto.randomInt`), and require explicit server-side confirmation (`confirmElevatedAdminCreation`) for elevated admin creation. |
-| **No student self-registration** | `Implemented` | Public registration is disabled; users authenticate against pre-created Firestore profiles. |
+| **Student self-registration** | `Implemented` | Public registration is enabled. New accounts are stored with `accountStatus = pending_approval`; an administrator must approve the account before normal student access is granted. |
 | **Student application submission** | `Implemented` | `submitApplicationAction` creates application and approval subdocuments in a Firestore transaction. |
 | **Duplicate-term prevention** | `Implemented` | Enforces deterministic doc ID `{studentUid}_{academicYear}_{semester}`; duplicate submissions throw transactional error. |
 | **Own-status tracking** | `Implemented` | Security rules restrict student reads to `studentUid == request.auth.uid`. |
 | **Signatory queues** | `Implemented` | Signatories query role-matching pending approval subdocuments through the collection-group index; server-side workflow gating exposes only the earliest unlocked stage. |
-| **Approve / Pending / Not Approved actions** | `Implemented` | `signClearanceAction` executes atomic status updates. |
-| **Required remarks** | `Implemented` | Server action enforces non-empty remarks when setting status to `pending` or `not_approved`. |
+| **Signatory clearance actions** | `Implemented` | `signClearanceAction` exposes only **Mark Pending** and **Approve Clearance** for normal signatory decisions. `reopenClearanceAction` provides the controlled **Reopen / Return to Pending** correction for an accidental approval. |
+| **Required remarks** | `Implemented` | Server actions require non-empty remarks when marking a requirement pending or returning an approved requirement to pending. |
 | **Accountant paid / unpaid verification** | `Implemented` | `updateFinancialStatusAction` updates direct application fields `financialStatus` and `financialVerifiedAt`. |
 | **Unpaid blocks approval** | `Implemented` | `lib/clearance/status.ts` forces overall status to `not_approved` whenever `financialStatus === 'unpaid'`. |
 | **Dean approves final clearance** | `Implemented` | Dean acts on the sixth workflow stage (the fifth approval row); the server writes `deanApproved` and recomputes application counters/status. |

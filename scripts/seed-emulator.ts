@@ -116,14 +116,6 @@ export async function seedEmulator(): Promise<void> {
       role: user.role,
       accountStatus: user.accountStatus,
       isActive: user.accountStatus === 'active',
-      ...(user.role === 'student'
-        ? {
-            studentNumber: user.studentNumber || 'STUD-2026-0000',
-            program: user.program || DEFAULT_ACADEMIC_PROGRAM_CODE,
-            yearLevel: user.yearLevel || '4th Year',
-            semester: user.semester || '1st Semester',
-          }
-        : {}),
     });
 
     if (user.role === 'student') {

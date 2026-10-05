@@ -94,10 +94,6 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
         role: 'student',
         accountStatus: 'pending_approval',
         isActive: false,
-        studentNumber: input.studentNumber,
-        program: input.program,
-        yearLevel: input.yearLevel,
-        semester: input.semester,
       });
 
       const studentRef = firestore.collection('students').doc(createdUid);

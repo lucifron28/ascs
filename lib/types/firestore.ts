@@ -31,10 +31,6 @@ export interface PublicUserProfile {
   role: string;
   accountStatus?: AccountStatus;
   isActive?: boolean;
-  studentNumber?: string;
-  program?: string;
-  yearLevel?: string;
-  semester?: string;
 }
 
 export interface StudentProfile {

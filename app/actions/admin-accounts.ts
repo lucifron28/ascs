@@ -234,10 +234,6 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         role: 'student',
         accountStatus: 'active',
         isActive: true,
-        studentNumber: input.studentNumber,
-        program: input.program,
-        yearLevel: input.yearLevel,
-        semester: input.semester,
       });
 
       const studentRef = firestore.collection('students').doc(uid);
