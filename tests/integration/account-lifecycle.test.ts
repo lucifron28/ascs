@@ -465,7 +465,7 @@ describe('Account Lifecycle Integration Tests', () => {
     // 3. Admin approves registration
     const approveRes = await approveStudentRegistrationAction({ userId: studentUid });
     assert.equal(approveRes.success, true);
-
+    assert.equal(approveRes.emailDelivery?.sent, true);
     // 4. Status is now active and student claims are synchronized
     const updatedDoc = await getAdminFirestore().collection('users').doc(studentUid).get();
     assert.equal(updatedDoc.data()?.accountStatus, 'active');
@@ -584,13 +584,22 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(activeReject.success, false);
     assert.match(activeReject.error, /cannot reject registration.*account status is 'active'/i);
 
-    // D. Admin rejects pending registration
+    // C2. Admin rejection requires a valid, length-bounded reason
+    const noReasonReject = await rejectStudentRegistrationAction({ userId: studentUid });
+    assert.equal(noReasonReject.success, false);
+    assert.match(noReasonReject.error, /rejection reason between 5 and 500 characters is required/i);
+
+    const shortReasonReject = await rejectStudentRegistrationAction({ userId: studentUid, reason: 'bad' });
+    assert.equal(shortReasonReject.success, false);
+    assert.match(shortReasonReject.error, /rejection reason between 5 and 500 characters is required/i);
+
+    // D. Admin rejects pending registration with mandatory reason
     const rejectRes = await rejectStudentRegistrationAction({
       userId: studentUid,
       reason: 'Invalid enrollment credentials provided.',
     });
     assert.equal(rejectRes.success, true);
-
+    assert.equal(rejectRes.emailDelivery?.sent, true);
     // Account must be completely deleted
     await assert.rejects(
       async () => getAdminAuth().getUser(studentUid),
