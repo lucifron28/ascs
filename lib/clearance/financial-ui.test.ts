@@ -86,24 +86,18 @@ test('filterFinancialRecords partitions distinct datasets for each filter', () =
   assert.equal(unpaid.length, 1);
   assert.equal(unpaid[0].student_name, 'Bob Santos');
 
-  // 4. Paid / Cleared returns only paid students whose clearance is not yet fully completed
+  // 4. Paid / Cleared returns all paid students whether in-progress or completed
   const paid = filterFinancialRecords(sampleRecords, 'paid');
-  assert.equal(paid.length, 1);
-  assert.equal(paid[0].student_name, 'Clara Diaz');
+  assert.equal(paid.length, 2);
+  const paidNames = paid.map((r) => r.student_name);
+  assert.ok(paidNames.includes('Clara Diaz'));
+  assert.ok(paidNames.includes('Daniel Cruz'));
 
-  // 5. Completed History returns only finalized completed clearance records (overall_status === approved)
-  const history = filterFinancialRecords(sampleRecords, 'history');
-  assert.equal(history.length, 1);
-  assert.equal(history[0].student_name, 'Daniel Cruz');
-
-  // Verify Paid / Cleared and Completed History are not duplicates and have zero overlap
-  const paidIds = new Set(paid.map((r) => r.student_id_number));
-  const historyIds = new Set(history.map((r) => r.student_id_number));
-  for (const id of paidIds) {
-    assert.equal(historyIds.has(id), false, `Paid ID ${id} must not appear in Completed History`);
-  }
-  assert.notEqual(all.length, pending.length);
-  assert.notEqual(paid.length, history.length === 0);
+  // Verify distinct counts
+  assert.equal(all.length, 4);
+  assert.equal(pending.length, 1);
+  assert.equal(unpaid.length, 1);
+  assert.equal(paid.length, 2);
 });
 
 test('filterFinancialRecords searches accurately inside the selected filter', () => {

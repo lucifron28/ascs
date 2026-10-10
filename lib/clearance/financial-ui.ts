@@ -23,12 +23,11 @@ export function getFinancialNotesDisplay(status: FinancialStatus, notes: string 
   return 'No outstanding balances recorded.';
 }
 
-export type AccountantFilterKey = 'all' | 'pending' | 'unpaid' | 'paid' | 'history';
+export type AccountantFilterKey = 'all' | 'pending' | 'unpaid' | 'paid';
 
 export interface FilterableFinancialRecord {
   status: FinancialStatus | string;
   is_actionable?: boolean;
-  is_history?: boolean;
   overall_status?: string;
   student_name?: string;
   student_id_number?: string;
@@ -54,10 +53,7 @@ export function filterFinancialRecords<T extends FilterableFinancialRecord>(
       categoryMatches = records.filter((r) => r.status === 'unpaid');
       break;
     case 'paid':
-      categoryMatches = records.filter((r) => r.status === 'paid' && r.overall_status !== 'approved');
-      break;
-    case 'history':
-      categoryMatches = records.filter((r) => r.overall_status === 'approved');
+      categoryMatches = records.filter((r) => r.status === 'paid');
       break;
     default:
       categoryMatches = records;

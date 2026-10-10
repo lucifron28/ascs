@@ -6,6 +6,7 @@ type ClearanceActionFallbacks = {
   signClearance: 'Unable to update the clearance decision. Please try again.';
   reopenClearance: 'Unable to return clearance requirement to pending. Please try again.';
   updateFinancialStatus: 'Unable to update the financial status. Please try again.';
+  reopenFinancialStatus: 'Unable to reopen financial status. Please try again.';
 };
 
 export type ClearanceAction = keyof ClearanceActionFallbacks;
@@ -33,6 +34,8 @@ const SAFE_BUSINESS_MESSAGES = [
   /^(?:only approved clearance requirements can be returned to pending\.)$/i,
   /^(?:invalid clearance approval status\. only approve and mark pending are permitted\.)$/i,
   /^(?:remarks are required when marking an approval as pending\.)$/i,
+  /^(?:a reason is required when reopening a financial record\.)$/i,
+  /^(?:only previously paid financial records can be reopened\.)$/i,
 ];
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -64,6 +67,7 @@ export function mapClearanceActionError<T extends ClearanceAction>(
     signClearance: 'Unable to update the clearance decision. Please try again.',
     reopenClearance: 'Unable to return clearance requirement to pending. Please try again.',
     updateFinancialStatus: 'Unable to update the financial status. Please try again.',
+    reopenFinancialStatus: 'Unable to reopen financial status. Please try again.',
   }[action];
 }
 

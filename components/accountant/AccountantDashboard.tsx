@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { fetchFinancialQueueAction, updateFinancialStatusAction } from '@/app/actions/clearance';
-import { CreditCard, CheckCircle2, ShieldAlert, AlertCircle, CircleEllipsis, Search, FileText } from 'lucide-react';
+import { fetchFinancialQueueAction, updateFinancialStatusAction, reopenFinancialStatusAction } from '@/app/actions/clearance';
+import { CreditCard, CheckCircle2, ShieldAlert, AlertCircle, CircleEllipsis, Search, FileText, RotateCcw } from 'lucide-react';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
 import {
   canSaveFinancialDecision,
@@ -47,6 +47,13 @@ export default function AccountantDashboard() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalSuccess, setModalSuccess] = useState(false);
+
+  // Reopen Modal State
+  const [reopenRecord, setReopenRecord] = useState<FinancialRecord | null>(null);
+  const [reopenReason, setReopenReason] = useState('');
+  const [reopenLoading, setReopenLoading] = useState(false);
+  const [reopenError, setReopenError] = useState<string | null>(null);
+  const [reopenSuccess, setReopenSuccess] = useState(false);
 
   const isMounted = React.useRef(true);
 
@@ -93,6 +100,44 @@ export default function AccountantDashboard() {
     setNotesInput(rec.notes || '');
     setModalError(null);
     setModalSuccess(false);
+  };
+
+  const handleOpenReopen = (rec: FinancialRecord) => {
+    setReopenRecord(rec);
+    setReopenReason('');
+    setReopenError(null);
+    setReopenSuccess(false);
+  };
+
+  const handleConfirmReopen = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reopenRecord) return;
+    const trimmed = reopenReason.trim();
+    if (!trimmed || trimmed.length < 3) {
+      setReopenError('A reason is required when reopening a financial record.');
+      return;
+    }
+    setReopenLoading(true);
+    setReopenError(null);
+    try {
+      const res = await reopenFinancialStatusAction({
+        recordId: reopenRecord.application_id || reopenRecord.id,
+        reason: trimmed,
+      });
+      if (res.success) {
+        setReopenSuccess(true);
+        setTimeout(async () => {
+          setReopenRecord(null);
+          await loadRecords();
+        }, 800);
+      } else {
+        setReopenError(res.error || 'Unable to reopen financial status.');
+      }
+    } catch (err: unknown) {
+      setReopenError(err instanceof Error ? err.message : 'Unable to reopen financial status.');
+    } finally {
+      setReopenLoading(false);
+    }
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -142,7 +187,6 @@ export default function AccountantDashboard() {
   const pendingCount = filterFinancialRecords(allRecords, 'pending').length;
   const unpaidCount = filterFinancialRecords(allRecords, 'unpaid').length;
   const paidCount = filterFinancialRecords(allRecords, 'paid').length;
-  const historyCount = filterFinancialRecords(allRecords, 'history').length;
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-base-content font-sans">
@@ -264,24 +308,7 @@ export default function AccountantDashboard() {
           >
             Paid / Cleared ({paidCount})
           </button>
-          <button
-            onClick={() => setStatusFilter('history')}
-            className={`btn btn-sm min-h-11 rounded-lg px-3 text-xs font-semibold border-none ${
-              statusFilter === 'history'
-                ? 'bg-primary text-primary-content hover:bg-primary/90'
-                : 'bg-base-200 text-base-content/80 hover:bg-base-300 hover:text-base-content'
-            }`}
-          >
-            Completed History ({historyCount})
-          </button>
-          {statusFilter === 'history' && (
-            <button
-              onClick={() => setStatusFilter('all')}
-              className="btn btn-sm min-h-11 btn-secondary text-secondary-content rounded-lg px-3 text-xs font-semibold"
-            >
-              Back to Action Queue
-            </button>
-          )}
+          {/* Completed History removed per client specification */}
         </div>
       </div>
 
@@ -296,9 +323,7 @@ export default function AccountantDashboard() {
               ? 'No Pending Financial Reviews'
               : statusFilter === 'unpaid'
               ? 'No Unpaid Accounts'
-              : statusFilter === 'paid'
-              ? 'No Paid / Cleared Records'
-              : 'No Completed Financial History'}
+              : 'No Paid / Cleared Records'}
           </h3>
           <p className="text-base-content/70 text-xs font-medium">
             {searchQuery ? 'No records match your search criteria.' : 'Students appear here after Librarian Clearance is approved.'}
@@ -349,10 +374,20 @@ export default function AccountantDashboard() {
                       {rec.verified_at ? new Date(rec.verified_at).toLocaleDateString() : '--'}
                     </td>
                     <td className="py-4 rounded-r-xl pr-4 text-right">
-                      {rec.is_actionable === false || rec.status === 'paid' ? (
-                        <span className="text-xs font-semibold text-base-content/60 inline-flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-success" aria-hidden="true" /> Completed
-                        </span>
+                      {rec.status === 'paid' ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs font-semibold text-base-content/60 inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-success" aria-hidden="true" /> Settled
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReopen(rec)}
+                            aria-label={`Reopen financial record for ${rec.student_name}`}
+                            className="btn btn-sm min-h-11 btn-outline btn-warning rounded-lg font-semibold shadow-sm flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" /> Reopen
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => handleOpenUpdate(rec)}
@@ -503,6 +538,96 @@ export default function AccountantDashboard() {
           </form>
         )}
       </AccessibleDialog>
+
+      {/* 5. Reopen Financial Account Accessible Dialog */}
+      <AccessibleDialog
+        isOpen={!!reopenRecord}
+        onClose={() => {
+          if (!reopenLoading) {
+            setReopenRecord(null);
+          }
+        }}
+        title="Reopen Financial Account"
+        description="Reopening a paid financial record will return its status to pending, lock downstream clearance stages, and require student re-evaluation."
+        preventClose={reopenLoading}
+        maxWidthClass="max-w-md"
+      >
+        {reopenRecord && (
+          <form onSubmit={handleConfirmReopen} className="space-y-4">
+            {reopenSuccess ? (
+              <div role="status" aria-live="polite" className="alert alert-success text-success-content rounded-xl flex items-center gap-2 p-3 text-xs font-medium">
+                <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Financial status reopened. Stage set back to pending.</span>
+              </div>
+            ) : (
+              <>
+                <div className="alert alert-warning text-warning-content rounded-xl flex items-start gap-2.5 p-3.5 text-xs font-medium">
+                  <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" />
+                  <div>
+                    <p className="font-bold">Workflow Impact Warning</p>
+                    <p className="mt-0.5 text-warning-content/90">
+                      Returning this account to Pending will invalidate downstream clearance approvals (OSA, Guidance, Area Chair, Dean) and revoke printable clearance eligibility until paid again.
+                     </p>
+                   </div>
+                 </div>
+
+                 {reopenError && (
+                   <div role="alert" className="alert alert-error text-error-content rounded-xl flex items-center gap-2 p-3 text-xs font-medium">
+                     <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                     <span>{reopenError}</span>
+                   </div>
+                 )}
+
+                 <div className="bg-base-200 border border-base-content/15 p-3 rounded-xl space-y-1 text-xs">
+                   <div><span className="text-base-content/60">Student:</span> <span className="font-semibold text-base-content">{reopenRecord.student_name}</span></div>
+                   <div><span className="text-base-content/60">Student No:</span> <span className="font-mono text-base-content">{reopenRecord.student_id_number}</span></div>
+                   <div><span className="text-base-content/60">Application:</span> <span className="font-mono text-base-content">{reopenRecord.application_number}</span></div>
+                 </div>
+
+                 <div className="form-control space-y-1.5">
+                   <label htmlFor="reopen-reason" className="label py-0">
+                     <span className="label-text text-base-content/80 font-medium text-xs">
+                       Reopen Reason <span className="text-error">*</span>
+                     </span>
+                   </label>
+                   <textarea
+                     id="reopen-reason"
+                     value={reopenReason}
+                     onChange={(e) => setReopenReason(e.target.value)}
+                     disabled={reopenLoading || reopenSuccess}
+                     placeholder="Specify the reason for reopening financial accountability (e.g., Unpaid graduation fee discovered during audit)..."
+                     rows={3}
+                     required
+                     className="textarea textarea-bordered w-full bg-base-200 border-base-content/10 text-base-content rounded-xl placeholder-base-content/40 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning"
+                   />
+                   <span className="text-[11px] text-base-content/60">
+                     This reason will be logged in the audit trail and sent to the student as a notification.
+                   </span>
+                 </div>
+
+                 <div className="pt-2 flex justify-end gap-2 border-t border-base-content/10">
+                   <button
+                     type="button"
+                     onClick={() => setReopenRecord(null)}
+                     disabled={reopenLoading}
+                     className="btn btn-sm btn-ghost rounded-xl text-xs"
+                   >
+                     Cancel
+                   </button>
+                   <button
+                     type="submit"
+                     disabled={reopenLoading || reopenSuccess || !reopenReason.trim()}
+                     aria-busy={reopenLoading}
+                     className="btn btn-sm btn-warning text-warning-content rounded-xl text-xs font-semibold px-5"
+                   >
+                     {reopenLoading ? 'Reopening record...' : 'Confirm Reopen'}
+                   </button>
+                 </div>
+               </>
+             )}
+           </form>
+         )}
+       </AccessibleDialog>
     </div>
   );
 }
