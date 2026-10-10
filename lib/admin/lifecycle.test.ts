@@ -16,6 +16,7 @@ import {
   validateRegistrationPassword,
   validateStudentRegistrationInput,
   mapLifecycleError,
+  validateRejectionReason,
 } from './lifecycle-validation';
 import type { UserRole } from '@/lib/types/roles';
 
@@ -317,4 +318,33 @@ test('16. New student profiles accept only active programs, canonical year level
     }),
     /Invalid semester/
   );
+});
+
+test('17. validateRejectionReason requires non-empty, length-bounded explanation', () => {
+  assert.equal(
+    validateRejectionReason('  Student not officially enrolled in BSAIS program.  '),
+    'Student not officially enrolled in BSAIS program.'
+  );
+
+  assert.throws(
+    () => validateRejectionReason(''),
+    /A rejection reason between 5 and 500 characters is required/
+  );
+  assert.throws(
+    () => validateRejectionReason('bad'),
+    /A rejection reason between 5 and 500 characters is required/
+  );
+  assert.throws(
+    () => validateRejectionReason(null),
+    /A rejection reason between 5 and 500 characters is required/
+  );
+  assert.throws(
+    () => validateRejectionReason('a'.repeat(501)),
+    /A rejection reason between 5 and 500 characters is required/
+  );
+
+  const mapped = mapLifecycleError(
+    new Error('A rejection reason between 5 and 500 characters is required.')
+  );
+  assert.equal(mapped, 'A rejection reason between 5 and 500 characters is required.');
 });

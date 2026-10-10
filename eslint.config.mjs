@@ -3,6 +3,15 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
 const eslintConfig = defineConfig([
+  globalIgnores([
+    ".next/**",
+    ".vercel/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "playwright-report/**",
+    "test-results/**",
+  ]),
   ...nextVitals,
   ...nextTs,
   {
@@ -11,15 +20,6 @@ const eslintConfig = defineConfig([
       "react-hooks/immutability": "off",
     }
   },
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    ".vercel/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
 ]);
 
 export default eslintConfig;

@@ -172,7 +172,7 @@ export default function AdminDashboard() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-  // Requirement Assignment Modal State
+  const [rejectionReason, setRejectionReason] = useState('');
   const [selectedReq, setSelectedReq] = useState<RequirementRecord | null>(null);
   const [signatorySearch, setSignatorySearch] = useState('');
   const [assignedSignatoryId, setAssignedSignatoryId] = useState<string | null>(null);
@@ -377,18 +377,26 @@ export default function AdminDashboard() {
     setDeleteActionType(type);
     setDeleteError(null);
     setDeleteSuccess(false);
+    setRejectionReason('');
     setDeleteModalOpen(true);
   };
-
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      const res = deleteActionType === 'reject'
-        ? await rejectStudentRegistrationAction({ userId: userToDelete.uid })
-        : await deleteUserAccountAction({ userId: userToDelete.uid });
+      if (deleteActionType === 'reject') {
+        const trimmed = rejectionReason.trim();
+        if (!trimmed || trimmed.length < 5 || trimmed.length > 500) {
+          setDeleteError('A rejection reason between 5 and 500 characters is required.');
+          setDeleteLoading(false);
+          return;
+        }
+      }
 
+      const res = deleteActionType === 'reject'
+        ? await rejectStudentRegistrationAction({ userId: userToDelete.uid, reason: rejectionReason.trim() })
+        : await deleteUserAccountAction({ userId: userToDelete.uid });
       if (res.success) {
         setDeleteSuccess(true);
         setTimeout(() => {
@@ -397,7 +405,7 @@ export default function AdminDashboard() {
           loadData();
         }, 800);
       } else {
-        setDeleteError(res.error || 'Operation failed.');
+        setDeleteError(('error' in res && typeof res.error === 'string' ? res.error : null) || 'Operation failed.');
       }
     } catch (err: unknown) {
       setDeleteError(err instanceof Error ? err.message : 'Operation error.');
@@ -1732,6 +1740,27 @@ export default function AdminDashboard() {
                     <div><span className="text-base-content/60">Student #:</span> <span className="font-mono text-base-content">{userToDelete.studentNumber}</span></div>
                   )}
                 </div>
+                {deleteActionType === 'reject' && (
+                  <div className="space-y-1.5 pt-1">
+                    <label htmlFor="rejectionReason" className="block text-xs font-semibold text-base-content">
+                      Rejection Reason <span className="text-error">*</span>
+                    </label>
+                    <textarea
+                      id="rejectionReason"
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Specify reason for rejecting this registration (e.g., Student number not found in official master list for 1st Semester)..."
+                      rows={3}
+                      maxLength={500}
+                      disabled={deleteLoading}
+                      className="textarea textarea-bordered w-full text-xs rounded-xl focus:outline-none focus:border-error"
+                    />
+                    <div className="flex justify-between text-[11px] text-base-content/60">
+                      <span>Sent to student&apos;s email as part of status notification.</span>
+                      <span>{rejectionReason.length} / 500</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-2 pt-3 border-t border-base-content/10">
                   <button

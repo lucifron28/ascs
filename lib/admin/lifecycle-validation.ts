@@ -248,6 +248,18 @@ export function checkRoleConversion(currentRole: UserRole, targetRole: UserRole)
     );
   }
 }
+/** Validate mandatory, length-bounded rejection reason for registration rejections. */
+export function validateRejectionReason(reason: unknown): string {
+  if (typeof reason !== 'string' || !reason.trim()) {
+    throw new Error('A rejection reason between 5 and 500 characters is required.');
+  }
+  const trimmed = reason.trim();
+  if (trimmed.length < 5 || trimmed.length > 500) {
+    throw new Error('A rejection reason between 5 and 500 characters is required.');
+  }
+  return trimmed;
+}
+
 
 /** Strip sensitive password/credential fields from activity log metadata. */
 export function sanitizeAuditMetadata<T extends Record<string, unknown>>(metadata: T): T {
@@ -368,6 +380,7 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
     lowerMsg.includes('unauthorized') ||
     lowerMsg.includes('cannot deactivate') ||
     lowerMsg.includes('cannot reject') ||
+    lowerMsg.includes('rejection reason') ||
     lowerMsg.includes('user account deletion') ||
     lowerMsg.includes('could not be completed') ||
     lowerMsg.includes('final active') ||
