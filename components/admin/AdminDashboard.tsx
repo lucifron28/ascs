@@ -584,7 +584,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="tabs tabs-boxed bg-base-100 p-1.5 rounded-xl border border-base-content/15 flex flex-wrap gap-1">
+      <div className="tabs tabs-boxed bg-base-100 p-1.5 rounded-xl border border-base-content/15 flex flex-wrap gap-1 max-w-full overflow-x-auto">
         <button
           onClick={() => setActiveTab('overview')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
@@ -621,7 +621,7 @@ export default function AdminDashboard() {
 
       {/* Error Alert */}
       {error && (
-        <div role="alert" className="alert alert-error rounded-xl shadow-sm border border-error/30 flex items-center justify-between">
+        <div role="alert" className="alert alert-error rounded-xl shadow-sm border border-error/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <span className="text-sm font-medium">{error}</span>
@@ -637,9 +637,9 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           {/* Pending Registrations Alert */}
           {pendingRegistrationsCount > 0 && (
-            <div className="alert alert-warning shadow-sm border border-warning/30 flex items-center justify-between p-4 rounded-xl">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-warning shrink-0" />
+            <div className="alert alert-warning shadow-sm border border-warning/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl">
+              <div className="flex items-start sm:items-center gap-3">
+                <Clock className="w-5 h-5 text-warning shrink-0 mt-0.5 sm:mt-0" />
                 <div>
                   <p className="font-bold text-sm text-base-content">
                     {pendingRegistrationsCount} student registration(s) awaiting approval
@@ -654,7 +654,7 @@ export default function AdminDashboard() {
                   setActiveTab('users');
                   setStatusFilter('pending_approval');
                 }}
-                className="btn btn-sm min-h-11 btn-warning font-semibold text-xs rounded-xl"
+                className="btn btn-sm min-h-11 btn-warning font-semibold text-xs rounded-xl w-full sm:w-auto shrink-0"
               >
                 Review Registrations
               </button>
