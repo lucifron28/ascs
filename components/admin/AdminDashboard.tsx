@@ -18,6 +18,7 @@ import {
   deleteUserAccountAction,
   approveStudentRegistrationAction,
   rejectStudentRegistrationAction,
+  retryRegistrationEmailAction,
 } from '@/app/actions/admin-accounts';
 import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
@@ -46,6 +47,7 @@ import {
   Check,
   Trash2,
   Clock,
+  Mail,
 } from 'lucide-react';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
 interface UserRecord {
@@ -173,6 +175,14 @@ export default function AdminDashboard() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  // Registration Email Delivery Feedback & Retry State
+  const [emailNotice, setEmailNotice] = useState<{
+    status: 'sent' | 'simulated' | 'failed';
+    message: string;
+    deliveryId?: string;
+    recipientEmail?: string;
+  } | null>(null);
+  const [retryingEmailId, setRetryingEmailId] = useState<string | null>(null);
   const [selectedReq, setSelectedReq] = useState<RequirementRecord | null>(null);
   const [signatorySearch, setSignatorySearch] = useState('');
   const [assignedSignatoryId, setAssignedSignatoryId] = useState<string | null>(null);
@@ -380,6 +390,36 @@ export default function AdminDashboard() {
     setRejectionReason('');
     setDeleteModalOpen(true);
   };
+  const handleRetryEmail = async (deliveryId: string) => {
+    setRetryingEmailId(deliveryId);
+    try {
+      const res = await retryRegistrationEmailAction({ deliveryId });
+      if (res.success) {
+        setEmailNotice({
+          status: res.status as 'sent' | 'simulated' | 'failed',
+          message:
+            res.status === 'sent'
+              ? 'Email successfully delivered to student.'
+              : 'Email delivery simulated for demo test account.',
+          deliveryId,
+        });
+      } else {
+        setEmailNotice({
+          status: 'failed',
+          message: `Email retry failed: ${res.error || 'Provider failure.'}`,
+          deliveryId,
+        });
+      }
+    } catch (err: unknown) {
+      setEmailNotice({
+        status: 'failed',
+        message: err instanceof Error ? err.message : 'Failed to retry email delivery.',
+        deliveryId,
+      });
+    } finally {
+      setRetryingEmailId(null);
+    }
+  };
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
     setDeleteLoading(true);
@@ -399,6 +439,27 @@ export default function AdminDashboard() {
         : await deleteUserAccountAction({ userId: userToDelete.uid });
       if (res.success) {
         setDeleteSuccess(true);
+        if ('emailDelivery' in res && res.emailDelivery) {
+          const del = res.emailDelivery as { status: 'sent' | 'simulated' | 'failed'; error?: string | null; deliveryId: string };
+          if (del.status === 'failed') {
+            setEmailNotice({
+              status: 'failed',
+              message: `Registration rejected and account deleted, but notification email failed to deliver: ${del.error || 'Provider unconfigured or network failure'}.`,
+              deliveryId: del.deliveryId,
+              recipientEmail: userToDelete.email,
+            });
+          } else if (del.status === 'sent') {
+            setEmailNotice({
+              status: 'sent',
+              message: `Registration rejected and notification email sent to ${userToDelete.email}.`,
+            });
+          } else {
+            setEmailNotice({
+              status: 'simulated',
+              message: `Registration rejected. Notification email simulated for demo identity (${userToDelete.email}).`,
+            });
+          }
+        }
         setTimeout(() => {
           setDeleteModalOpen(false);
           setUserToDelete(null);
@@ -425,6 +486,27 @@ export default function AdminDashboard() {
       const res = await approveStudentRegistrationAction({ userId: user.uid });
       if (res.success) {
         await loadData();
+        if ('emailDelivery' in res && res.emailDelivery) {
+          const del = res.emailDelivery as { status: 'sent' | 'simulated' | 'failed'; error?: string | null; deliveryId: string };
+          if (del.status === 'failed') {
+            setEmailNotice({
+              status: 'failed',
+              message: `Student approved, but confirmation email failed to deliver: ${del.error || 'Provider unconfigured or network failure'}.`,
+              deliveryId: del.deliveryId,
+              recipientEmail: user.email,
+            });
+          } else if (del.status === 'sent') {
+            setEmailNotice({
+              status: 'sent',
+              message: `Student approved and confirmation email sent to ${user.email}.`,
+            });
+          } else {
+            setEmailNotice({
+              status: 'simulated',
+              message: `Student approved. Confirmation email simulated for demo identity (${user.email}).`,
+            });
+          }
+        }
       } else {
         setError(res.error || 'Failed to approve registration.');
       }
@@ -629,6 +711,59 @@ export default function AdminDashboard() {
           <button onClick={() => setError(null)} className="btn btn-xs btn-ghost">
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Registration Email Delivery Status Banner */}
+      {emailNotice && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`alert rounded-xl shadow-sm border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 ${
+            emailNotice.status === 'sent'
+              ? 'alert-success border-success/30'
+              : emailNotice.status === 'failed'
+              ? 'alert-warning border-warning/30'
+              : 'alert-info border-info/30'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {emailNotice.status === 'sent' ? (
+              <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+            ) : emailNotice.status === 'failed' ? (
+              <AlertCircle className="w-5 h-5 text-warning shrink-0" />
+            ) : (
+              <Mail className="w-5 h-5 text-info shrink-0" />
+            )}
+            <div>
+              <p className="font-semibold text-xs text-base-content">{emailNotice.message}</p>
+              {emailNotice.status === 'failed' && (
+                <p className="text-[11px] text-base-content/70">
+                  Account decision is preserved. You can retry sending this notification email below.
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {emailNotice.status === 'failed' && emailNotice.deliveryId && (
+              <button
+                type="button"
+                onClick={() => handleRetryEmail(emailNotice.deliveryId!)}
+                disabled={retryingEmailId === emailNotice.deliveryId}
+                className="btn btn-xs min-h-8 btn-warning text-warning-content font-bold rounded-lg"
+              >
+                {retryingEmailId === emailNotice.deliveryId ? 'Retrying...' : 'Retry Email'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setEmailNotice(null)}
+              className="btn btn-xs btn-ghost text-base-content/60 hover:text-base-content"
+              aria-label="Dismiss email notice"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 

@@ -20,6 +20,12 @@ const eslintConfig = defineConfig([
       "react-hooks/immutability": "off",
     }
   },
+  {
+    files: ["**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
