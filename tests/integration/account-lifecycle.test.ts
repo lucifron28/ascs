@@ -14,6 +14,8 @@ import {
   deleteUserAccountAction,
   approveStudentRegistrationAction,
   rejectStudentRegistrationAction,
+  retryRegistrationEmailAction,
+  fetchRegistrationEmailDeliveriesAction,
 } from '@/app/actions/admin-accounts';
 import { fetchAdminUsersAction, fetchSignatoryCandidatesAction } from '@/app/actions/admin';
 import { getAuthenticatedUser } from '@/lib/auth/session';
@@ -465,7 +467,18 @@ describe('Account Lifecycle Integration Tests', () => {
     // 3. Admin approves registration
     const approveRes = await approveStudentRegistrationAction({ userId: studentUid });
     assert.equal(approveRes.success, true);
-    assert.equal(approveRes.emailDelivery?.sent, true);
+    assert.equal(approveRes.emailDelivery?.status, 'simulated');
+    assert.ok(approveRes.emailDelivery?.deliveryId);
+
+    // Verify delivery document was persisted in Firestore
+    const approveDeliveryDoc = await getAdminFirestore()
+      .collection('registrationEmailDeliveries')
+      .doc(approveRes.emailDelivery.deliveryId)
+      .get();
+    assert.equal(approveDeliveryDoc.exists, true);
+    assert.equal(approveDeliveryDoc.data()?.decisionType, 'approved');
+    assert.equal(approveDeliveryDoc.data()?.status, 'simulated');
+    assert.equal(approveDeliveryDoc.data()?.recipientEmail, 'student.approval@example.test');
     // 4. Status is now active and student claims are synchronized
     const updatedDoc = await getAdminFirestore().collection('users').doc(studentUid).get();
     assert.equal(updatedDoc.data()?.accountStatus, 'active');
@@ -599,7 +612,19 @@ describe('Account Lifecycle Integration Tests', () => {
       reason: 'Invalid enrollment credentials provided.',
     });
     assert.equal(rejectRes.success, true);
-    assert.equal(rejectRes.emailDelivery?.sent, true);
+    assert.equal(rejectRes.emailDelivery?.status, 'simulated');
+    assert.ok(rejectRes.emailDelivery?.deliveryId);
+
+    // Verify delivery record persists recipient and rejection reason even after user deletion
+    const rejectDeliveryDoc = await getAdminFirestore()
+      .collection('registrationEmailDeliveries')
+      .doc(rejectRes.emailDelivery.deliveryId)
+      .get();
+    assert.equal(rejectDeliveryDoc.exists, true);
+    assert.equal(rejectDeliveryDoc.data()?.decisionType, 'rejected');
+    assert.equal(rejectDeliveryDoc.data()?.recipientEmail, 'student.reject@example.test');
+    assert.equal(rejectDeliveryDoc.data()?.rejectionReason, 'Invalid enrollment credentials provided.');
+    assert.equal(rejectDeliveryDoc.data()?.status, 'simulated');
     // Account must be completely deleted
     await assert.rejects(
       async () => getAdminAuth().getUser(studentUid),
@@ -654,5 +679,72 @@ describe('Account Lifecycle Integration Tests', () => {
     const nonExistentRes = await deleteUserAccountAction({ userId: 'non-existent-user-uid' });
     assert.equal(nonExistentRes.success, false);
     assert.match(nonExistentRes.error, /user account not found|target user/i);
+  });
+
+  it('20. Registration email delivery records, failure retry, and unauthorized retry handling', async () => {
+    const db = getAdminFirestore();
+
+    // 1. Create a simulated failed delivery record in Firestore
+    const mockDeliveryRef = db.collection('registrationEmailDeliveries').doc();
+    const mockDeliveryId = mockDeliveryRef.id;
+    const now = new Date().toISOString();
+
+    await mockDeliveryRef.set({
+      deliveryId: mockDeliveryId,
+      recipientEmail: 'student.retry@example.test',
+      recipientName: 'Retry Student',
+      decisionType: 'rejected',
+      rejectionReason: 'Missing official birth certificate copy.',
+      status: 'failed',
+      lastAttemptAt: now,
+      error: 'Simulated network timeout',
+      attemptsCount: 1,
+      createdAt: now,
+      updatedAt: now,
+      userId: 'deleted-student-uid',
+      actorId: 'admin-uid',
+    });
+
+    // A. Unauthenticated caller cannot retry email
+    delete process.env.TEST_SESSION_COOKIE;
+    const unauthRetry = await retryRegistrationEmailAction({ deliveryId: mockDeliveryId });
+    assert.equal(unauthRetry.success, false);
+    assert.match(unauthRetry.error || '', /unauthorized|session/i);
+
+    // B. Non-admin (student) cannot retry email
+    const studentSession = await getSessionCookieForUser('student.b@example.test', 'password123');
+    process.env.TEST_SESSION_COOKIE = studentSession;
+    const nonAdminRetry = await retryRegistrationEmailAction({ deliveryId: mockDeliveryId });
+    assert.equal(nonAdminRetry.success, false);
+    assert.match(nonAdminRetry.error || '', /unauthorized|only system administrators/i);
+
+    // C. Non-existent delivery ID fails safely
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const missingRetry = await retryRegistrationEmailAction({ deliveryId: 'non-existent-delivery-id' });
+    assert.equal(missingRetry.success, false);
+    assert.match(missingRetry.error || '', /record not found/i);
+
+    // D. Admin successfully retries delivery for deleted student account
+    const retryRes = await retryRegistrationEmailAction({ deliveryId: mockDeliveryId });
+    assert.equal(retryRes.success, true);
+    assert.equal(retryRes.status, 'simulated'); // @example.test resolves to simulated
+
+    const updatedDeliveryDoc = await mockDeliveryRef.get();
+    const updatedData = updatedDeliveryDoc.data();
+    assert.equal(updatedData?.status, 'simulated');
+    assert.equal(updatedData?.attemptsCount, 2);
+    assert.equal(updatedData?.rejectionReason, 'Missing official birth certificate copy.');
+
+    // E. Idempotency: Retrying a delivery marked 'sent' is rejected
+    await mockDeliveryRef.update({ status: 'sent', error: null });
+    const duplicateRetry = await retryRegistrationEmailAction({ deliveryId: mockDeliveryId });
+    assert.equal(duplicateRetry.success, false);
+    assert.match(duplicateRetry.error || '', /already been successfully delivered/i);
+
+    // F. Admin can fetch recent registration email deliveries
+    const fetchDeliveriesRes = await fetchRegistrationEmailDeliveriesAction();
+    assert.equal(fetchDeliveriesRes.success, true);
+    assert.ok(fetchDeliveriesRes.deliveries.length >= 1);
+    assert.ok(fetchDeliveriesRes.deliveries.some((d) => d.deliveryId === mockDeliveryId));
   });
 });

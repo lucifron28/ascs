@@ -129,3 +129,24 @@ export interface ActivityLog {
   metadata: Record<string, unknown>;
   createdAt: FirestoreTimestamp;
 }
+
+export type EmailDeliveryStatus = 'sent' | 'failed' | 'simulated';
+export type RegistrationDecisionType = 'approved' | 'rejected';
+
+export interface RegistrationEmailDelivery {
+  deliveryId: string;
+  recipientEmail: string;
+  recipientName: string;
+  decisionType: RegistrationDecisionType;
+  rejectionReason: string | null;
+  status: EmailDeliveryStatus;
+  lastAttemptAt: string;
+  error: string | null;
+  attemptsCount: number;
+  createdAt: string;
+  updatedAt: string;
+  userId?: string;
+  providerId?: string | null;
+  actorId?: string;
+  lastRetriedBy?: string | null;
+}

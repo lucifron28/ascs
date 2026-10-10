@@ -100,5 +100,11 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false; // Server-only
     }
+
+    // registrationEmailDeliveries collection
+    match /registrationEmailDeliveries/{deliveryId} {
+      allow read: if isAdmin();
+      allow write: if false; // Server-only
+    }
   }
 }

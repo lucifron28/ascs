@@ -21,6 +21,11 @@ import {
   sendRegistrationApprovedEmail,
   sendRegistrationRejectedEmail,
 } from '@/lib/email/service';
+import {
+  recordRegistrationEmailDelivery,
+  retryRegistrationEmail,
+} from '@/lib/email/delivery';
+import type { RegistrationEmailDelivery, EmailDeliveryStatus } from '@/lib/types/firestore';
 // Helper to verify caller is active Admin
 async function getAuthenticatedAdmin() {
   const authenticated = await getAuthenticatedUser();
@@ -1177,22 +1182,33 @@ export async function approveStudentRegistrationAction(data: { userId: string })
 
     await batch.commit();
 
-    let emailDelivery: { sent: boolean; error?: string } = { sent: true };
+    let emailDelivery: { status: EmailDeliveryStatus; error?: string | null; deliveryId: string } = {
+      status: 'simulated',
+      deliveryId: '',
+    };
     try {
       const emailResult = await sendRegistrationApprovedEmail({
         to: userData.email,
         fullName: userData.fullName || 'Student',
       });
-      if (!emailResult.success) {
-        emailDelivery = { sent: false, error: emailResult.error };
-        console.warn('[Email Warning] Registration approved email delivery failed:', emailResult.error);
+      const deliveryRecord = await recordRegistrationEmailDelivery({
+        recipientEmail: userData.email,
+        recipientName: userData.fullName || 'Student',
+        decisionType: 'approved',
+        emailResult,
+        userId: data.userId,
+        actorId: adminUid,
+      });
+      emailDelivery = {
+        status: deliveryRecord.status,
+        error: deliveryRecord.error,
+        deliveryId: deliveryRecord.deliveryId,
+      };
+      if (deliveryRecord.status === 'failed') {
+        console.warn('[Email Warning] Registration approved email delivery failed:', deliveryRecord.error);
       }
     } catch (emailErr) {
-      emailDelivery = {
-        sent: false,
-        error: emailErr instanceof Error ? emailErr.message : 'Failed to send notification email',
-      };
-      console.warn('[Email Warning] Error sending registration approved email:', emailErr);
+      console.warn('[Email Warning] Error recording or sending registration approved email:', emailErr);
     }
 
     return {
@@ -1209,7 +1225,7 @@ export async function approveStudentRegistrationAction(data: { userId: string })
 // 9. Reject Student Self-Registration (Admin only)
 export async function rejectStudentRegistrationAction(data: { userId: string; reason?: string }) {
   try {
-    await getAuthenticatedAdmin();
+    const { uid: adminUid } = await getAuthenticatedAdmin();
     if (!data?.userId) {
       throw new Error('User ID is required.');
     }
@@ -1242,23 +1258,35 @@ export async function rejectStudentRegistrationAction(data: { userId: string; re
       return deleteResult;
     }
 
-    let emailDelivery: { sent: boolean; error?: string } = { sent: true };
+    let emailDelivery: { status: EmailDeliveryStatus; error?: string | null; deliveryId: string } = {
+      status: 'simulated',
+      deliveryId: '',
+    };
     try {
       const emailResult = await sendRegistrationRejectedEmail({
         to: targetEmail,
         fullName: targetFullName,
         rejectionReason: validatedReason,
       });
-      if (!emailResult.success) {
-        emailDelivery = { sent: false, error: emailResult.error };
-        console.warn('[Email Warning] Registration rejected email delivery failed:', emailResult.error);
+      const deliveryRecord = await recordRegistrationEmailDelivery({
+        recipientEmail: targetEmail,
+        recipientName: targetFullName,
+        decisionType: 'rejected',
+        rejectionReason: validatedReason,
+        emailResult,
+        userId: data.userId,
+        actorId: adminUid,
+      });
+      emailDelivery = {
+        status: deliveryRecord.status,
+        error: deliveryRecord.error,
+        deliveryId: deliveryRecord.deliveryId,
+      };
+      if (deliveryRecord.status === 'failed') {
+        console.warn('[Email Warning] Registration rejected email delivery failed:', deliveryRecord.error);
       }
     } catch (emailErr) {
-      emailDelivery = {
-        sent: false,
-        error: emailErr instanceof Error ? emailErr.message : 'Failed to send notification email',
-      };
-      console.warn('[Email Warning] Error sending registration rejected email:', emailErr);
+      console.warn('[Email Warning] Error recording or sending registration rejected email:', emailErr);
     }
 
     return {
@@ -1269,5 +1297,52 @@ export async function rejectStudentRegistrationAction(data: { userId: string; re
   } catch (error: unknown) {
     logSafeAuthError('reject_student_registration', error, data.userId);
     return { success: false, error: mapLifecycleError(error, 'Failed to reject student registration.') };
+  }
+}
+
+// 10. Retry Registration Decision Email (Admin only)
+export async function retryRegistrationEmailAction(data: { deliveryId: string }) {
+  try {
+    const { uid: adminUid, user } = await getAuthenticatedAdmin();
+    if (!data?.deliveryId) {
+      throw new Error('Delivery ID is required.');
+    }
+
+    const result = await retryRegistrationEmail(data.deliveryId, adminUid, user.fullName || 'Administrator');
+    return {
+      success: result.success,
+      status: result.status,
+      error: result.error || null,
+      delivery: result.delivery,
+    };
+  } catch (error: unknown) {
+    logSafeAuthError('retry_registration_email', error, data.deliveryId);
+    return {
+      success: false,
+      error: mapLifecycleError(error, 'Failed to retry registration email delivery.'),
+    };
+  }
+}
+
+// 11. Fetch Registration Email Deliveries (Admin only)
+export async function fetchRegistrationEmailDeliveriesAction() {
+  try {
+    await getAuthenticatedAdmin();
+    const firestore = getAdminFirestore();
+    const snap = await firestore
+      .collection('registrationEmailDeliveries')
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+
+    const deliveries = snap.docs.map((doc) => doc.data() as RegistrationEmailDelivery);
+    return { success: true, deliveries };
+  } catch (error: unknown) {
+    logSafeAuthError('fetch_registration_email_deliveries', error);
+    return {
+      success: false,
+      error: mapLifecycleError(error, 'Failed to fetch registration email deliveries.'),
+      deliveries: [] as RegistrationEmailDelivery[],
+    };
   }
 }

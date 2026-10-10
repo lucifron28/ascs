@@ -383,6 +383,10 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
     lowerMsg.includes('rejection reason') ||
     lowerMsg.includes('user account deletion') ||
     lowerMsg.includes('could not be completed') ||
+    lowerMsg.includes('delivery record not found') ||
+    lowerMsg.includes('record not found') ||
+    lowerMsg.includes('already been successfully delivered') ||
+    lowerMsg.includes('delivery id is required') ||
     lowerMsg.includes('final active') ||
     lowerMsg.includes('requires explicit confirmation') ||
     lowerMsg.includes('manual intervention') ||
