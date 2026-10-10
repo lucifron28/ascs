@@ -21,7 +21,7 @@ not present on the public Vercel demo.
 
 ### 0:00 - Login and scope disclaimer
 
-Select **Student G - Live Journey** (`FSM` - Food Service Management) and fill
+Select **Student G - Live Journey** (`BSAIS` - Accounting Information System) and fill
 the local emulator credentials. Say that the data is fictional and the
 application is a capstone MVP. Show the shared header,
 notification control, theme selector, and logout control.

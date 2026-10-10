@@ -17,7 +17,11 @@ test('clearance infrastructure errors map to operation-specific safe copy', () =
   );
   assert.equal(
     mapClearanceActionError('reopenClearance', new Error('Network error')),
-    'Unable to return clearance requirement to pending. Please try again.',
+    'Unable to return clearance requirement to pending. Please try again.'
+  );
+  assert.equal(
+    mapClearanceActionError('reopenFinancialStatus', new Error('Network error')),
+    'Unable to reopen financial status. Please try again.'
   );
 });
 
@@ -60,5 +64,13 @@ test('clearance business validation errors remain specific', () => {
   assert.equal(
     mapClearanceActionError('signClearance', new Error('Invalid clearance approval status. Only approve and mark pending are permitted.')),
     'Invalid clearance approval status. Only approve and mark pending are permitted.',
+  );
+  assert.equal(
+    mapClearanceActionError('reopenFinancialStatus', new Error('A reason is required when reopening a financial record.')),
+    'A reason is required when reopening a financial record.',
+  );
+  assert.equal(
+    mapClearanceActionError('reopenFinancialStatus', new Error('Only previously paid financial records can be reopened.')),
+    'Only previously paid financial records can be reopened.',
   );
 });

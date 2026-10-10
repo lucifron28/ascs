@@ -22,7 +22,8 @@ import {
 import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
 import { CLEARANCE_WORKFLOW_STAGES } from '@/lib/clearance/workflow';
-import { ACADEMIC_PROGRAM_CODES, ACADEMIC_PROGRAMS, formatProgram } from '@/lib/academic-programs';
+import { ACTIVE_STUDENT_PROGRAM_CODES, ACADEMIC_PROGRAMS, formatProgram } from '@/lib/academic-programs';
+import { STUDENT_PROFILE_SEMESTERS, STUDENT_YEAR_LEVELS } from '@/lib/student-profile-options';
 import { formatAuditTimestamp } from '@/lib/audit/timestamp';
 import {
   Users,
@@ -130,7 +131,8 @@ export default function AdminDashboard() {
     studentNumber: '',
     fullName: '',
     program: 'BSAIS',
-    yearLevel: '1',
+    yearLevel: '1st Year',
+    semester: '1st Semester',
     section: 'A',
     contactNumber: '',
     temporaryPassword: '',
@@ -170,7 +172,7 @@ export default function AdminDashboard() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-  // Requirement Assignment Modal State
+  const [rejectionReason, setRejectionReason] = useState('');
   const [selectedReq, setSelectedReq] = useState<RequirementRecord | null>(null);
   const [signatorySearch, setSignatorySearch] = useState('');
   const [assignedSignatoryId, setAssignedSignatoryId] = useState<string | null>(null);
@@ -242,7 +244,8 @@ export default function AdminDashboard() {
           studentNumber: '',
           fullName: '',
           program: 'BSAIS',
-          yearLevel: '1',
+          yearLevel: '1st Year',
+          semester: '1st Semester',
           section: 'A',
           contactNumber: '',
           temporaryPassword: '',
@@ -374,18 +377,26 @@ export default function AdminDashboard() {
     setDeleteActionType(type);
     setDeleteError(null);
     setDeleteSuccess(false);
+    setRejectionReason('');
     setDeleteModalOpen(true);
   };
-
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      const res = deleteActionType === 'reject'
-        ? await rejectStudentRegistrationAction({ userId: userToDelete.uid })
-        : await deleteUserAccountAction({ userId: userToDelete.uid });
+      if (deleteActionType === 'reject') {
+        const trimmed = rejectionReason.trim();
+        if (!trimmed || trimmed.length < 5 || trimmed.length > 500) {
+          setDeleteError('A rejection reason between 5 and 500 characters is required.');
+          setDeleteLoading(false);
+          return;
+        }
+      }
 
+      const res = deleteActionType === 'reject'
+        ? await rejectStudentRegistrationAction({ userId: userToDelete.uid, reason: rejectionReason.trim() })
+        : await deleteUserAccountAction({ userId: userToDelete.uid });
       if (res.success) {
         setDeleteSuccess(true);
         setTimeout(() => {
@@ -394,7 +405,7 @@ export default function AdminDashboard() {
           loadData();
         }, 800);
       } else {
-        setDeleteError(res.error || 'Operation failed.');
+        setDeleteError(('error' in res && typeof res.error === 'string' ? res.error : null) || 'Operation failed.');
       }
     } catch (err: unknown) {
       setDeleteError(err instanceof Error ? err.message : 'Operation error.');
@@ -573,7 +584,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="tabs tabs-boxed bg-base-100 p-1.5 rounded-xl border border-base-content/15 flex flex-wrap gap-1">
+      <div className="tabs tabs-boxed bg-base-100 p-1.5 rounded-xl border border-base-content/15 flex flex-wrap gap-1 max-w-full overflow-x-auto">
         <button
           onClick={() => setActiveTab('overview')}
           className={`tab gap-2 rounded-xl text-sm font-semibold transition-all ${
@@ -610,7 +621,7 @@ export default function AdminDashboard() {
 
       {/* Error Alert */}
       {error && (
-        <div role="alert" className="alert alert-error rounded-xl shadow-sm border border-error/30 flex items-center justify-between">
+        <div role="alert" className="alert alert-error rounded-xl shadow-sm border border-error/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <span className="text-sm font-medium">{error}</span>
@@ -626,9 +637,9 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           {/* Pending Registrations Alert */}
           {pendingRegistrationsCount > 0 && (
-            <div className="alert alert-warning shadow-sm border border-warning/30 flex items-center justify-between p-4 rounded-xl">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-warning shrink-0" />
+            <div className="alert alert-warning shadow-sm border border-warning/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl">
+              <div className="flex items-start sm:items-center gap-3">
+                <Clock className="w-5 h-5 text-warning shrink-0 mt-0.5 sm:mt-0" />
                 <div>
                   <p className="font-bold text-sm text-base-content">
                     {pendingRegistrationsCount} student registration(s) awaiting approval
@@ -643,7 +654,7 @@ export default function AdminDashboard() {
                   setActiveTab('users');
                   setStatusFilter('pending_approval');
                 }}
-                className="btn btn-sm min-h-11 btn-warning font-semibold text-xs rounded-xl"
+                className="btn btn-sm min-h-11 btn-warning font-semibold text-xs rounded-xl w-full sm:w-auto shrink-0"
               >
                 Review Registrations
               </button>
@@ -1292,7 +1303,7 @@ export default function AdminDashboard() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="form-control">
               <label htmlFor="create-student-program" className="label py-0.5">
                 <span className="label-text text-xs font-semibold">Program</span>
@@ -1304,7 +1315,7 @@ export default function AdminDashboard() {
                 onChange={(e) => setStudentForm({ ...studentForm, program: e.target.value })}
                 className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                {ACADEMIC_PROGRAM_CODES.map((code) => (
+                {ACTIVE_STUDENT_PROGRAM_CODES.map((code) => (
                   <option key={code} value={code}>
                     {code} — {ACADEMIC_PROGRAMS[code]}
                   </option>
@@ -1315,15 +1326,33 @@ export default function AdminDashboard() {
               <label htmlFor="create-student-year" className="label py-0.5">
                 <span className="label-text text-xs font-semibold">Year Level</span>
               </label>
-              <input
+              <select
                 id="create-student-year"
-                type="text"
                 required
-                placeholder="4"
                 value={studentForm.yearLevel}
                 onChange={(e) => setStudentForm({ ...studentForm, yearLevel: e.target.value })}
-                className="input input-sm input-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              />
+                className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                {STUDENT_YEAR_LEVELS.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-control">
+              <label htmlFor="create-student-semester" className="label py-0.5">
+                <span className="label-text text-xs font-semibold">Semester</span>
+              </label>
+              <select
+                id="create-student-semester"
+                required
+                value={studentForm.semester}
+                onChange={(e) => setStudentForm({ ...studentForm, semester: e.target.value })}
+                className="select select-sm select-bordered bg-base-200 border-base-content/10 rounded-xl text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                {STUDENT_PROFILE_SEMESTERS.map((semester) => (
+                  <option key={semester} value={semester}>{semester}</option>
+                ))}
+              </select>
             </div>
             <div className="form-control">
               <label htmlFor="create-student-section" className="label py-0.5">
@@ -1711,6 +1740,27 @@ export default function AdminDashboard() {
                     <div><span className="text-base-content/60">Student #:</span> <span className="font-mono text-base-content">{userToDelete.studentNumber}</span></div>
                   )}
                 </div>
+                {deleteActionType === 'reject' && (
+                  <div className="space-y-1.5 pt-1">
+                    <label htmlFor="rejectionReason" className="block text-xs font-semibold text-base-content">
+                      Rejection Reason <span className="text-error">*</span>
+                    </label>
+                    <textarea
+                      id="rejectionReason"
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Specify reason for rejecting this registration (e.g., Student number not found in official master list for 1st Semester)..."
+                      rows={3}
+                      maxLength={500}
+                      disabled={deleteLoading}
+                      className="textarea textarea-bordered w-full text-xs rounded-xl focus:outline-none focus:border-error"
+                    />
+                    <div className="flex justify-between text-[11px] text-base-content/60">
+                      <span>Sent to student&apos;s email as part of status notification.</span>
+                      <span>{rejectionReason.length} / 500</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-2 pt-3 border-t border-base-content/10">
                   <button

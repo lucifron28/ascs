@@ -730,14 +730,26 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
       isActive: user.accountStatus === 'active',
       mustChangePassword: user.mustChangePassword === true,
       contactNumber: '09123456789',
+      ...(user.role === 'student'
+        ? {
+            studentNumber: user.studentNumber || 'STUD-2026-0000',
+            program: user.program || DEFAULT_ACADEMIC_PROGRAM_CODE,
+            yearLevel: user.yearLevel || '4th Year',
+            semester: user.semester || '1st Semester',
+          }
+        : {}),
       createdAt: now,
       updatedAt: now,
       deactivatedAt: user.accountStatus === 'inactive' ? now : null,
     });
 
     await db.collection('publicUsers').doc(authUid).set({
+      uid: authUid,
+      email: user.email,
       fullName: user.fullName,
       role: user.role,
+      accountStatus: user.accountStatus,
+      isActive: user.accountStatus === 'active',
     });
 
     if (user.role === 'student') {
@@ -747,6 +759,7 @@ export async function resetRemoteDemo(options: ResetOptions): Promise<DryRunRepo
         fullName: user.fullName,
         program: user.program || DEFAULT_ACADEMIC_PROGRAM_CODE,
         yearLevel: user.yearLevel || '4th Year',
+        semester: user.semester || '1st Semester',
         section: user.section || 'A',
         email: user.email,
         contactNumber: '09123456789',

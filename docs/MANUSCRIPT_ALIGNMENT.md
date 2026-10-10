@@ -58,9 +58,9 @@ The demonstration dataset uses the PKM program catalog supplied for the ASCS
 project. Firestore keeps the stable **Program Code** on student profiles and
 clearance applications; the shared catalog derives the corresponding **Program
 Name** for student views, administrative tables, reports, CSV output, and the
-printable prototype. The seven deterministic student scenarios use BSAIS,
-BSMA, BEED, CRIM, ENGLISH, ACP, and FSM respectively; FILIPINO, MATH, and SS
-remain supported catalog entries for future fictional records.
+printable prototype. The seven deterministic student scenarios use only the
+active BSAIS and BSMA choices while preserving their distinct workflow states;
+the remaining catalog entries are retained for historical fictional records.
 
 The local emulator login exposes one grouped account selector for all seven
 student scenarios and seven staff identities. The selector requires both Demo

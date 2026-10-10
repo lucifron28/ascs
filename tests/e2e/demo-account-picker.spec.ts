@@ -29,7 +29,7 @@ test.describe('Emulator-only demo account picker', () => {
     await picker.selectOption('student-g');
     const details = page.locator('#demo-account-details');
     await expect(details.getByText('Student G — Live Journey', { exact: true })).toBeVisible();
-    await expect(details.getByText(/FSM — Food Service Management/i)).toBeVisible();
+    await expect(details.getByText(/BSAIS — Accounting Information System/i)).toBeVisible();
     await expect(details.getByText(/complete end-to-end defense workflow/i)).toBeVisible();
 
     await page.getByRole('button', { name: 'Fill Demo Credentials' }).click();

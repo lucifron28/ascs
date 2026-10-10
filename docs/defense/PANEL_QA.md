@@ -24,7 +24,7 @@ institutional deployment or certification.
    identities. It requires both Demo Mode and Firebase Emulator Mode, uses the
    normal Firebase authentication flow after filling the form, and is hidden
    on the public Vercel demo.
-5b. **Why do the records use codes such as BSAIS and FSM?** The fictional
+5b. **Why do the records use codes such as BSAIS and BSMA?** The fictional
    dataset uses the PKM program catalog supplied for this project. A shared
    catalog keeps Program Code storage stable while deriving Program Name labels
    consistently in UI, reports, CSV output, and the printable prototype.

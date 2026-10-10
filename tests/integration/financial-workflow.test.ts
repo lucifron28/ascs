@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-auth';
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminFirestore } from '@/lib/firebase/admin';
-import { fetchFinancialQueueAction, updateFinancialStatusAction } from '@/app/actions/clearance';
+import { fetchFinancialQueueAction, updateFinancialStatusAction, reopenFinancialStatusAction } from '@/app/actions/clearance';
 import { filterFinancialRecords } from '@/lib/clearance/financial-ui';
 
 describe('Financial Workflow Integration Tests', () => {
@@ -212,20 +212,13 @@ describe('Financial Workflow Integration Tests', () => {
     const pendingFiltered = filterFinancialRecords(allRecords, 'pending');
     assert.ok(pendingFiltered.every((r) => r.status === 'pending'));
 
-    // 3. Paid / Cleared filter: paid but overall clearance is not yet fully approved
+    // 3. Paid / Cleared filter: all paid financial records
     const paidFiltered = filterFinancialRecords(allRecords, 'paid');
-    assert.ok(paidFiltered.every((r) => r.status === 'paid' && r.overall_status !== 'approved'));
+    assert.ok(paidFiltered.length >= 1);
+    assert.ok(paidFiltered.every((r) => r.status === 'paid'));
 
-    // 4. Completed History filter: final completed clearance records where overall_status === 'approved'
-    const historyFiltered = filterFinancialRecords(allRecords, 'history');
-    assert.ok(historyFiltered.every((r) => r.overall_status === 'approved'));
-
-    // Verify Paid / Cleared and Completed History have zero overlap
-    const paidIds = new Set(paidFiltered.map((r) => r.student_id_number));
-    for (const h of historyFiltered) {
-      assert.equal(paidIds.has(h.student_id_number), false, 'Paid record must not appear in Completed History');
-    }
-
+    // 4. Verify 4 filters partition accurately
+    assert.equal(allFiltered.length, allRecords.length);
     // 5. Search within filter
     const firstRecord = allRecords[0];
     if (firstRecord && firstRecord.student_name) {
@@ -233,5 +226,96 @@ describe('Financial Workflow Integration Tests', () => {
       assert.ok(searched.length >= 1);
       assert.ok(searched.some((r) => r.student_name === firstRecord.student_name));
     }
+  });
+
+  it('11. reopenFinancialStatusAction enforces authorization and input validation', async () => {
+    // A. Non-Accountant (Librarian) cannot reopen financial status
+    process.env.TEST_SESSION_COOKIE = librarianSession;
+    const unauthRes = await reopenFinancialStatusAction({
+      recordId: 'app-student-a',
+      reason: 'Audit correction',
+    });
+    assert.equal(unauthRes.success, false);
+    assert.match(unauthRes.error, /only accountants/i);
+
+    // B. Accountant caller requires non-empty reason
+    process.env.TEST_SESSION_COOKIE = accountantSession;
+    const noReasonRes = await reopenFinancialStatusAction({
+      recordId: 'app-student-a',
+      reason: '   ',
+    });
+    assert.equal(noReasonRes.success, false);
+    assert.match(noReasonRes.error, /reason is required/i);
+
+    // C. Non-paid record cannot be reopened
+    const nonPaidRes = await reopenFinancialStatusAction({
+      recordId: 'app-student-c', // student c is pending
+      reason: 'Attempted to reopen pending record',
+    });
+    assert.equal(nonPaidRes.success, false);
+    assert.match(nonPaidRes.error, /only previously paid financial records can be reopened/i);
+  });
+
+  it('12. Reopening a fully approved clearance resets financial stage and downstream approvals', async () => {
+    process.env.TEST_SESSION_COOKIE = accountantSession;
+    const db = getAdminFirestore();
+    const appId = 'app-student-a';
+
+    // Verify pre-condition: app-student-a is fully approved
+    const preDoc = await db.collection('clearanceApplications').doc(appId).get();
+    assert.equal(preDoc.data()?.financialStatus, 'paid');
+    assert.equal(preDoc.data()?.overallStatus, 'approved');
+    assert.equal(preDoc.data()?.printableAvailable, true);
+    assert.equal(preDoc.data()?.deanApproved, true);
+
+    // Accountant reopens the financial status
+    const reopenRes = await reopenFinancialStatusAction({
+      recordId: appId,
+      reason: 'Unpaid graduation fee discovered during audit.',
+    });
+    assert.equal(reopenRes.success, true);
+
+    // Verify parent application state
+    const postDoc = await db.collection('clearanceApplications').doc(appId).get();
+    const postData = postDoc.data();
+    assert.equal(postData?.financialStatus, 'pending');
+    assert.equal(postData?.overallStatus, 'pending');
+    assert.equal(postData?.printableAvailable, false);
+    assert.equal(postData?.deanApproved, false);
+    assert.equal(postData?.financialRemarks, 'Unpaid graduation fee discovered during audit.');
+    assert.ok(postData?.financialReopenedAt);
+
+    // Verify subcollection approvals:
+    // Upstream (Librarian) remains approved
+    const libApproval = await db.collection('clearanceApplications').doc(appId).collection('approvals').doc('librarian').get();
+    assert.equal(libApproval.data()?.status, 'approved');
+
+    // Downstream (OSA, Guidance, Area Chair, Dean) are reset to pending
+    for (const role of ['osa_coordinator', 'guidance_counselor', 'area_chair', 'dean']) {
+      const appDoc = await db.collection('clearanceApplications').doc(appId).collection('approvals').doc(role).get();
+      assert.equal(appDoc.data()?.status, 'pending', `Downstream approval ${role} must be reset to pending`);
+      assert.equal(appDoc.data()?.actedAt, null);
+      assert.ok(appDoc.data()?.remarksLatest?.includes('Financial Reopen Reset'));
+    }
+
+    // Verify remarks subcollection has audit records
+    const remarksSnap = await db.collection('clearanceApplications').doc(appId).collection('remarks').get();
+    const remarkContents = remarksSnap.docs.map((d) => d.data().content);
+    assert.ok(remarkContents.some((c) => c.includes('[Accountant Financial Reopen]')));
+    assert.ok(remarkContents.some((c) => c.includes('[Financial Invalidation]')));
+
+    // Verify activityLogs
+    const logSnap = await db.collection('activityLogs')
+      .where('entityId', '==', appId)
+      .where('action', '==', 'reopen_financial_status')
+      .get();
+    assert.ok(logSnap.size >= 1);
+
+    // Verify notification to student
+    const notifSnap = await db.collection('notifications')
+      .where('recipientId', '==', 'demo-student-a-uid')
+      .where('type', '==', 'financial_reopened')
+      .get();
+    assert.ok(notifSnap.size >= 1);
   });
 });

@@ -36,6 +36,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-2026-9991',
       program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
       contactNumber: '09123456789',
     };
@@ -56,15 +57,25 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(userDoc.data()?.role, 'student');
     assert.equal(userDoc.data()?.mustChangePassword, true);
     assert.equal(userDoc.data()?.accountStatus, 'active');
+    assert.equal(userDoc.data()?.program, studentData.program);
+    assert.equal(userDoc.data()?.yearLevel, studentData.yearLevel);
+    assert.equal(userDoc.data()?.semester, studentData.semester);
 
     const publicDoc = await getAdminFirestore().collection('publicUsers').doc(uid).get();
     assert.equal(publicDoc.exists, true);
-    assert.equal(publicDoc.data()?.role, 'student');
+    const publicData = publicDoc.data();
+    assert.equal(publicData?.role, 'student');
+    assert.equal(publicData?.studentNumber, undefined);
+    assert.equal(publicData?.program, undefined);
+    assert.equal(publicData?.yearLevel, undefined);
+    assert.equal(publicData?.semester, undefined);
 
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.exists, true);
     assert.equal(studentDoc.data()?.studentNumber, studentData.studentNumber);
     assert.equal(studentDoc.data()?.program, 'BSAIS');
+    assert.equal(studentDoc.data()?.yearLevel, studentData.yearLevel);
+    assert.equal(studentDoc.data()?.semester, studentData.semester);
   });
 
   it('2. Admin can create a staff account without creating a student profile', async () => {
@@ -228,6 +239,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-2026-9992',
       program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
       contactNumber: '09123456789',
       password: 'student-password',
@@ -249,10 +261,22 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(userDoc.data()?.isActive, false);
     assert.equal(userDoc.data()?.createdBy, 'self_registration');
     assert.equal(userDoc.data()?.mustChangePassword, false);
+    assert.equal(userDoc.data()?.program, registrationData.program);
+    assert.equal(userDoc.data()?.yearLevel, registrationData.yearLevel);
+    assert.equal(userDoc.data()?.semester, registrationData.semester);
 
     const studentDoc = await getAdminFirestore().collection('students').doc(uid).get();
     assert.equal(studentDoc.data()?.studentNumber, registrationData.studentNumber);
     assert.equal(studentDoc.data()?.program, registrationData.program);
+    assert.equal(studentDoc.data()?.yearLevel, registrationData.yearLevel);
+    assert.equal(studentDoc.data()?.semester, registrationData.semester);
+    const publicDoc = await getAdminFirestore().collection('publicUsers').doc(uid).get();
+    const publicData = publicDoc.data();
+    assert.equal(publicData?.role, 'student');
+    assert.equal(publicData?.studentNumber, undefined);
+    assert.equal(publicData?.program, undefined);
+    assert.equal(publicData?.yearLevel, undefined);
+    assert.equal(publicData?.semester, undefined);
     const auditLogs = await getAdminFirestore()
       .collection('activityLogs')
       .where('action', '==', 'self_register_student_account')
@@ -269,6 +293,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-2026-0001',
       program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
       contactNumber: '09123456789',
     };
@@ -397,6 +422,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-2026-9993',
       program: 'BSMA',
       yearLevel: '2nd Year',
+      semester: '2nd Semester',
       section: 'B',
       password: 'student-password123',
       confirmPassword: 'student-password123',
@@ -439,7 +465,7 @@ describe('Account Lifecycle Integration Tests', () => {
     // 3. Admin approves registration
     const approveRes = await approveStudentRegistrationAction({ userId: studentUid });
     assert.equal(approveRes.success, true);
-
+    assert.equal(approveRes.emailDelivery?.sent, true);
     // 4. Status is now active and student claims are synchronized
     const updatedDoc = await getAdminFirestore().collection('users').doc(studentUid).get();
     assert.equal(updatedDoc.data()?.accountStatus, 'active');
@@ -466,6 +492,7 @@ describe('Account Lifecycle Integration Tests', () => {
       studentNumber: 'STUD-DELETE-001',
       program: 'BSAIS',
       yearLevel: '1st Year',
+      semester: '1st Semester',
       section: 'A',
     });
     assert.equal(tempStudent.success, true);
@@ -525,8 +552,9 @@ describe('Account Lifecycle Integration Tests', () => {
       email: 'student.reject@example.test',
       fullName: 'Rejected Student',
       studentNumber: 'STUD-2026-9994',
-      program: 'CRIM',
+      program: 'BSAIS',
       yearLevel: '3rd Year',
+      semester: '1st Semester',
       section: 'A',
       password: 'student-password123',
       confirmPassword: 'student-password123',
@@ -556,13 +584,22 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(activeReject.success, false);
     assert.match(activeReject.error, /cannot reject registration.*account status is 'active'/i);
 
-    // D. Admin rejects pending registration
+    // C2. Admin rejection requires a valid, length-bounded reason
+    const noReasonReject = await rejectStudentRegistrationAction({ userId: studentUid });
+    assert.equal(noReasonReject.success, false);
+    assert.match(noReasonReject.error, /rejection reason between 5 and 500 characters is required/i);
+
+    const shortReasonReject = await rejectStudentRegistrationAction({ userId: studentUid, reason: 'bad' });
+    assert.equal(shortReasonReject.success, false);
+    assert.match(shortReasonReject.error, /rejection reason between 5 and 500 characters is required/i);
+
+    // D. Admin rejects pending registration with mandatory reason
     const rejectRes = await rejectStudentRegistrationAction({
       userId: studentUid,
       reason: 'Invalid enrollment credentials provided.',
     });
     assert.equal(rejectRes.success, true);
-
+    assert.equal(rejectRes.emailDelivery?.sent, true);
     // Account must be completely deleted
     await assert.rejects(
       async () => getAdminAuth().getUser(studentUid),

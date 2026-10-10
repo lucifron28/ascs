@@ -5,7 +5,8 @@ import {
   DEMO_STUDENT_FIXTURES,
   DEMO_REQUIREMENTS_FIXTURE,
 } from '../tests/fixtures/demo-data';
-import { isAcademicProgramCode } from '../lib/academic-programs';
+import { isActiveStudentProgramCode } from '../lib/academic-programs';
+import { isStudentProfileSemester, isStudentYearLevel } from '../lib/student-profile-options';
 import { CLEARANCE_WORKFLOW_STAGES } from '../lib/clearance/workflow';
 
 export async function verifySeedInvariants(): Promise<boolean> {
@@ -71,7 +72,15 @@ export async function verifySeedInvariants(): Promise<boolean> {
       throw new Error(`INVARIANT FAILED: Firestore students doc missing for student UID ${student.uid}`);
     }
     const studentData = studentDoc.data();
-    if (!student.program || studentData?.program !== student.program || !isAcademicProgramCode(studentData?.program)) {
+    if (
+      !student.program ||
+      studentData?.program !== student.program ||
+      !isActiveStudentProgramCode(studentData?.program) ||
+      studentData?.yearLevel !== student.yearLevel ||
+      studentData?.semester !== student.semester ||
+      !isStudentYearLevel(studentData?.yearLevel) ||
+      !isStudentProfileSemester(studentData?.semester)
+    ) {
       throw new Error(
         `INVARIANT FAILED: Program mismatch for ${student.uid}. Expected ${student.program}, got ${studentData?.program}`
       );
@@ -161,7 +170,7 @@ export async function verifySeedInvariants(): Promise<boolean> {
     appCData?.notApprovedCount !== 1 ||
     appCData?.deanApproved !== false ||
     appCData?.printableAvailable !== false ||
-    appCData?.program !== 'BEED'
+    appCData?.program !== 'BSAIS'
   ) {
     throw new Error(`INVARIANT FAILED: Student C state incorrect. Got: ${JSON.stringify(appCData)}`);
   }
@@ -183,7 +192,7 @@ export async function verifySeedInvariants(): Promise<boolean> {
     appDData?.financialStatus !== 'unpaid' ||
     appDData?.overallStatus !== 'not_approved' ||
     appDData?.printableAvailable !== false ||
-    appDData?.program !== 'CRIM' ||
+    appDData?.program !== 'BSMA' ||
     appDData?.deanApproved !== true ||
     appDData?.approvedCount !== 5 ||
     appDData?.pendingCount !== 0 ||

@@ -13,9 +13,14 @@ import {
   checkFinalActiveAdmin,
   generateRandomTemporaryPassword,
   sanitizeAuditMetadata,
+  validateRejectionReason,
   mapLifecycleError,
   logSafeAuthError,
 } from '@/lib/admin/lifecycle-validation';
+import {
+  sendRegistrationApprovedEmail,
+  sendRegistrationRejectedEmail,
+} from '@/lib/email/service';
 // Helper to verify caller is active Admin
 async function getAuthenticatedAdmin() {
   const authenticated = await getAuthenticatedUser();
@@ -217,6 +222,9 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         isActive: true,
         mustChangePassword: true,
         studentNumber: input.studentNumber,
+        program: input.program,
+        yearLevel: input.yearLevel,
+        semester: input.semester,
         contactNumber: input.contactNumber,
         createdAt: now,
         updatedAt: now,
@@ -241,6 +249,7 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         email: input.email,
         program: input.program,
         yearLevel: input.yearLevel,
+        semester: input.semester,
         section: input.section,
         contactNumber: input.contactNumber,
         createdAt: now,
@@ -265,6 +274,31 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
       });
 
       await batch.commit();
+
+      const [authRecord, userProfileSnap, publicProfileSnap, studentProfileSnap] = await Promise.all([
+        auth.getUser(uid),
+        firestore.collection('users').doc(uid).get(),
+        firestore.collection('publicUsers').doc(uid).get(),
+        firestore.collection('students').doc(uid).get(),
+      ]);
+      const userProfile = userProfileSnap.data();
+      const publicProfile = publicProfileSnap.data();
+      const studentProfile = studentProfileSnap.data();
+      if (
+        authRecord.customClaims?.role !== 'student' ||
+        authRecord.disabled === true ||
+        userProfile?.role !== 'student' ||
+        userProfile?.accountStatus !== 'active' ||
+        userProfile?.isActive === false ||
+        publicProfile?.role !== 'student' ||
+        publicProfile?.accountStatus !== 'active' ||
+        publicProfile?.isActive === false ||
+        studentProfile?.program !== input.program ||
+        studentProfile?.yearLevel !== input.yearLevel ||
+        studentProfile?.semester !== input.semester
+      ) {
+        throw new Error('Student account synchronization verification failed across Auth, users, publicUsers, and students.');
+      }
     } catch (dbErr: unknown) {
       let deleted = false;
       try {
@@ -1142,7 +1176,30 @@ export async function approveStudentRegistrationAction(data: { userId: string })
     });
 
     await batch.commit();
-    return { success: true, message: 'Student registration approved successfully.' };
+
+    let emailDelivery: { sent: boolean; error?: string } = { sent: true };
+    try {
+      const emailResult = await sendRegistrationApprovedEmail({
+        to: userData.email,
+        fullName: userData.fullName || 'Student',
+      });
+      if (!emailResult.success) {
+        emailDelivery = { sent: false, error: emailResult.error };
+        console.warn('[Email Warning] Registration approved email delivery failed:', emailResult.error);
+      }
+    } catch (emailErr) {
+      emailDelivery = {
+        sent: false,
+        error: emailErr instanceof Error ? emailErr.message : 'Failed to send notification email',
+      };
+      console.warn('[Email Warning] Error sending registration approved email:', emailErr);
+    }
+
+    return {
+      success: true,
+      message: 'Student registration approved successfully.',
+      emailDelivery,
+    };
   } catch (error: unknown) {
     logSafeAuthError('approve_student_registration', error, data.userId);
     return { success: false, error: mapLifecycleError(error, 'Failed to approve student registration.') };
@@ -1170,11 +1227,45 @@ export async function rejectStudentRegistrationAction(data: { userId: string; re
       throw new Error(`Cannot reject registration: Account status is '${userData.accountStatus}'.`);
     }
 
-    return await deleteUserAccountAction({
+    const validatedReason = validateRejectionReason(data?.reason);
+
+    const targetEmail = userData.email;
+    const targetFullName = userData.fullName || 'Student';
+
+    const deleteResult = await deleteUserAccountAction({
       userId: data.userId,
       isRejection: true,
-      rejectionReason: data.reason,
+      rejectionReason: validatedReason,
     });
+
+    if (!deleteResult.success) {
+      return deleteResult;
+    }
+
+    let emailDelivery: { sent: boolean; error?: string } = { sent: true };
+    try {
+      const emailResult = await sendRegistrationRejectedEmail({
+        to: targetEmail,
+        fullName: targetFullName,
+        rejectionReason: validatedReason,
+      });
+      if (!emailResult.success) {
+        emailDelivery = { sent: false, error: emailResult.error };
+        console.warn('[Email Warning] Registration rejected email delivery failed:', emailResult.error);
+      }
+    } catch (emailErr) {
+      emailDelivery = {
+        sent: false,
+        error: emailErr instanceof Error ? emailErr.message : 'Failed to send notification email',
+      };
+      console.warn('[Email Warning] Error sending registration rejected email:', emailErr);
+    }
+
+    return {
+      success: true,
+      message: 'Student registration rejected and account deleted.',
+      emailDelivery,
+    };
   } catch (error: unknown) {
     logSafeAuthError('reject_student_registration', error, data.userId);
     return { success: false, error: mapLifecycleError(error, 'Failed to reject student registration.') };

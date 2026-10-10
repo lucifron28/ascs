@@ -1024,6 +1024,154 @@ export async function updateFinancialStatusAction(data: {
   }
 }
 
+// 6b. Reopen Financial Status (Accountant or Admin)
+export async function reopenFinancialStatusAction(data: {
+  recordId: string; // matches clearance application ID
+  reason: string;
+}) {
+  try {
+    const { uid: accountantId, user } = await getAuthenticatedUser();
+
+    if (user.role !== 'accountant' && user.role !== 'admin') {
+      throw new Error('Unauthorized: Only accountants can modify financial status.');
+    }
+    if (!data?.recordId) {
+      throw new Error('Clearance application not found.');
+    }
+
+    const trimmedReason = data.reason?.trim() || '';
+    if (!trimmedReason || trimmedReason.length < 3) {
+      throw new Error('A reason is required when reopening a financial record.');
+    }
+
+    const firestore = getAdminFirestore();
+    const appRef = firestore.collection('clearanceApplications').doc(data.recordId);
+
+    await firestore.runTransaction(async (transaction: Transaction) => {
+      const appSnap = await transaction.get(appRef);
+      const approvalsSnap = await transaction.get(appRef.collection('approvals'));
+
+      if (!appSnap.exists) {
+        throw new Error('Clearance application not found.');
+      }
+
+      const appData = appSnap.data()!;
+      if (appData.financialStatus !== 'paid') {
+        throw new Error('Only previously paid financial records can be reopened.');
+      }
+
+      const now = new Date().toISOString();
+
+      // Invalidate active downstream approvals (OSA, Guidance, Area Chair, Dean)
+      // that were approved, forcing re-evaluation after repayment.
+      const downstreamRoles: readonly string[] = [
+        'osa_coordinator',
+        'guidance_counselor',
+        'area_chair',
+        'dean',
+      ];
+
+      for (const approvalDoc of approvalsSnap.docs) {
+        const approvalData = approvalDoc.data();
+        if (
+          downstreamRoles.includes(approvalData.signatoryRole) &&
+          approvalData.status === 'approved'
+        ) {
+          transaction.update(approvalDoc.ref, {
+            status: 'pending',
+            actedAt: null,
+            remarksLatest: `[Financial Reopen Reset] Previous approval invalidated because Accountant reopened financial review: ${trimmedReason}`,
+            reopenedAt: now,
+            reopenedBy: accountantId,
+            reopenedByName: user.fullName || 'Accountant',
+            updatedAt: now,
+          });
+
+          const invalidationRemarkRef = appRef.collection('remarks').doc();
+          transaction.set(invalidationRemarkRef, {
+            approvalId: approvalDoc.id,
+            authorId: accountantId,
+            authorName: user.fullName || 'Accountant',
+            authorRole: user.role,
+            content: `[Financial Invalidation]: Prior approval by ${approvalData.signatoryRole} reset to pending because Accountant reopened financial review: ${trimmedReason}`,
+            createdAt: now,
+          });
+        }
+      }
+
+      // Recompute overall status & counters with financialStatus = 'pending'
+      const updatedApprovals = approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => {
+        const approvalData = doc.data();
+        const isDownstreamApproved =
+          downstreamRoles.includes(approvalData.signatoryRole) &&
+          approvalData.status === 'approved';
+        return {
+          signatoryRole: approvalData.signatoryRole,
+          status: isDownstreamApproved ? 'pending' : approvalData.status,
+        };
+      });
+
+      const summary = getClearanceStatusSummary(updatedApprovals, 'pending');
+
+      transaction.update(appRef, {
+        financialStatus: 'pending',
+        financialVerifiedAt: null,
+        financialRemarks: trimmedReason,
+        financialReopenedAt: now,
+        financialReopenedBy: accountantId,
+        financialReopenedByName: user.fullName || 'Accountant',
+        overallStatus: summary.overallStatus,
+        pendingCount: summary.pendingCount,
+        approvedCount: summary.approvedCount,
+        notApprovedCount: summary.notApprovedCount,
+        printableAvailable: false,
+        deanApproved: false,
+        updatedAt: now,
+      });
+
+      const remarkRef = appRef.collection('remarks').doc();
+      transaction.set(remarkRef, {
+        authorId: accountantId,
+        authorName: user.fullName || 'Accountant',
+        authorRole: user.role,
+        content: `[Accountant Financial Reopen]: ${trimmedReason}`,
+        createdAt: now,
+      });
+
+      const logRef = firestore.collection('activityLogs').doc();
+      transaction.set(logRef, {
+        actorId: accountantId,
+        actorName: user.fullName || 'Accountant',
+        actorRole: user.role,
+        action: 'reopen_financial_status',
+        entityType: 'clearance_application',
+        entityId: data.recordId,
+        metadata: {
+          previousFinancialStatus: 'paid',
+          newFinancialStatus: 'pending',
+          reason: trimmedReason,
+        },
+        createdAt: now,
+      });
+
+      const notifRef = firestore.collection('notifications').doc();
+      transaction.set(notifRef, {
+        recipientId: appData.studentUid,
+        type: 'financial_reopened',
+        message: `Your financial clearance for application ${appData.applicationNumber} has been reopened by Accounting: ${trimmedReason}. Downstream clearance review will pause until financial review is re-evaluated.`,
+        relatedApplicationId: data.recordId,
+        isRead: false,
+        createdAt: now,
+      });
+    });
+
+    return { success: true, message: 'Financial status reopened successfully.' };
+  } catch (error: unknown) {
+    logClearanceActionError('reopenFinancialStatus', error);
+    return { success: false, error: mapClearanceActionError('reopenFinancialStatus', error) };
+  }
+}
+
 // 7. Fetch Dean Clearance Applications Queue (legacy read endpoint)
 export async function fetchDeanApplicationsAction() {
   try {

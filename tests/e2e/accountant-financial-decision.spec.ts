@@ -45,11 +45,20 @@ test.describe('Accountant financial decision state', () => {
       await dialog.getByRole('button', { name: /close dialog/i }).click();
 
       await page.getByRole('button', { name: /paid \/ cleared/i }).click();
-      await page.getByRole('button', { name: /completed history/i }).click();
       const paidRow = page.locator('tr', { hasText: 'STUD-2026-0001' });
-      await expect(paidRow).toContainText('Completed');
+      await expect(paidRow).toContainText('Settled');
       await expect(paidRow.getByRole('button', { name: /update/i })).toHaveCount(0);
-      await page.getByRole('button', { name: /back to action queue|all/i }).first().click();
+      const reopenBtn = paidRow.getByRole('button', { name: /reopen/i });
+      await expect(reopenBtn).toBeVisible();
+      await reopenBtn.click();
+
+      const reopenDialog = page.getByRole('dialog', { name: /reopen financial account/i });
+      await expect(reopenDialog).toBeVisible();
+      await expect(reopenDialog.getByLabel(/reopen reason/i)).toBeVisible();
+      await reopenDialog.getByRole('button', { name: /cancel/i }).click();
+      await expect(reopenDialog).not.toBeVisible();
+
+      await page.getByRole('button', { name: /^all \(/i }).click();
       const unpaidRow = page.locator('tr', { hasText: 'STUD-2026-0004' });
       await unpaidRow.getByRole('button', { name: /update financial status/i }).click();
       await expect(page.getByRole('dialog').getByLabel(/mark unpaid dues/i)).toBeChecked();

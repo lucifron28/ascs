@@ -15,14 +15,22 @@ export interface UserProfile {
   accountStatus: AccountStatus;
   mustChangePassword: boolean;
   contactNumber: string;
+  studentNumber?: string;
+  program?: string;
+  yearLevel?: string;
+  semester?: string;
   createdAt: FirestoreTimestamp;
   updatedAt: FirestoreTimestamp;
   deactivatedAt: FirestoreTimestamp | null;
 }
 
 export interface PublicUserProfile {
+  uid?: string;
+  email?: string;
   fullName: string;
   role: string;
+  accountStatus?: AccountStatus;
+  isActive?: boolean;
 }
 
 export interface StudentProfile {
@@ -31,6 +39,7 @@ export interface StudentProfile {
   fullName: string;
   program: string;
   yearLevel: string;
+  semester: string;
   section: string;
   email: string;
   contactNumber: string;

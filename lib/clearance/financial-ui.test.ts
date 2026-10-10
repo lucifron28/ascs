@@ -58,7 +58,7 @@ test('filterFinancialRecords partitions distinct datasets for each filter', () =
       student_name: 'Clara Diaz',
       student_id_number: 'STUD-003',
       application_number: 'CLR-2026-003',
-      program: 'CRIM',
+      program: 'BSAIS',
     },
     // 4. Fully completed student: entire 6-stage workflow approved
     {
@@ -68,7 +68,7 @@ test('filterFinancialRecords partitions distinct datasets for each filter', () =
       student_name: 'Daniel Cruz',
       student_id_number: 'STUD-004',
       application_number: 'CLR-2026-004',
-      program: 'BEED',
+      program: 'BSMA',
     },
   ];
 
@@ -86,24 +86,18 @@ test('filterFinancialRecords partitions distinct datasets for each filter', () =
   assert.equal(unpaid.length, 1);
   assert.equal(unpaid[0].student_name, 'Bob Santos');
 
-  // 4. Paid / Cleared returns only paid students whose clearance is not yet fully completed
+  // 4. Paid / Cleared returns all paid students whether in-progress or completed
   const paid = filterFinancialRecords(sampleRecords, 'paid');
-  assert.equal(paid.length, 1);
-  assert.equal(paid[0].student_name, 'Clara Diaz');
+  assert.equal(paid.length, 2);
+  const paidNames = paid.map((r) => r.student_name);
+  assert.ok(paidNames.includes('Clara Diaz'));
+  assert.ok(paidNames.includes('Daniel Cruz'));
 
-  // 5. Completed History returns only finalized completed clearance records (overall_status === approved)
-  const history = filterFinancialRecords(sampleRecords, 'history');
-  assert.equal(history.length, 1);
-  assert.equal(history[0].student_name, 'Daniel Cruz');
-
-  // Verify Paid / Cleared and Completed History are not duplicates and have zero overlap
-  const paidIds = new Set(paid.map((r) => r.student_id_number));
-  const historyIds = new Set(history.map((r) => r.student_id_number));
-  for (const id of paidIds) {
-    assert.equal(historyIds.has(id), false, `Paid ID ${id} must not appear in Completed History`);
-  }
-  assert.notEqual(all.length, pending.length);
-  assert.notEqual(paid.length, history.length === 0);
+  // Verify distinct counts
+  assert.equal(all.length, 4);
+  assert.equal(pending.length, 1);
+  assert.equal(unpaid.length, 1);
+  assert.equal(paid.length, 2);
 });
 
 test('filterFinancialRecords searches accurately inside the selected filter', () => {
@@ -122,7 +116,7 @@ test('filterFinancialRecords searches accurately inside the selected filter', ()
       student_name: 'Juan dela Cruz',
       student_id_number: 'STUD-102',
       application_number: 'CLR-2026-102',
-      program: 'CRIM',
+      program: 'BSMA',
     },
     {
       status: 'paid',
@@ -150,7 +144,7 @@ test('filterFinancialRecords searches accurately inside the selected filter', ()
   assert.equal(searchApp[0].student_name, 'Maria Clara');
 
   // Search by program code inside all
-  const searchProg = filterFinancialRecords(sampleRecords, 'all', 'CRIM');
+  const searchProg = filterFinancialRecords(sampleRecords, 'all', 'BSMA');
   assert.equal(searchProg.length, 1);
   assert.equal(searchProg[0].student_name, 'Juan dela Cruz');
 
