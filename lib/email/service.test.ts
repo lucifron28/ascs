@@ -133,3 +133,29 @@ test('10. sendRegistrationRejectedEmail formats and delivers simulated email wit
   assert.equal(result.success, true);
   assert.equal(result.simulated, true);
 });
+
+test('11. sendEmail returns descriptive error when Gmail SMTP credentials are not configured', async () => {
+  const originalEnv = { ...process.env };
+  delete process.env.NODE_ENV;
+  delete process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR;
+  delete process.env.FIREBASE_EMULATOR_HUB;
+  delete process.env.GMAIL_USER;
+  delete process.env.SMTP_USER;
+  delete process.env.GMAIL_APP_PASSWORD;
+  delete process.env.SMTP_PASS;
+  delete process.env.SMTP_PASSWORD;
+
+  try {
+    const result = await sendEmail({
+      to: 'realstudent@gmail.com',
+      subject: 'Test Subject',
+      html: '<p>Test</p>',
+      text: 'Test',
+    });
+
+    assert.equal(result.success, false);
+    assert.match(result.error || '', /Gmail SMTP credentials .* are not configured/);
+  } finally {
+    process.env = originalEnv;
+  }
+});

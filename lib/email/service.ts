@@ -1,12 +1,12 @@
 /**
- * Transactional email service for ASCS PKM.
- * Uses native fetch to interact directly with the Resend REST API (https://api.resend.com/emails)
- * without requiring external npm dependencies.
+ * Transactional email service for ASCS PKM using Gmail SMTP via nodemailer.
+ * Supports Gmail App Passwords and standard SMTP delivery.
  *
  * Fully protected with test-domain guards and emulator detection to avoid sending real
- * emails to fictional accounts or in test environments.
+ * emails to fictional accounts or during automated test/emulator runs.
  */
 
+import nodemailer from 'nodemailer';
 import {
   renderRegistrationApprovedEmail,
   renderRegistrationRejectedEmail,
@@ -56,8 +56,32 @@ export function isTestOrEmulatorEnvironment(): boolean {
 }
 
 /**
- * Sends a transactional email using the Resend REST API.
- * Safely falls back to simulation mode in tests, emulators, or if credentials are unconfigured.
+ * Creates and returns a nodemailer transporter configured for Gmail SMTP.
+ */
+export function getMailTransporter() {
+  const user = (process.env.GMAIL_USER || process.env.SMTP_USER || '').trim();
+  const rawPass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || '';
+  // Gmail App Passwords may include spaces when copied from Google Account; strip them
+  const pass = rawPass.replace(/\s+/g, '').trim();
+
+  if (!user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user,
+      pass,
+    },
+  });
+}
+
+/**
+ * Sends a transactional email using Gmail SMTP via nodemailer.
+ * Safely falls back to simulation mode in tests, emulators, or for fictional test addresses.
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   const { to, subject, html, text, from, replyTo } = options;
@@ -71,55 +95,35 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
     };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  const transporter = getMailTransporter();
+  if (!transporter) {
     return {
       success: false,
-      error: 'RESEND_API_KEY environment variable is not configured',
+      error: 'Gmail SMTP credentials (GMAIL_USER and GMAIL_APP_PASSWORD) are not configured',
     };
   }
 
-  const senderEmail = from || process.env.EMAIL_FROM || 'ASCS PKM <onboarding@resend.dev>';
+  const user = (process.env.GMAIL_USER || process.env.SMTP_USER || '').trim();
+  const senderEmail = from || process.env.EMAIL_FROM || `ASCS PKM <${user}>`;
 
   try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        from: senderEmail,
-        to: [to],
-        subject,
-        html,
-        text,
-        ...(replyTo ? { reply_to: replyTo } : {}),
-      }),
+    const info = await transporter.sendMail({
+      from: senderEmail,
+      to,
+      subject,
+      html,
+      text,
+      ...(replyTo ? { replyTo } : {}),
     });
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      const errorMessage =
-        (data && typeof data.message === 'string' && data.message) ||
-        (data && typeof data.name === 'string' && data.name) ||
-        `HTTP ${response.status}: ${response.statusText}`;
-
-      return {
-        success: false,
-        error: errorMessage,
-      };
-    }
 
     return {
       success: true,
-      id: data?.id,
+      id: info.messageId,
     };
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Unknown network failure while dispatching email',
+      error: err instanceof Error ? err.message : 'Unknown network failure while dispatching email via Gmail SMTP',
     };
   }
 }
