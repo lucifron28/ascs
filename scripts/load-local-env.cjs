@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- CJS preload for tsx */
 const { loadEnvConfig } = require('@next/env');
 
 // Keep standalone emulator scripts consistent with `next dev`/`next start`.

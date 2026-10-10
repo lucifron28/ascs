@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   parseResetOptions,
   assertRemoteResetSafety,
@@ -184,4 +186,15 @@ test('assertRecordsSafety allows clean demo datasets and aborts on unexpected re
     () => assertRecordsSafety(badAuth, badFirestore),
     /HARD SAFETY STOP: Found 2 unexpected non-demo record\(s\) \(1 Auth account\(s\), 1 Firestore record\(s\)\)/
   );
+});
+
+test('load-migration-cli.cjs neutralizes server-only without extracting refresh tokens or writing files', () => {
+
+  const content = fs.readFileSync(path.resolve(__dirname, 'load-migration-cli.cjs'), 'utf8');
+
+  // Verifies it does not extract tokens from firebase-tools.json or write ad-hoc credential files
+  assert.ok(!content.includes('firebase-tools.json'), 'Must not reference firebase-tools.json');
+  assert.ok(!content.includes('refresh_token'), 'Must not manipulate refresh_token');
+  assert.ok(!content.includes('writeFileSync'), 'Must not write credential files');
+  assert.ok(content.includes('server-only'), 'Must neutralize server-only');
 });
