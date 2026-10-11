@@ -32,3 +32,19 @@ test('2. resolveDeliveryStatus never conflates simulated delivery with sent deli
   assert.notEqual(resolveDeliveryStatus(simulated), 'sent');
   assert.equal(resolveDeliveryStatus(simulated), 'simulated');
 });
+
+test('3. resolveDeliveryStatus classifies unexpected exceptions as failed, never simulated', () => {
+  const unhandledExceptionResult: SendEmailResult = {
+    success: false,
+    error: 'ECONNRESET: Connection reset by peer',
+  };
+  assert.equal(resolveDeliveryStatus(unhandledExceptionResult), 'failed');
+  assert.notEqual(resolveDeliveryStatus(unhandledExceptionResult), 'simulated');
+});
+
+test('4. resolveDeliveryStatus handles null or empty messageId safely', () => {
+  const missingIdResult: SendEmailResult = {
+    success: true,
+  };
+  assert.equal(resolveDeliveryStatus(missingIdResult), 'sent');
+});

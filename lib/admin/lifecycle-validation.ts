@@ -338,8 +338,12 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
   const lowerMsg = message.toLowerCase();
   const lowerCode = code.toLowerCase();
 
+  if (lowerMsg.includes('already registered to another student')) {
+    return message;
+  }
   if (
-    lowerMsg.includes('already registered') ||
+    (lowerMsg.includes('email') && lowerMsg.includes('already registered')) ||
+    lowerMsg.includes('the specified email address') ||
     lowerMsg.includes('email-already-exists') ||
     lowerCode.includes('email-already-exists')
   ) {
@@ -386,6 +390,7 @@ export function mapLifecycleError(error: unknown, fallbackMessage: string = 'Ope
     lowerMsg.includes('delivery record not found') ||
     lowerMsg.includes('record not found') ||
     lowerMsg.includes('already been successfully delivered') ||
+    lowerMsg.includes('currently in progress') ||
     lowerMsg.includes('delivery id is required') ||
     lowerMsg.includes('final active') ||
     lowerMsg.includes('requires explicit confirmation') ||

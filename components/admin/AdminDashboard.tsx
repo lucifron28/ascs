@@ -19,7 +19,9 @@ import {
   approveStudentRegistrationAction,
   rejectStudentRegistrationAction,
   retryRegistrationEmailAction,
+  fetchRegistrationEmailDeliveriesAction,
 } from '@/app/actions/admin-accounts';
+import type { RegistrationEmailDelivery } from '@/lib/types/firestore';
 import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
 import { CLEARANCE_WORKFLOW_STAGES } from '@/lib/clearance/workflow';
@@ -183,6 +185,7 @@ export default function AdminDashboard() {
     recipientEmail?: string;
   } | null>(null);
   const [retryingEmailId, setRetryingEmailId] = useState<string | null>(null);
+  const [failedDeliveries, setFailedDeliveries] = useState<RegistrationEmailDelivery[]>([]);
   const [selectedReq, setSelectedReq] = useState<RequirementRecord | null>(null);
   const [signatorySearch, setSignatorySearch] = useState('');
   const [assignedSignatoryId, setAssignedSignatoryId] = useState<string | null>(null);
@@ -198,16 +201,20 @@ export default function AdminDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [uRes, rRes, lRes] = await Promise.all([
+      const [uRes, rRes, lRes, dRes] = await Promise.all([
         fetchAdminUsersAction(),
         fetchClearanceRequirementsAction(),
         fetchActivityLogsAction(),
+        fetchRegistrationEmailDeliveriesAction(),
       ]);
 
       if (isMounted.current) {
         if (uRes.success) setUsers(uRes.users || []);
         if (rRes.success) setRequirements(rRes.requirements || []);
         if (lRes.success) setLogs(lRes.logs || []);
+        if (dRes && dRes.success && dRes.deliveries) {
+          setFailedDeliveries(dRes.deliveries.filter((d: RegistrationEmailDelivery) => d.status === 'failed'));
+        }
 
         if (!uRes.success) setError(uRes.error || 'Failed to load user accounts.');
       }
@@ -418,6 +425,7 @@ export default function AdminDashboard() {
       });
     } finally {
       setRetryingEmailId(null);
+      loadData();
     }
   };
   const handleConfirmDelete = async () => {
@@ -793,6 +801,43 @@ export default function AdminDashboard() {
               >
                 Review Registrations
               </button>
+            </div>
+          )}
+          {/* Failed Email Deliveries Alert */}
+          {failedDeliveries.length > 0 && (
+            <div className="alert alert-warning shadow-sm border border-warning/30 p-4 rounded-xl space-y-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-warning shrink-0" />
+                <h4 className="font-bold text-sm text-base-content">
+                  {failedDeliveries.length} registration notification email(s) failed delivery
+                </h4>
+              </div>
+              <p className="text-xs text-base-content/75">
+                Account decisions were preserved, but email dispatch failed. You can safely retry delivery below:
+              </p>
+              <div className="space-y-2">
+                {failedDeliveries.map((del) => (
+                  <div
+                    key={del.deliveryId}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-2.5 bg-base-100 rounded-lg border border-base-content/10 text-xs"
+                  >
+                    <div>
+                      <span className="font-semibold text-base-content">{del.recipientName}</span>{' '}
+                      <span className="text-base-content/70">({del.recipientEmail})</span> —{' '}
+                      <span className="capitalize font-mono text-warning">{del.decisionType}</span>
+                      {del.error && <p className="text-[11px] text-error mt-0.5">{del.error}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRetryEmail(del.deliveryId)}
+                      disabled={retryingEmailId === del.deliveryId}
+                      className="btn btn-xs btn-warning text-warning-content font-bold rounded-lg shrink-0"
+                    >
+                      {retryingEmailId === del.deliveryId ? 'Retrying...' : 'Retry Email'}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {/* Stats Grid */}

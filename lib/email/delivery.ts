@@ -93,19 +93,43 @@ export async function retryRegistrationEmail(
 
   const firestore = getAdminFirestore();
   const deliveryRef = firestore.collection('registrationEmailDeliveries').doc(deliveryId);
-  const deliverySnap = await deliveryRef.get();
 
-  if (!deliverySnap.exists) {
-    throw new Error('Registration email delivery record not found.');
+  // 1. Atomically claim the delivery record using a Firestore transaction to prevent concurrent duplicate sends
+  let claimedDelivery: RegistrationEmailDelivery | null = null;
+  await firestore.runTransaction(async (transaction) => {
+    const deliverySnap = await transaction.get(deliveryRef);
+    if (!deliverySnap.exists) {
+      throw new Error('Registration email delivery record not found.');
+    }
+
+    const current = deliverySnap.data() as RegistrationEmailDelivery;
+
+    // Prevent accidental duplicate sends if email already succeeded
+    if (current.status === 'sent') {
+      throw new Error('Email has already been successfully delivered.');
+    }
+
+    // Prevent concurrent duplicate sends if another request is currently dispatching
+    if (current.status === 'sending') {
+      throw new Error('Email delivery retry is currently in progress.');
+    }
+
+    const now = new Date().toISOString();
+    transaction.update(deliveryRef, {
+      status: 'sending',
+      lastAttemptAt: now,
+      lastRetriedBy: adminUid,
+      updatedAt: now,
+    });
+
+    claimedDelivery = current;
+  });
+
+  if (!claimedDelivery) {
+    throw new Error('Failed to claim registration email delivery record.');
   }
 
-  const delivery = deliverySnap.data() as RegistrationEmailDelivery;
-
-  // Prevent accidental duplicate sends if email already succeeded
-  if (delivery.status === 'sent') {
-    throw new Error('Email has already been successfully delivered.');
-  }
-
+  const delivery: RegistrationEmailDelivery = claimedDelivery;
   // Execute email dispatch based on recorded decision type
   let emailResult: SendEmailResult;
   try {
