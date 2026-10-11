@@ -746,6 +746,9 @@ export async function reopenClearanceAction(data: {
 
       const now = new Date().toISOString();
 
+      const reopenedStage = getWorkflowStageForRole(user.role);
+      const reopenedStageNumber = reopenedStage ? reopenedStage.stage : 1;
+
       // 1. Revert approval status to pending and record remark
       transaction.update(approvalRef, {
         status: 'pending',
@@ -768,11 +771,46 @@ export async function reopenClearanceAction(data: {
         createdAt: now,
       });
 
-      // 3. Recompute overall status & counters
-      const updatedApprovals = approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => ({
-        status: doc.id === data.approvalId ? 'pending' : doc.data().status,
-        signatoryRole: doc.id === data.approvalId ? approvalData.signatoryRole : doc.data().signatoryRole,
-      }));
+      // 2b. Invalidate downstream approvals that were previously approved
+      for (const doc of approvalsSnap.docs) {
+        if (doc.id === data.approvalId) continue;
+        const dRole = doc.data().signatoryRole;
+        const dStage = getWorkflowStageForRole(dRole);
+        if (dStage && dStage.stage > reopenedStageNumber && doc.data().status === 'approved') {
+          transaction.update(doc.ref, {
+            status: 'pending',
+            actedAt: null,
+            remarksLatest: `[Downstream Invalidation] Previous approval invalidated because earlier stage (${reopenedStage?.label || user.role}) was reopened: ${trimmedRemarks}`,
+            reopenedAt: now,
+            reopenedBy: signatoryId,
+            reopenedByName: user.fullName,
+            updatedAt: now,
+          });
+
+          const invRemarkRef = appRef.collection('remarks').doc();
+          transaction.set(invRemarkRef, {
+            approvalId: doc.id,
+            authorId: signatoryId,
+            authorName: user.fullName,
+            authorRole: user.role,
+            content: `[Downstream Invalidation]: Prior approval by ${dRole} reset to pending because ${reopenedStage?.label || user.role} clearance was reopened: ${trimmedRemarks}`,
+            createdAt: now,
+          });
+        }
+      }
+
+      // 3. Recompute overall status & counters with downstream invalidations
+      const updatedApprovals = approvalsSnap.docs.map((doc: QueryDocumentSnapshot) => {
+        const dRole = doc.data().signatoryRole;
+        const dStage = getWorkflowStageForRole(dRole);
+        const isDownstream = dStage && dStage.stage > reopenedStageNumber;
+        const isTarget = doc.id === data.approvalId;
+        const shouldBePending = isTarget || (isDownstream && doc.data().status === 'approved');
+        return {
+          status: shouldBePending ? 'pending' : doc.data().status,
+          signatoryRole: dRole,
+        };
+      });
 
       const summary = getClearanceStatusSummary(updatedApprovals, appData.financialStatus);
       const deanRows = updatedApprovals.filter((approval) => approval.signatoryRole === 'dean');
