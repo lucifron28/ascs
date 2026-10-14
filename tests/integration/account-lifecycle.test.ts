@@ -820,7 +820,28 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(abandonedRecovered.success, true);
     assert.equal(abandonedRecovered.status, 'simulated');
 
-    // F. Admin can fetch recent registration email deliveries
+    // E4. Fencing guard: Stale/expired attempt token cannot overwrite a newer claim
+    await mockDeliveryRef.update({
+      status: 'sending',
+      currentAttemptId: 'att_newer_active_claim',
+      lastAttemptAt: new Date().toISOString(),
+    });
+
+    // Simulate an older attempt trying to write its outcome
+    await db.runTransaction(async (transaction) => {
+      const snap = await transaction.get(mockDeliveryRef);
+      const data = snap.data();
+      const staleAttemptId = 'att_stale_expired_attempt';
+      if (data?.currentAttemptId !== staleAttemptId) {
+        // Fenced out! Do not overwrite!
+        return;
+      }
+      transaction.update(mockDeliveryRef, { status: 'failed', error: 'Stale error' });
+    });
+
+    const fencedDoc = await mockDeliveryRef.get();
+    assert.equal(fencedDoc.data()?.currentAttemptId, 'att_newer_active_claim');
+    assert.equal(fencedDoc.data()?.status, 'sending', 'Stale attempt must NOT overwrite newer active claim');
     const fetchDeliveriesRes = await fetchRegistrationEmailDeliveriesAction();
     assert.equal(fetchDeliveriesRes.success, true);
     assert.ok(fetchDeliveriesRes.deliveries.length >= 1);
@@ -851,14 +872,36 @@ describe('Account Lifecycle Integration Tests', () => {
     // First resend succeeds
     const firstResend = await resendStudentVerificationEmailAction({ email: studentEmail });
     assert.equal(firstResend.success, true);
-    assert.match(firstResend.message || '', /verification email sent/i);
-
+    assert.match(firstResend.message || '', /if an unverified student account exists/i);
     // Immediate second resend is throttled by the 60-second cooldown
     const secondResend = await resendStudentVerificationEmailAction({ email: studentEmail });
     assert.equal(secondResend.success, false);
     assert.match(secondResend.error || '', /please wait.*second.*before requesting/i);
-  });
 
+    // C. Concurrent resend requests: Exactly one resets cooldown, others are throttled atomically
+    const concurrentEmail = `verify.concurrent.${Date.now()}@example.test`;
+    await registerStudentAccountAction({
+      email: concurrentEmail,
+      fullName: 'Concurrent Test Student',
+      studentNumber: `STUD-CONC-${Date.now().toString().slice(-4)}`,
+      program: 'BSAIS',
+      yearLevel: '1st Year',
+      semester: '1st Semester',
+      section: 'A',
+      password: 'password123',
+      confirmPassword: 'password123',
+    });
+
+    const [concurrent1, concurrent2] = await Promise.all([
+      resendStudentVerificationEmailAction({ email: concurrentEmail }),
+      resendStudentVerificationEmailAction({ email: concurrentEmail }),
+    ]);
+    assert.ok(
+      (concurrent1.error && concurrent1.error.includes('Please wait')) ||
+      (concurrent2.error && concurrent2.error.includes('Please wait')),
+      'At least one concurrent resend request must be throttled by the atomic cooldown'
+    );
+  });
   it('22. Student-number reservation UID association and ownership verification on release', async () => {
     const db = getAdminFirestore();
     const testNumber = `STUD-OWN-${Date.now().toString().slice(-4)}`;

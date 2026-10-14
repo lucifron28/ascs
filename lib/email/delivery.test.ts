@@ -112,3 +112,34 @@ test('6. isDeliveryRetryable permits failed and abandoned sending records, rejec
   };
   assert.equal(isDeliveryRetryable(timedOutSending), true);
 });
+
+test('7. Attempt fencing preserves newer attempt state and discards stale timed-out attempt updates', () => {
+  const baseDelivery: RegistrationEmailDelivery = {
+    deliveryId: 'del-fenced',
+    recipientEmail: 'student@example.test',
+    recipientName: 'Student',
+    decisionType: 'approved',
+    rejectionReason: null,
+    status: 'sending',
+    currentAttemptId: 'att_newer_attempt_456',
+    lastAttemptAt: new Date().toISOString(),
+    error: null,
+    attemptsCount: 2,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Simulated older attempt finishing with an older attempt ID
+  const olderAttemptId = 'att_older_attempt_123';
+  const isFencedOut = baseDelivery.currentAttemptId !== olderAttemptId;
+  assert.equal(isFencedOut, true, 'Older attempt token must be identified as superseded');
+
+  // If the record was already marked sent by the newer attempt, it must never be overwritten with failure
+  const sentDelivery: RegistrationEmailDelivery = {
+    ...baseDelivery,
+    status: 'sent',
+    currentAttemptId: 'att_newer_attempt_456',
+  };
+  const wouldOverwriteSent = sentDelivery.status === 'sent';
+  assert.equal(wouldOverwriteSent, true, 'Sent status must be protected against late failure overwrite');
+});

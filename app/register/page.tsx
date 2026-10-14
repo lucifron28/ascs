@@ -50,7 +50,11 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
-
+  const [registrationOutcome, setRegistrationOutcome] = useState<{
+    email: string;
+    emailSent: boolean;
+    emailError?: string | null;
+  } | null>(null);
   const updateField = (field: keyof typeof initialForm, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     setError(null);
@@ -75,9 +79,13 @@ export default function RegisterPage() {
 
       setForm((current) => ({ ...current, password: '', confirmPassword: '' }));
       setRegisteredEmail(result.user.email);
+      setRegistrationOutcome({
+        email: result.user.email,
+        emailSent: result.emailSent !== false,
+        emailError: result.emailError,
+      });
     } catch (registrationError: unknown) {
       setError(registrationError instanceof Error ? registrationError.message : 'Unable to create your account.');
-    } finally {
       setLoading(false);
     }
   };
@@ -113,11 +121,23 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <h2 className="text-xl font-bold text-base-content">Registration Submitted</h2>
                 <p className="mt-2 text-sm text-base-content/75 max-w-md mx-auto">
-                  Your student account for <span className="font-semibold text-base-content">{registeredEmail}</span> has been submitted. Please check your inbox for an <span className="font-bold text-primary">email verification link</span> and wait for <span className="font-bold text-warning">administrator approval</span>.
+                  Your student account for <span className="font-semibold text-base-content">{registeredEmail}</span> has been created and is <span className="font-bold text-warning">waiting for administrator approval</span>.
                 </p>
-                <p className="text-xs text-base-content/60 max-w-sm mx-auto">
-                  You will be able to access the clearance portal once your email address is verified and your registration is confirmed by the administration.
-                </p>
+                {registrationOutcome?.emailSent === false ? (
+                  <div className="p-3.5 bg-warning/10 border border-warning/30 rounded-xl max-w-md mx-auto text-xs text-base-content/80 text-left space-y-1.5 mt-2">
+                    <p className="font-bold text-warning">Verification Email Notice:</p>
+                    <p>
+                      The initial email verification message could not be delivered automatically ({registrationOutcome.emailError || 'mail service temporary error'}). Your account registration was safely saved.
+                    </p>
+                    <p>
+                      You can request a new verification link anytime from the Sign In page.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-base-content/60 max-w-sm mx-auto">
+                    Please check your inbox for an <span className="font-bold text-primary">email verification link</span>. You will be able to access the clearance portal once your email is verified and your account is approved.
+                  </p>
+                )}
               </div>
               <div className="pt-2">
                 <Link

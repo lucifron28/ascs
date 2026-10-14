@@ -7,6 +7,11 @@ export interface StudentNumberReservationRecord {
   updatedAt?: string;
 }
 
+export interface ReservationReleaseResult {
+  released: boolean;
+  reason?: 'reservation_not_found' | 'ownership_mismatch' | 'invalid_input';
+}
+
 /**
  * Atomically reserves a student number using a dedicated collection.
  * Uses document ID uniqueness in a Firestore transaction to eliminate race conditions
@@ -65,35 +70,40 @@ export async function associateStudentNumberReservation(
 
 /**
  * Releases a reserved student number upon creation rollback or permanent account deletion.
- * Verifies reservation ownership if expectedUserId is supplied to prevent deleting
- * reservations belonging to another student.
+ * Atomically verifies reservation ownership within a Firestore transaction before deleting,
+ * strictly preventing the release of another student's reservation.
  */
 export async function releaseStudentNumberReservation(
   firestore: Firestore,
   studentNumber: string,
-  expectedUserId?: string
-): Promise<void> {
-  if (!studentNumber || typeof studentNumber !== 'string') return;
+  expectedUserId: string
+): Promise<ReservationReleaseResult> {
+  if (!studentNumber || typeof studentNumber !== 'string') {
+    throw new Error('Student number is required for reservation release.');
+  }
+  if (!expectedUserId || typeof expectedUserId !== 'string') {
+    throw new Error('Expected user ID is required for reservation release to verify ownership.');
+  }
+
   const normalized = studentNumber.trim().toUpperCase();
   const reservationRef = firestore.collection('studentNumberReservations').doc(normalized);
 
-  if (expectedUserId) {
-    const snap = await reservationRef.get();
-    if (!snap.exists) return;
+  return await firestore.runTransaction(async (transaction) => {
+    const snap = await transaction.get(reservationRef);
+    if (!snap.exists) {
+      return { released: false, reason: 'reservation_not_found' as const };
+    }
+
     const data = snap.data() as StudentNumberReservationRecord;
-    // Only permit release if the reservation is owned by the expected user
+    // Strict ownership verification: only release if reservation is owned by the expected user
     if (data.userId !== expectedUserId) {
       console.warn(
         `[Reservation Ownership Guard] Refused to release reservation for '${normalized}'. Owned by '${data.userId}', expected '${expectedUserId}'.`
       );
-      return;
+      return { released: false, reason: 'ownership_mismatch' as const };
     }
-  }
 
-  try {
-    await reservationRef.delete();
-  } catch (err: unknown) {
-    console.error(`[Reservation Cleanup Failure] Could not delete reservation doc for '${normalized}':`, err);
-    throw new Error(`Failed to release student number reservation: ${err instanceof Error ? err.message : String(err)}`);
-  }
+    transaction.delete(reservationRef);
+    return { released: true };
+  });
 }

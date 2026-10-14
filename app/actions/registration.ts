@@ -181,7 +181,15 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
       } catch {
         // Keep the original profile-creation failure as the user-facing error.
       }
-      await releaseStudentNumberReservation(firestore, input.studentNumber, createdUid || 'pending');
+      if (deleted) {
+        await releaseStudentNumberReservation(firestore, input.studentNumber, createdUid).catch((relErr) => {
+          console.error('[Reservation Cleanup Error] Failed to release reservation after Auth cleanup:', relErr);
+        });
+      } else {
+        console.error(
+          `[Compensation Failure] Auth account ${createdUid} could not be deleted; retaining student number reservation for ${input.studentNumber} to prevent duplicate identity collision.`
+        );
+      }
       compensationSucceeded = deleted;
 
       // Keep provider/database details in server logs only. Public registration
@@ -194,16 +202,24 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
     }
 
     // Generate and dispatch email verification link for student email ownership verification
+    let emailSent = false;
+    let emailError: string | null = null;
     try {
       const verificationLink = await auth.generateEmailVerificationLink(input.email);
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: input.email,
         subject: 'ASCS PKM — Verify your student email address',
         text: `Hello ${input.fullName},\n\nPlease verify your email address for the Automated Student Clearance System (ASCS) by visiting the link below:\n\n${verificationLink}\n\nOnce your email is verified and your account is approved by an administrator, you will be able to sign in and submit your clearance application.\n\nBest regards,\nASCS PKM Administration`,
         html: `<!DOCTYPE html><html><body><h2>ASCS PKM</h2><p>Hello <strong>${escapeHtml(input.fullName)}</strong>,</p><p>Please verify your email address for your student account registration by clicking the link below:</p><p><a href="${verificationLink}">Verify Email Address</a></p><p>Once your email address is verified and your account is approved by an administrator, you will be able to sign in.</p></body></html>`,
       });
+      emailSent = emailResult.success;
+      if (!emailResult.success) {
+        emailError = emailResult.error || 'Failed to dispatch email';
+      }
     } catch (verifyEmailErr) {
       console.warn('[Email Warning] Could not dispatch email verification link:', verifyEmailErr);
+      emailSent = false;
+      emailError = verifyEmailErr instanceof Error ? verifyEmailErr.message : 'Email dispatch error';
     }
 
     return {
@@ -214,6 +230,8 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
         fullName: input.fullName,
         role: 'student' as const,
       },
+      emailSent,
+      emailError,
     };
   } catch (error: unknown) {
     logSafeAuthError(
@@ -239,21 +257,25 @@ export async function resendStudentVerificationEmailAction(data: { email: string
     const normalized = data.email.trim().toLowerCase();
     const auth = getAdminAuth();
     const firestore = getAdminFirestore();
-
-    // Cooldown check (60 seconds)
+    // 1. Atomic 60-second cooldown check and lease claim within a transaction
     const nowMs = Date.now();
-    const cooldownRef = firestore.collection('verificationCooldowns').doc(Buffer.from(normalized).toString('hex'));
-    const cooldownSnap = await cooldownRef.get();
-    if (cooldownSnap.exists) {
-      const lastReq = cooldownSnap.data()?.lastRequestedAt;
-      if (lastReq && nowMs - new Date(lastReq).getTime() < 60_000) {
-        const waitSecs = Math.ceil((60_000 - (nowMs - new Date(lastReq).getTime())) / 1000);
-        return {
-          success: false,
-          error: `Please wait ${waitSecs} second${waitSecs === 1 ? '' : 's'} before requesting another verification email.`,
-        };
+    const cooldownDocId = Buffer.from(normalized).toString('hex');
+    const cooldownRef = firestore.collection('verificationCooldowns').doc(cooldownDocId);
+
+    await firestore.runTransaction(async (transaction) => {
+      const snap = await transaction.get(cooldownRef);
+      if (snap.exists) {
+        const lastReq = snap.data()?.lastRequestedAt;
+        if (lastReq && nowMs - new Date(lastReq).getTime() < 60_000) {
+          const waitSecs = Math.ceil((60_000 - (nowMs - new Date(lastReq).getTime())) / 1000);
+          throw new Error(`Please wait ${waitSecs} second${waitSecs === 1 ? '' : 's'} before requesting another verification email.`);
+        }
       }
-    }
+      transaction.set(cooldownRef, {
+        email: normalized,
+        lastRequestedAt: new Date(nowMs).toISOString(),
+      });
+    });
 
     // Generic response message to prevent account enumeration
     const genericResponse = {
@@ -281,12 +303,6 @@ export async function resendStudentVerificationEmailAction(data: { email: string
       return genericResponse;
     }
 
-    // Update cooldown
-    await cooldownRef.set({
-      email: normalized,
-      lastRequestedAt: new Date(nowMs).toISOString(),
-    });
-
     const verificationLink = await auth.generateEmailVerificationLink(normalized);
     const emailResult = await sendEmail({
       to: normalized,
@@ -298,15 +314,22 @@ export async function resendStudentVerificationEmailAction(data: { email: string
     if (!emailResult.success) {
       return {
         success: false as const,
-        error: emailResult.error || 'Failed to dispatch verification email. Please try again later.',
+        error: 'Unable to send verification email at this time. Please try again later.',
       };
     }
 
-    return { success: true as const, message: 'Verification email sent. Please check your inbox.' };
+    return genericResponse;
   } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('Please wait')) {
+      return {
+        success: false as const,
+        error: message,
+      };
+    }
     return {
       success: false as const,
-      error: error instanceof Error ? error.message : 'Failed to resend verification email.',
+      error: 'Unable to process verification request at this time. Please try again later.',
     };
   }
 }

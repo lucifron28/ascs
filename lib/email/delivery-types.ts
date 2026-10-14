@@ -17,6 +17,8 @@ export interface RegistrationEmailDelivery {
   providerId?: string | null;
   actorId?: string;
   lastRetriedBy?: string | null;
+  currentAttemptId?: string | null;
+  smtpDeliveryGuarantee?: 'at_least_once' | 'simulated';
 }
 
 /** Maximum duration in ms that an in-progress send attempt is locked before considered abandoned (2 minutes). */

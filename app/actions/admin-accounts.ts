@@ -996,7 +996,7 @@ export async function deleteUserAccountAction(data: {
           const sNumber = studentDoc.data()?.studentNumber;
           await studentRef.delete();
           if (sNumber) {
-            await releaseStudentNumberReservation(firestore, sNumber);
+            await releaseStudentNumberReservation(firestore, sNumber, data.userId);
           }
         }
       });

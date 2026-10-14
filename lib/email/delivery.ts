@@ -98,8 +98,10 @@ export async function retryRegistrationEmail(
   const firestore = getAdminFirestore();
   const deliveryRef = firestore.collection('registrationEmailDeliveries').doc(deliveryId);
 
-  // 1. Atomically claim the delivery record using a Firestore transaction to prevent concurrent duplicate sends
+  // 1. Atomically claim the delivery record with an attemptId fencing token
+  const attemptId = `att_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   let claimedDelivery: RegistrationEmailDelivery | null = null;
+
   await firestore.runTransaction(async (transaction) => {
     const deliverySnap = await transaction.get(deliveryRef);
     if (!deliverySnap.exists) {
@@ -121,12 +123,13 @@ export async function retryRegistrationEmail(
         throw new Error('Email delivery retry is currently in progress. Please wait before retrying again.');
       }
       // Lease is expired/abandoned (e.g. from server crash or network timeout).
-      // Recovery proceeds safely by claiming the abandoned record.
+      // Recovery proceeds safely by claiming the abandoned record with a new attemptId.
     }
 
     const now = new Date().toISOString();
     transaction.update(deliveryRef, {
       status: 'sending',
+      currentAttemptId: attemptId,
       lastAttemptAt: now,
       lastRetriedBy: adminUid,
       updatedAt: now,
@@ -165,29 +168,58 @@ export async function retryRegistrationEmail(
   const newStatus = resolveDeliveryStatus(emailResult);
   const now = new Date().toISOString();
 
-  const updatedDelivery: RegistrationEmailDelivery = {
-    ...delivery,
-    status: newStatus,
-    lastAttemptAt: now,
-    error: emailResult.error || null,
-    attemptsCount: (delivery.attemptsCount || 1) + 1,
-    updatedAt: now,
-    providerId: emailResult.id || delivery.providerId || null,
-    lastRetriedBy: adminUid,
-  };
+  let finalDelivery: RegistrationEmailDelivery = { ...delivery, status: newStatus };
+  let fencedOut = false;
 
-  // Atomically update delivery record
-  await deliveryRef.update({
-    status: newStatus,
-    lastAttemptAt: now,
-    error: emailResult.error || null,
-    attemptsCount: updatedDelivery.attemptsCount,
-    updatedAt: now,
-    providerId: updatedDelivery.providerId,
-    lastRetriedBy: adminUid,
+  // 3. Atomically commit the outcome ONLY if our attemptId is still the active attempt
+  await firestore.runTransaction(async (transaction) => {
+    const freshSnap = await transaction.get(deliveryRef);
+    if (!freshSnap.exists) return;
+    const freshData = freshSnap.data() as RegistrationEmailDelivery;
+
+    // Fencing check 1: If another attempt superseded the lease while this attempt ran, discard stale outcome
+    if (freshData.currentAttemptId !== attemptId) {
+      console.warn(
+        `[Email Retry Fencing] Attempt ${attemptId} was superseded by attempt ${freshData.currentAttemptId}. Stale result discarded.`
+      );
+      fencedOut = true;
+      finalDelivery = freshData;
+      return;
+    }
+
+    // Fencing check 2: Never overwrite a successful 'sent' record with a delayed failure
+    if (freshData.status === 'sent' && newStatus !== 'sent') {
+      console.warn(`[Email Retry Fencing] Record is already marked sent; discarding failed outcome from attempt ${attemptId}.`);
+      fencedOut = true;
+      finalDelivery = freshData;
+      return;
+    }
+
+    const updatedData: Partial<RegistrationEmailDelivery> = {
+      status: newStatus,
+      lastAttemptAt: now,
+      error: emailResult.error || null,
+      attemptsCount: (freshData.attemptsCount || 1) + 1,
+      updatedAt: now,
+      providerId: emailResult.id || freshData.providerId || null,
+      lastRetriedBy: adminUid,
+      smtpDeliveryGuarantee: emailResult.simulated ? 'simulated' : 'at_least_once',
+    };
+
+    transaction.update(deliveryRef, updatedData);
+    finalDelivery = { ...freshData, ...updatedData };
   });
 
-  // Log activity in activityLogs
+  if (fencedOut) {
+    return {
+      success: finalDelivery.status === 'sent' || finalDelivery.status === 'simulated',
+      status: finalDelivery.status,
+      error: finalDelivery.error || null,
+      delivery: finalDelivery,
+    };
+  }
+
+  // 4. Log activity in activityLogs
   const logRef = firestore.collection('activityLogs').doc();
   await logRef.set({
     actorId: adminUid,
@@ -201,7 +233,10 @@ export async function retryRegistrationEmail(
       decisionType: delivery.decisionType,
       previousStatus: delivery.status,
       newStatus,
-      attemptsCount: updatedDelivery.attemptsCount,
+      attemptsCount: finalDelivery.attemptsCount,
+      attemptId,
+      recoveredFromAbandonedSending: delivery.status === 'sending',
+      smtpDeliveryGuarantee: emailResult.simulated ? 'simulated' : 'at_least_once',
       error: emailResult.error || null,
     }),
     createdAt: now,
@@ -211,6 +246,6 @@ export async function retryRegistrationEmail(
     success: newStatus !== 'failed',
     status: newStatus,
     error: emailResult.error || null,
-    delivery: updatedDelivery,
+    delivery: finalDelivery,
   };
 }
