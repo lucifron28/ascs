@@ -189,6 +189,9 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
       createdUid = userRecord.uid;
       await auth.setCustomUserClaims(createdUid, { role: 'student', mustChangePassword: true });
     } catch (authErr: unknown) {
+      await releaseStudentNumberReservation(firestore, input.studentNumber, 'pending').catch((relErr) => {
+        console.error('[Reservation Cleanup Error] Failed to release reservation on Admin student Auth failure:', relErr);
+      });
       if (createdUid) {
         let deleted = false;
         try {
@@ -274,6 +277,12 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         }),
         createdAt: now,
       });
+      // Associate student number reservation with actual user UID
+      const reservationRef = firestore.collection('studentNumberReservations').doc(input.studentNumber.trim().toUpperCase());
+      batch.update(reservationRef, {
+        userId: uid,
+        updatedAt: now,
+      });
 
       await batch.commit();
 
@@ -302,7 +311,7 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         throw new Error('Student account synchronization verification failed across Auth, users, publicUsers, and students.');
       }
     } catch (dbErr: unknown) {
-      await releaseStudentNumberReservation(firestore, input.studentNumber);
+      await releaseStudentNumberReservation(firestore, input.studentNumber, uid || 'pending');
       let deleted = false;
       try {
         await auth.deleteUser(uid);

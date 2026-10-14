@@ -50,14 +50,22 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
     // Atomically reserve student number to prevent concurrent duplicate registrations
     await reserveStudentNumberAtomically(firestore, input.studentNumber, 'pending', nowIso);
 
-    const userRecord = await auth.createUser({
-      email: input.email,
-      password: input.password,
-      displayName: input.fullName,
-      emailVerified: false,
-    });
-    createdUid = userRecord.uid;
-
+    let userRecord;
+    try {
+      userRecord = await auth.createUser({
+        email: input.email,
+        password: input.password,
+        displayName: input.fullName,
+        emailVerified: false,
+      });
+      createdUid = userRecord.uid;
+    } catch (authCreateErr) {
+      // Release reservation when Firebase Auth creation fails
+      await releaseStudentNumberReservation(firestore, input.studentNumber, 'pending').catch((relErr) => {
+        console.error('[Reservation Cleanup Error] Failed to release reservation on Auth creation failure:', relErr);
+      });
+      throw authCreateErr;
+    }
     try {
       await auth.setCustomUserClaims(createdUid, {
         role: 'student',
@@ -130,6 +138,12 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
         }),
         createdAt: now,
       });
+      // Associate student number reservation with actual user UID
+      const reservationRef = firestore.collection('studentNumberReservations').doc(input.studentNumber.trim().toUpperCase());
+      batch.update(reservationRef, {
+        userId: createdUid,
+        updatedAt: now,
+      });
 
       await batch.commit();
 
@@ -167,7 +181,7 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
       } catch {
         // Keep the original profile-creation failure as the user-facing error.
       }
-      await releaseStudentNumberReservation(firestore, input.studentNumber);
+      await releaseStudentNumberReservation(firestore, input.studentNumber, createdUid || 'pending');
       compensationSucceeded = deleted;
 
       // Keep provider/database details in server logs only. Public registration
@@ -219,35 +233,79 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
  */
 export async function resendStudentVerificationEmailAction(data: { email: string }) {
   try {
-    if (!data?.email || typeof data.email !== 'string') {
+    if (!data?.email || typeof data.email !== 'string' || !data.email.trim()) {
       throw new Error('Email address is required.');
     }
     const normalized = data.email.trim().toLowerCase();
     const auth = getAdminAuth();
     const firestore = getAdminFirestore();
 
-    const userRecord = await auth.getUserByEmail(normalized);
+    // Cooldown check (60 seconds)
+    const nowMs = Date.now();
+    const cooldownRef = firestore.collection('verificationCooldowns').doc(Buffer.from(normalized).toString('hex'));
+    const cooldownSnap = await cooldownRef.get();
+    if (cooldownSnap.exists) {
+      const lastReq = cooldownSnap.data()?.lastRequestedAt;
+      if (lastReq && nowMs - new Date(lastReq).getTime() < 60_000) {
+        const waitSecs = Math.ceil((60_000 - (nowMs - new Date(lastReq).getTime())) / 1000);
+        return {
+          success: false,
+          error: `Please wait ${waitSecs} second${waitSecs === 1 ? '' : 's'} before requesting another verification email.`,
+        };
+      }
+    }
+
+    // Generic response message to prevent account enumeration
+    const genericResponse = {
+      success: true as const,
+      message: 'If an unverified student account exists for this email address, a verification link has been sent. Please check your inbox.',
+    };
+
+    let userRecord;
+    try {
+      userRecord = await auth.getUserByEmail(normalized);
+    } catch (err: unknown) {
+      const code = typeof err === 'object' && err !== null ? (err as { code?: string }).code : undefined;
+      if (code === 'auth/user-not-found') {
+        return genericResponse;
+      }
+      throw err;
+    }
+
     if (userRecord.emailVerified) {
-      return { success: true, message: 'Your email address is already verified. You may sign in.' };
+      return genericResponse;
     }
 
     const userDoc = await firestore.collection('users').doc(userRecord.uid).get();
     if (!userDoc.exists || userDoc.data()?.role !== 'student') {
-      throw new Error('Verification link resend is only available for student accounts.');
+      return genericResponse;
     }
 
+    // Update cooldown
+    await cooldownRef.set({
+      email: normalized,
+      lastRequestedAt: new Date(nowMs).toISOString(),
+    });
+
     const verificationLink = await auth.generateEmailVerificationLink(normalized);
-    await sendEmail({
+    const emailResult = await sendEmail({
       to: normalized,
       subject: 'ASCS PKM — Verify your student email address',
       text: `Hello ${userDoc.data()?.fullName || 'Student'},\n\nPlease verify your email address by visiting the link below:\n\n${verificationLink}\n\nBest regards,\nASCS PKM Administration`,
       html: `<!DOCTYPE html><html><body><h2>ASCS PKM</h2><p>Hello <strong>${escapeHtml(userDoc.data()?.fullName || 'Student')}</strong>,</p><p>Please verify your email address by clicking the link below:</p><p><a href="${verificationLink}">Verify Email Address</a></p></body></html>`,
     });
 
-    return { success: true, message: 'Verification email sent. Please check your inbox.' };
+    if (!emailResult.success) {
+      return {
+        success: false as const,
+        error: emailResult.error || 'Failed to dispatch verification email. Please try again later.',
+      };
+    }
+
+    return { success: true as const, message: 'Verification email sent. Please check your inbox.' };
   } catch (error: unknown) {
     return {
-      success: false,
+      success: false as const,
       error: error instanceof Error ? error.message : 'Failed to resend verification email.',
     };
   }
