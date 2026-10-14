@@ -76,12 +76,13 @@ export async function associateStudentNumberReservation(
 export async function releaseStudentNumberReservation(
   firestore: Firestore,
   studentNumber: string,
-  expectedUserId: string
+  expectedUserId: string | readonly string[]
 ): Promise<ReservationReleaseResult> {
   if (!studentNumber || typeof studentNumber !== 'string') {
     throw new Error('Student number is required for reservation release.');
   }
-  if (!expectedUserId || typeof expectedUserId !== 'string') {
+  const expectedUserIds = typeof expectedUserId === 'string' ? [expectedUserId] : [...expectedUserId];
+  if (expectedUserIds.length === 0 || expectedUserIds.some((userId) => !userId || typeof userId !== 'string')) {
     throw new Error('Expected user ID is required for reservation release to verify ownership.');
   }
 
@@ -96,9 +97,9 @@ export async function releaseStudentNumberReservation(
 
     const data = snap.data() as StudentNumberReservationRecord;
     // Strict ownership verification: only release if reservation is owned by the expected user
-    if (data.userId !== expectedUserId) {
+    if (!expectedUserIds.includes(data.userId)) {
       console.warn(
-        `[Reservation Ownership Guard] Refused to release reservation for '${normalized}'. Owned by '${data.userId}', expected '${expectedUserId}'.`
+        `[Reservation Ownership Guard] Refused to release reservation for '${normalized}'. Owned by '${data.userId}', expected '${expectedUserIds.join(" or ")}'.`
       );
       return { released: false, reason: 'ownership_mismatch' as const };
     }

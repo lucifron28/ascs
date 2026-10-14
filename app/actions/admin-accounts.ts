@@ -31,6 +31,57 @@ import {
   releaseStudentNumberReservation,
 } from '@/lib/admin/student-number-reservation';
 
+async function deleteAuthUserIfPresent(auth: ReturnType<typeof getAdminAuth>, uid: string): Promise<void> {
+  try {
+    await auth.deleteUser(uid);
+  } catch (error: unknown) {
+    if ((error as { code?: string }).code !== 'auth/user-not-found') {
+      throw error;
+    }
+  }
+}
+
+async function releaseReservationAfterConfirmedAuthCleanup(
+  firestore: ReturnType<typeof getAdminFirestore>,
+  studentNumber: string,
+  expectedUserIds: string | readonly string[],
+  operation: string
+): Promise<boolean> {
+  try {
+    const result = await releaseStudentNumberReservation(firestore, studentNumber, expectedUserIds);
+    if (result.released || result.reason === 'reservation_not_found') {
+      return true;
+    }
+    if (!result.released) {
+      console.error('[Reservation Cleanup Error] Reservation was not released after Auth cleanup:', {
+        operation,
+        studentNumber,
+        reason: result.reason,
+      });
+    }
+    return false;
+  } catch (error: unknown) {
+    console.error('[Reservation Cleanup Error] Failed to release reservation after Auth cleanup:', {
+      operation,
+      studentNumber,
+      error,
+    });
+    return false;
+  }
+}
+
+async function confirmAuthUserAbsent(
+  auth: ReturnType<typeof getAdminAuth>,
+  email: string
+): Promise<boolean> {
+  try {
+    await auth.getUserByEmail(email);
+    return false;
+  } catch (error: unknown) {
+    return (error as { code?: string }).code === 'auth/user-not-found';
+  }
+}
+
 // Helper to verify caller is active Admin
 async function getAuthenticatedAdmin() {
   const authenticated = await getAuthenticatedUser();
@@ -189,20 +240,41 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
       createdUid = userRecord.uid;
       await auth.setCustomUserClaims(createdUid, { role: 'student', mustChangePassword: true });
     } catch (authErr: unknown) {
-      await releaseStudentNumberReservation(firestore, input.studentNumber, 'pending').catch((relErr) => {
-        console.error('[Reservation Cleanup Error] Failed to release reservation on Admin student Auth failure:', relErr);
-      });
+      let authAbsent = false;
       if (createdUid) {
-        let deleted = false;
         try {
-          await auth.deleteUser(createdUid);
-          deleted = true;
-        } catch {}
-        if (!deleted) {
-          throw new Error(
-            'Account creation partially failed and Auth cleanup also failed. Manual intervention is required.'
-          );
+          await deleteAuthUserIfPresent(auth, createdUid);
+          authAbsent = true;
+        } catch (cleanupError: unknown) {
+          console.error('[Auth Cleanup Error] Failed to delete partially created Admin student account:', cleanupError);
         }
+      } else {
+        authAbsent = await confirmAuthUserAbsent(auth, input.email);
+      }
+
+      if (authAbsent) {
+        const reservationReleased = await releaseReservationAfterConfirmedAuthCleanup(
+          firestore,
+          input.studentNumber,
+          'pending',
+          'admin_student_auth_creation'
+        );
+        if (!reservationReleased) {
+          throw new Error('Account creation failed after Auth cleanup. Student-number reservation cleanup needs manual intervention.');
+        }
+      } else {
+        console.error(
+          '[Reservation Cleanup Error] Retaining student number reservation because Auth absence was not confirmed:',
+          { operation: 'admin_student_auth_creation', studentNumber: input.studentNumber }
+        );
+      }
+
+      if (!authAbsent) {
+        throw new Error(
+          'Account creation partially failed and Auth absence could not be confirmed. Manual intervention is required.'
+        );
+      }
+      if (createdUid) {
         throw new Error(
           'Account creation failed during custom claim setup. Auth cleanup completed.'
         );
@@ -311,13 +383,30 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         throw new Error('Student account synchronization verification failed across Auth, users, publicUsers, and students.');
       }
     } catch (dbErr: unknown) {
-      await releaseStudentNumberReservation(firestore, input.studentNumber, uid || 'pending');
       let deleted = false;
+      let reservationReleased = false;
       try {
-        await auth.deleteUser(uid);
+        await deleteAuthUserIfPresent(auth, uid);
         deleted = true;
       } catch {}
-      const cleanupStatus = deleted ? 'Auth cleanup completed.' : 'Auth cleanup failed (manual intervention required).';
+      if (deleted) {
+        reservationReleased = await releaseReservationAfterConfirmedAuthCleanup(
+          firestore,
+          input.studentNumber,
+          ['pending', uid],
+          'admin_student_firestore_rollback'
+        );
+      } else {
+        console.error(
+          '[Reservation Cleanup Error] Retaining student number reservation because Auth cleanup failed:',
+          { operation: 'admin_student_firestore_rollback', studentNumber: input.studentNumber }
+        );
+      }
+      const cleanupStatus = deleted
+        ? reservationReleased
+          ? 'Auth cleanup completed.'
+          : 'Auth cleanup completed, but reservation cleanup failed (manual intervention required).'
+        : 'Auth cleanup failed (manual intervention required).';
       const msg = dbErr instanceof Error ? dbErr.message : 'Database profile creation failed.';
       throw new Error(`Account creation failed during Firestore write: ${msg}. ${cleanupStatus}`);
     }
@@ -909,12 +998,18 @@ export async function deleteUserAccountAction(data: {
     let targetEmail = '';
     let targetRole: UserRole | 'unknown' = 'unknown';
     let targetFullName = '';
+    let studentNumberForReservation: string | null = null;
+    let studentProfileRemoved = false;
+    let authDeleted = false;
 
     if (userSnap.exists) {
       const u = userSnap.data()!;
       targetEmail = u.email || '';
       targetRole = u.role || 'unknown';
       targetFullName = u.fullName || '';
+      if (targetRole === 'student' || targetRole === 'unknown') {
+        studentNumberForReservation = u.studentNumber || null;
+      }
 
       if (targetRole === 'admin') {
         const activeAdminsSnap = await firestore
@@ -993,12 +1088,11 @@ export async function deleteUserAccountAction(data: {
         const studentRef = firestore.collection('students').doc(data.userId);
         const studentDoc = await studentRef.get();
         if (studentDoc.exists) {
-          const sNumber = studentDoc.data()?.studentNumber;
+          const sNumber = studentDoc.data()?.studentNumber || studentNumberForReservation;
+          if (sNumber) studentNumberForReservation = sNumber;
           await studentRef.delete();
-          if (sNumber) {
-            await releaseStudentNumberReservation(firestore, sNumber, data.userId);
-          }
         }
+        studentProfileRemoved = true;
       });
     }
 
@@ -1037,14 +1131,44 @@ export async function deleteUserAccountAction(data: {
 
     // 4. Delete Auth user
     await executeStep('auth_user', async () => {
+      await deleteAuthUserIfPresent(auth, data.userId);
+      authDeleted = true;
+    });
+
+    if (authDeleted && studentProfileRemoved) {
+      const reservationNumbers = new Set<string>();
+      if (studentNumberForReservation) reservationNumbers.add(studentNumberForReservation);
       try {
-        await auth.deleteUser(data.userId);
-      } catch (authDeleteErr: unknown) {
-        if ((authDeleteErr as { code?: string }).code !== 'auth/user-not-found') {
-          throw authDeleteErr;
+        const reservationsSnap = await firestore
+          .collection('studentNumberReservations')
+          .where('userId', '==', data.userId)
+          .get();
+        for (const reservationDoc of reservationsSnap.docs) {
+          const reservation = reservationDoc.data();
+          reservationNumbers.add(reservation.studentNumber || reservationDoc.id);
+        }
+      } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        failedSteps.push({ step: 'student_number_reservation_lookup', error: errorMsg });
+        logSafeAuthError('delete_user_step_student_number_reservation_lookup', error, data.userId);
+      }
+
+      for (const studentNumber of reservationNumbers) {
+        try {
+          const result = await releaseStudentNumberReservation(firestore, studentNumber, data.userId);
+          if (!result.released && result.reason === 'ownership_mismatch') {
+            failedSteps.push({
+              step: 'student_number_reservation',
+              error: 'Student-number reservation is owned by a different account and was retained.',
+            });
+          }
+        } catch (error: unknown) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          failedSteps.push({ step: 'student_number_reservation', error: errorMsg });
+          logSafeAuthError('delete_user_step_student_number_reservation', error, data.userId);
         }
       }
-    });
+    }
 
     const now = new Date().toISOString();
 

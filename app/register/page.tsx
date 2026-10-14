@@ -127,7 +127,7 @@ export default function RegisterPage() {
                   <div className="p-3.5 bg-warning/10 border border-warning/30 rounded-xl max-w-md mx-auto text-xs text-base-content/80 text-left space-y-1.5 mt-2">
                     <p className="font-bold text-warning">Verification Email Notice:</p>
                     <p>
-                      The initial email verification message could not be delivered automatically ({registrationOutcome.emailError || 'mail service temporary error'}). Your account registration was safely saved.
+                      The initial verification email could not be sent automatically. Your account registration was safely saved.
                     </p>
                     <p>
                       You can request a new verification link anytime from the Sign In page.

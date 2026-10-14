@@ -77,6 +77,11 @@ export interface RetryRegistrationEmailResult {
   delivery: RegistrationEmailDelivery;
 }
 
+export interface RegistrationEmailDispatchers {
+  sendApproved: typeof sendRegistrationApprovedEmail;
+  sendRejected: typeof sendRegistrationRejectedEmail;
+}
+
 /**
  * Retries a previously failed or pending registration decision email.
  * Guarantees:
@@ -89,7 +94,11 @@ export interface RetryRegistrationEmailResult {
 export async function retryRegistrationEmail(
   deliveryId: string,
   adminUid: string,
-  adminName: string = 'Administrator'
+  adminName: string = 'Administrator',
+  dispatchers: RegistrationEmailDispatchers = {
+    sendApproved: sendRegistrationApprovedEmail,
+    sendRejected: sendRegistrationRejectedEmail,
+  }
 ): Promise<RetryRegistrationEmailResult> {
   if (!deliveryId || typeof deliveryId !== 'string') {
     throw new Error('Delivery ID is required for email retry.');
@@ -147,12 +156,12 @@ export async function retryRegistrationEmail(
   let emailResult: SendEmailResult;
   try {
     if (delivery.decisionType === 'approved') {
-      emailResult = await sendRegistrationApprovedEmail({
+      emailResult = await dispatchers.sendApproved({
         to: delivery.recipientEmail,
         fullName: delivery.recipientName,
       });
     } else {
-      emailResult = await sendRegistrationRejectedEmail({
+      emailResult = await dispatchers.sendRejected({
         to: delivery.recipientEmail,
         fullName: delivery.recipientName,
         rejectionReason: delivery.rejectionReason || 'Registration could not be approved.',

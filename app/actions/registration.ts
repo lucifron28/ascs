@@ -14,6 +14,70 @@ import {
 } from '@/lib/admin/student-number-reservation';
 import { sendEmail } from '@/lib/email/service';
 import { escapeHtml } from '@/lib/email/templates';
+
+const GENERIC_VERIFICATION_EMAIL_ERROR =
+  'The verification email could not be sent automatically. You can request a new link from the Sign In page.';
+
+async function sendVerificationEmail(options: Parameters<typeof sendEmail>[0]) {
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE === 'true'
+  ) {
+    return { success: false, error: 'Test-only SMTP authentication failure: 535 invalid credentials.' };
+  }
+  return sendEmail(options);
+}
+
+async function releaseRegistrationReservation(
+  firestore: ReturnType<typeof getAdminFirestore>,
+  studentNumber: string,
+  expectedUserIds: string | readonly string[],
+  operation: string
+): Promise<boolean> {
+  try {
+    const result = await releaseStudentNumberReservation(firestore, studentNumber, expectedUserIds);
+    if (result.released || result.reason === 'reservation_not_found') {
+      return true;
+    }
+    if (!result.released) {
+      console.error('[Reservation Cleanup Error] Registration reservation was not released:', {
+        operation,
+        studentNumber,
+        reason: result.reason,
+      });
+    }
+    return false;
+  } catch (error: unknown) {
+    console.error('[Reservation Cleanup Error] Failed to release registration reservation:', {
+      operation,
+      studentNumber,
+      error,
+    });
+    return false;
+  }
+}
+
+async function deleteAuthUserIfPresent(auth: ReturnType<typeof getAdminAuth>, uid: string): Promise<void> {
+  try {
+    await auth.deleteUser(uid);
+  } catch (error: unknown) {
+    if ((error as { code?: string }).code !== 'auth/user-not-found') {
+      throw error;
+    }
+  }
+}
+
+async function confirmAuthUserAbsent(
+  auth: ReturnType<typeof getAdminAuth>,
+  email: string
+): Promise<boolean> {
+  try {
+    await auth.getUserByEmail(email);
+    return false;
+  } catch (error: unknown) {
+    return (error as { code?: string }).code === 'auth/user-not-found';
+  }
+}
 /**
  * Create a student-only account from the public registration form.
  *
@@ -60,10 +124,26 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
       });
       createdUid = userRecord.uid;
     } catch (authCreateErr) {
-      // Release reservation when Firebase Auth creation fails
-      await releaseStudentNumberReservation(firestore, input.studentNumber, 'pending').catch((relErr) => {
-        console.error('[Reservation Cleanup Error] Failed to release reservation on Auth creation failure:', relErr);
-      });
+      // Auth may have accepted a create request even when its response was lost.
+      const authAbsent = await confirmAuthUserAbsent(auth, input.email);
+      const reservationReleased = authAbsent
+        ? await releaseRegistrationReservation(
+            firestore,
+            input.studentNumber,
+            'pending',
+            'self_registration_auth_creation'
+          )
+        : false;
+      if (!authAbsent) {
+        console.error(
+          '[Reservation Cleanup Error] Retaining student number reservation because Auth absence was not confirmed:',
+          { operation: 'self_registration_auth_creation', studentNumber: input.studentNumber }
+        );
+      }
+      compensationSucceeded = authAbsent && reservationReleased;
+      if (!compensationSucceeded) {
+        throw new Error('Registration could not complete. Reservation cleanup needs administrator attention.');
+      }
       throw authCreateErr;
     }
     try {
@@ -173,29 +253,33 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
       }
     } catch {
       let deleted = false;
+      let reservationReleased = false;
       try {
         if (createdUid) {
-          await auth.deleteUser(createdUid);
+          await deleteAuthUserIfPresent(auth, createdUid);
           deleted = true;
         }
       } catch {
         // Keep the original profile-creation failure as the user-facing error.
       }
       if (deleted) {
-        await releaseStudentNumberReservation(firestore, input.studentNumber, createdUid).catch((relErr) => {
-          console.error('[Reservation Cleanup Error] Failed to release reservation after Auth cleanup:', relErr);
-        });
+        reservationReleased = await releaseRegistrationReservation(
+          firestore,
+          input.studentNumber,
+          ['pending', createdUid],
+          'self_registration_profile_rollback'
+        );
       } else {
         console.error(
           `[Compensation Failure] Auth account ${createdUid} could not be deleted; retaining student number reservation for ${input.studentNumber} to prevent duplicate identity collision.`
         );
       }
-      compensationSucceeded = deleted;
+      compensationSucceeded = deleted && reservationReleased;
 
       // Keep provider/database details in server logs only. Public registration
       // must not expose internal Firestore or Auth error messages.
       throw new Error(
-        deleted
+        deleted && reservationReleased
           ? 'Registration could not complete. Please try again.'
           : 'Registration could not complete. Please contact an administrator.'
       );
@@ -206,7 +290,7 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
     let emailError: string | null = null;
     try {
       const verificationLink = await auth.generateEmailVerificationLink(input.email);
-      const emailResult = await sendEmail({
+      const emailResult = await sendVerificationEmail({
         to: input.email,
         subject: 'ASCS PKM — Verify your student email address',
         text: `Hello ${input.fullName},\n\nPlease verify your email address for the Automated Student Clearance System (ASCS) by visiting the link below:\n\n${verificationLink}\n\nOnce your email is verified and your account is approved by an administrator, you will be able to sign in and submit your clearance application.\n\nBest regards,\nASCS PKM Administration`,
@@ -214,12 +298,13 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
       });
       emailSent = emailResult.success;
       if (!emailResult.success) {
-        emailError = emailResult.error || 'Failed to dispatch email';
+        console.error('[Email Warning] Could not dispatch email verification link:', emailResult.error || 'Unknown provider failure');
+        emailError = GENERIC_VERIFICATION_EMAIL_ERROR;
       }
     } catch (verifyEmailErr) {
       console.warn('[Email Warning] Could not dispatch email verification link:', verifyEmailErr);
       emailSent = false;
-      emailError = verifyEmailErr instanceof Error ? verifyEmailErr.message : 'Email dispatch error';
+      emailError = GENERIC_VERIFICATION_EMAIL_ERROR;
     }
 
     return {
@@ -250,6 +335,11 @@ export async function registerStudentAccountAction(data: Partial<StudentRegistra
  * Resend verification email to an unverified student account.
  */
 export async function resendStudentVerificationEmailAction(data: { email: string }) {
+  const genericResponse = {
+    success: true as const,
+    message: 'If an unverified student account exists for this email address, a verification link has been sent. Please check your inbox.',
+  };
+
   try {
     if (!data?.email || typeof data.email !== 'string' || !data.email.trim()) {
       throw new Error('Email address is required.');
@@ -277,12 +367,6 @@ export async function resendStudentVerificationEmailAction(data: { email: string
       });
     });
 
-    // Generic response message to prevent account enumeration
-    const genericResponse = {
-      success: true as const,
-      message: 'If an unverified student account exists for this email address, a verification link has been sent. Please check your inbox.',
-    };
-
     let userRecord;
     try {
       userRecord = await auth.getUserByEmail(normalized);
@@ -304,7 +388,7 @@ export async function resendStudentVerificationEmailAction(data: { email: string
     }
 
     const verificationLink = await auth.generateEmailVerificationLink(normalized);
-    const emailResult = await sendEmail({
+    const emailResult = await sendVerificationEmail({
       to: normalized,
       subject: 'ASCS PKM — Verify your student email address',
       text: `Hello ${userDoc.data()?.fullName || 'Student'},\n\nPlease verify your email address by visiting the link below:\n\n${verificationLink}\n\nBest regards,\nASCS PKM Administration`,
@@ -312,10 +396,8 @@ export async function resendStudentVerificationEmailAction(data: { email: string
     });
 
     if (!emailResult.success) {
-      return {
-        success: false as const,
-        error: 'Unable to send verification email at this time. Please try again later.',
-      };
+      console.error('[Verification Resend] Email provider rejected delivery:', emailResult.error || 'Unknown provider failure');
+      return genericResponse;
     }
 
     return genericResponse;
@@ -327,9 +409,7 @@ export async function resendStudentVerificationEmailAction(data: { email: string
         error: message,
       };
     }
-    return {
-      success: false as const,
-      error: 'Unable to process verification request at this time. Please try again later.',
-    };
+    console.error('[Verification Resend] Request failed; returning generic response:', error);
+    return genericResponse;
   }
 }
