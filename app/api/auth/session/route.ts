@@ -44,6 +44,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 4b. Confirm email verification for self-registered students
+    if (user?.role === 'student' && user?.createdBy === 'self_registration' && !decodedToken.email_verified) {
+      return NextResponse.json(
+        { error: 'Email verification required. Please verify your email address to access your clearance portal.' },
+        { status: 403 }
+      );
+    }
+
     // Set session expiration to 5 days
     const expiresIn = 60 * 60 * 24 * 5 * 1000;
 

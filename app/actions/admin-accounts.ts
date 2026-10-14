@@ -26,6 +26,11 @@ import {
   retryRegistrationEmail,
 } from '@/lib/email/delivery';
 import type { RegistrationEmailDelivery, EmailDeliveryStatus } from '@/lib/types/firestore';
+import {
+  reserveStudentNumberAtomically,
+  releaseStudentNumberReservation,
+} from '@/lib/admin/student-number-reservation';
+
 // Helper to verify caller is active Admin
 async function getAuthenticatedAdmin() {
   const authenticated = await getAuthenticatedUser();
@@ -167,16 +172,9 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
       }
     }
 
-    // Duplicate student number check in Firestore
-    const studentNumberQuery = await firestore
-      .collection('students')
-      .where('studentNumber', '==', input.studentNumber)
-      .get();
-
-    if (!studentNumberQuery.empty) {
-      throw new Error(`Student number '${input.studentNumber}' is already registered to another student.`);
-    }
-
+    const now = new Date().toISOString();
+    // Atomically reserve student number to prevent concurrent duplicate accounts
+    await reserveStudentNumberAtomically(firestore, input.studentNumber, 'pending', now);
     const tempPassword = input.temporaryPassword || generateRandomTemporaryPassword();
 
     // Step A: Create Auth user & set custom claims with cleanup compensation
@@ -213,7 +211,6 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
     const uid = createdUid;
 
     // Step B: Write Firestore profiles & Activity Log in ONE atomic batch
-    const now = new Date().toISOString();
     try {
       const batch = firestore.batch();
 
@@ -305,6 +302,7 @@ export async function createStudentAccountAction(data: StudentAccountInput) {
         throw new Error('Student account synchronization verification failed across Auth, users, publicUsers, and students.');
       }
     } catch (dbErr: unknown) {
+      await releaseStudentNumberReservation(firestore, input.studentNumber);
       let deleted = false;
       try {
         await auth.deleteUser(uid);
@@ -986,7 +984,11 @@ export async function deleteUserAccountAction(data: {
         const studentRef = firestore.collection('students').doc(data.userId);
         const studentDoc = await studentRef.get();
         if (studentDoc.exists) {
+          const sNumber = studentDoc.data()?.studentNumber;
           await studentRef.delete();
+          if (sNumber) {
+            await releaseStudentNumberReservation(firestore, sNumber);
+          }
         }
       });
     }
@@ -1183,7 +1185,8 @@ export async function approveStudentRegistrationAction(data: { userId: string })
     await batch.commit();
 
     let emailDelivery: { status: EmailDeliveryStatus; error?: string | null; deliveryId: string } = {
-      status: 'simulated',
+      status: 'failed',
+      error: null,
       deliveryId: '',
     };
     try {
@@ -1208,7 +1211,30 @@ export async function approveStudentRegistrationAction(data: { userId: string })
         console.warn('[Email Warning] Registration approved email delivery failed:', deliveryRecord.error);
       }
     } catch (emailErr) {
+      const errorMsg = emailErr instanceof Error ? emailErr.message : 'Failed to dispatch notification email';
       console.warn('[Email Warning] Error recording or sending registration approved email:', emailErr);
+      try {
+        const fallbackDelivery = await recordRegistrationEmailDelivery({
+          recipientEmail: userData.email,
+          recipientName: userData.fullName || 'Student',
+          decisionType: 'approved',
+          emailResult: { success: false, error: errorMsg },
+          userId: data.userId,
+          actorId: adminUid,
+        });
+        emailDelivery = {
+          status: 'failed',
+          error: errorMsg,
+          deliveryId: fallbackDelivery.deliveryId,
+        };
+      } catch (fallbackErr) {
+        console.error('[Email Critical] Failed to persist fallback delivery record:', fallbackErr);
+        emailDelivery = {
+          status: 'failed',
+          error: errorMsg,
+          deliveryId: '',
+        };
+      }
     }
 
     return {
@@ -1259,7 +1285,8 @@ export async function rejectStudentRegistrationAction(data: { userId: string; re
     }
 
     let emailDelivery: { status: EmailDeliveryStatus; error?: string | null; deliveryId: string } = {
-      status: 'simulated',
+      status: 'failed',
+      error: null,
       deliveryId: '',
     };
     try {
@@ -1286,7 +1313,31 @@ export async function rejectStudentRegistrationAction(data: { userId: string; re
         console.warn('[Email Warning] Registration rejected email delivery failed:', deliveryRecord.error);
       }
     } catch (emailErr) {
+      const errorMsg = emailErr instanceof Error ? emailErr.message : 'Failed to dispatch notification email';
       console.warn('[Email Warning] Error recording or sending registration rejected email:', emailErr);
+      try {
+        const fallbackDelivery = await recordRegistrationEmailDelivery({
+          recipientEmail: targetEmail,
+          recipientName: targetFullName,
+          decisionType: 'rejected',
+          rejectionReason: validatedReason,
+          emailResult: { success: false, error: errorMsg },
+          userId: data.userId,
+          actorId: adminUid,
+        });
+        emailDelivery = {
+          status: 'failed',
+          error: errorMsg,
+          deliveryId: fallbackDelivery.deliveryId,
+        };
+      } catch (fallbackErr) {
+        console.error('[Email Critical] Failed to persist fallback delivery record:', fallbackErr);
+        emailDelivery = {
+          status: 'failed',
+          error: errorMsg,
+          deliveryId: '',
+        };
+      }
     }
 
     return {

@@ -20,48 +20,53 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function isActiveUser() {
+      return hasUserDoc() && getUserData().accountStatus == 'active' && getUserData().isActive == true;
+    }
+
     function getUserRole() {
       return hasUserDoc() ? getUserData().role : null;
     }
 
     function isAdmin() {
-      return isAuthenticated() && getUserRole() == 'admin';
+      return isAuthenticated() && isActiveUser() && getUserRole() == 'admin';
     }
 
     function isAccountant() {
-      return isAuthenticated() && getUserRole() == 'accountant';
+      return isAuthenticated() && isActiveUser() && getUserRole() == 'accountant';
     }
 
     function isDean() {
-      return isAuthenticated() && getUserRole() == 'dean';
+      return isAuthenticated() && isActiveUser() && getUserRole() == 'dean';
     }
+
     // users collection
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if (isOwner(userId) && isActiveUser()) || isAdmin();
       allow write: if false; // All updates, profile creation, role changes are server-only
     }
 
     // publicUsers collection
     match /publicUsers/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && isActiveUser();
       allow write: if false; // Server-only update from Server Actions
     }
 
     // students collection
     match /students/{studentId} {
-      allow read: if isOwner(studentId) || isAdmin();
+      allow read: if (isOwner(studentId) && isActiveUser()) || isAdmin();
       allow write: if false; // Server-only creation and update
     }
 
     // clearanceRequirements collection
     match /clearanceRequirements/{requirementId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && isActiveUser();
       allow write: if false; // Server-only management
     }
 
     // clearanceApplications collection
     match /clearanceApplications/{applicationId} {
-      allow read: if isAuthenticated() && (
+      allow read: if isAuthenticated() && isActiveUser() && (
         resource.data.studentUid == request.auth.uid 
         || isAdmin()
       );
@@ -69,7 +74,7 @@ service cloud.firestore {
       
       // approvals subcollection
       match /approvals/{approvalId} {
-        allow read: if isAuthenticated() && (
+        allow read: if isAuthenticated() && isActiveUser() && (
           get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.studentUid == request.auth.uid
           || isAdmin()
         );
@@ -78,7 +83,7 @@ service cloud.firestore {
 
       // remarks subcollection
       match /remarks/{remarkId} {
-        allow read: if isAuthenticated() && (
+        allow read: if isAuthenticated() && isActiveUser() && (
           get(/databases/$(database)/documents/clearanceApplications/$(applicationId)).data.studentUid == request.auth.uid
           || isAdmin()
         );
@@ -86,11 +91,10 @@ service cloud.firestore {
       }
     }
 
-
     // notifications collection
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid 
+      allow read: if isAuthenticated() && isActiveUser() && resource.data.recipientId == request.auth.uid;
+      allow update: if isAuthenticated() && isActiveUser() && resource.data.recipientId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
       allow create, delete: if false; // Server-only creation/deletion
     }
@@ -105,6 +109,12 @@ service cloud.firestore {
     match /registrationEmailDeliveries/{deliveryId} {
       allow read: if isAdmin();
       allow write: if false; // Server-only
+    }
+
+    // studentNumberReservations collection
+    match /studentNumberReservations/{studentNumber} {
+      allow read: if isAdmin();
+      allow write: if false; // Server-only reservation
     }
   }
 }

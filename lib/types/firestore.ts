@@ -130,7 +130,7 @@ export interface ActivityLog {
   createdAt: FirestoreTimestamp;
 }
 
-export type EmailDeliveryStatus = 'sent' | 'failed' | 'simulated';
+export type EmailDeliveryStatus = 'sent' | 'failed' | 'simulated' | 'sending';
 export type RegistrationDecisionType = 'approved' | 'rejected';
 
 export interface RegistrationEmailDelivery {

@@ -28,12 +28,15 @@ describe('Firestore Rules Security Boundaries Tests', () => {
     // Seed mock user docs for rule helper functions like getUserData()
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const db = context.firestore();
-      await setDoc(doc(db, 'users/student-a-uid'), { role: 'student' });
-      await setDoc(doc(db, 'users/student-b-uid'), { role: 'student' });
-      await setDoc(doc(db, 'users/admin-uid'), { role: 'admin' });
-      await setDoc(doc(db, 'users/librarian-uid'), { role: 'librarian' });
-      await setDoc(doc(db, 'users/accountant-uid'), { role: 'accountant' });
-      await setDoc(doc(db, 'users/dean-uid'), { role: 'dean' });
+      await setDoc(doc(db, 'users/student-a-uid'), { role: 'student', accountStatus: 'active', isActive: true });
+      await setDoc(doc(db, 'users/student-b-uid'), { role: 'student', accountStatus: 'active', isActive: true });
+      await setDoc(doc(db, 'users/admin-uid'), { role: 'admin', accountStatus: 'active', isActive: true });
+      await setDoc(doc(db, 'users/librarian-uid'), { role: 'librarian', accountStatus: 'active', isActive: true });
+      await setDoc(doc(db, 'users/accountant-uid'), { role: 'accountant', accountStatus: 'active', isActive: true });
+      await setDoc(doc(db, 'users/dean-uid'), { role: 'dean', accountStatus: 'active', isActive: true });
+      await setDoc(doc(db, 'users/pending-student-uid'), { role: 'student', accountStatus: 'pending_approval', isActive: false });
+      await setDoc(doc(db, 'users/inactive-admin-uid'), { role: 'admin', accountStatus: 'inactive', isActive: false });
+      await setDoc(doc(db, 'activityLogs/log-1'), { action: 'test_action' });
       await setDoc(doc(db, 'clearanceApplications/app-student-a'), {
         studentUid: 'student-a-uid',
         financialStatus: 'paid',
@@ -124,5 +127,32 @@ describe('Firestore Rules Security Boundaries Tests', () => {
     await assertFails(
       setDoc(doc(adminDb, 'users/new-user'), { role: 'student' })
     );
+  });
+
+  it('6. Pending students CANNOT read protected collections through client SDK', async () => {
+    const pendingDb = testEnv.authenticatedContext('pending-student-uid').firestore();
+
+    await assertFails(getDoc(doc(pendingDb, 'users/pending-student-uid')));
+    await assertFails(getDoc(doc(pendingDb, 'publicUsers/student-a-uid')));
+    await assertFails(getDoc(doc(pendingDb, 'clearanceRequirements/librarian')));
+    await assertFails(getDoc(doc(pendingDb, 'clearanceApplications/app-student-a')));
+    await assertFails(getDoc(doc(pendingDb, 'activityLogs/log-1')));
+  });
+
+  it('7. Inactive administrators CANNOT read protected collections through client SDK', async () => {
+    const inactiveAdminDb = testEnv.authenticatedContext('inactive-admin-uid').firestore();
+
+    await assertFails(getDoc(doc(inactiveAdminDb, 'users/student-a-uid')));
+    await assertFails(getDoc(doc(inactiveAdminDb, 'clearanceApplications/app-student-a')));
+    await assertFails(getDoc(doc(inactiveAdminDb, 'activityLogs/log-1')));
+    await assertFails(getDoc(doc(inactiveAdminDb, 'registrationEmailDeliveries/delivery-1')));
+  });
+
+  it('8. Active administrators CAN read permitted admin collections', async () => {
+    const activeAdminDb = testEnv.authenticatedContext('admin-uid').firestore();
+
+    await assertSucceeds(getDoc(doc(activeAdminDb, 'users/student-a-uid')));
+    await assertSucceeds(getDoc(doc(activeAdminDb, 'clearanceApplications/app-student-a')));
+    await assertSucceeds(getDoc(doc(activeAdminDb, 'activityLogs/log-1')));
   });
 });

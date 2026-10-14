@@ -204,13 +204,36 @@ describe('Signatory Workflow Integration Tests', () => {
     const appDoc = await getAdminFirestore().collection('clearanceApplications').doc('app-student-a').get();
     assert.equal(appDoc.data()?.overallStatus, 'pending');
     assert.equal(appDoc.data()?.printableAvailable, false);
-    assert.equal(appDoc.data()?.approvedCount, 4);
-    assert.equal(appDoc.data()?.pendingCount, 1);
+    assert.equal(appDoc.data()?.approvedCount, 0);
+    assert.equal(appDoc.data()?.pendingCount, 5);
+    assert.equal(appDoc.data()?.deanApproved, false);
 
     const approvalDoc = await getAdminFirestore().collection('clearanceApplications').doc('app-student-a').collection('approvals').doc('librarian').get();
     assert.equal(approvalDoc.data()?.status, 'pending');
     assert.equal(approvalDoc.data()?.remarksLatest, 'Accidental approval corrected - student has unreturned library book.');
 
+    // Downstream approvals (OSA, Guidance, Area Chair, Dean) are invalidated to pending
+    for (const downstreamRole of ['osa_coordinator', 'guidance_counselor', 'area_chair', 'dean']) {
+      const dSnap = await getAdminFirestore()
+        .collection('clearanceApplications')
+        .doc('app-student-a')
+        .collection('approvals')
+        .doc(downstreamRole)
+        .get();
+      assert.equal(dSnap.data()?.status, 'pending');
+      assert.equal(dSnap.data()?.actedAt, null);
+      assert.ok(dSnap.data()?.remarksLatest?.includes('Downstream Invalidation'));
+    }
+
+    // Remarks subcollection contains audit records for downstream invalidations
+    const remarksSnap = await getAdminFirestore()
+      .collection('clearanceApplications')
+      .doc('app-student-a')
+      .collection('remarks')
+      .get();
+    const remarkContents = remarksSnap.docs.map((d) => d.data().content);
+    assert.ok(remarkContents.some((c) => c.includes('[Reopened / Returned to Pending]')));
+    assert.ok(remarkContents.some((c) => c.includes('[Downstream Invalidation]')));
     // Unauthorized role cannot reopen
     process.env.TEST_SESSION_COOKIE = osaSession;
     const failReopen = await reopenClearanceAction({

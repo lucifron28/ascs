@@ -71,6 +71,9 @@ export async function getAuthenticatedUserForPasswordChange(session?: string) {
   if (user.accountStatus === 'inactive' || user.isActive === false) {
     throw new Error('Unauthorized: Account is inactive or deactivated.');
   }
+  if (user.role === 'student' && user.createdBy === 'self_registration' && claims.email_verified === false) {
+    throw new Error('Unauthorized: Email verification required.');
+  }
 
   return { claims, uid, user };
 }

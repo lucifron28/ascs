@@ -307,6 +307,59 @@ describe('Account Lifecycle Integration Tests', () => {
     }
   });
 
+  it('6b. Atomic student-number uniqueness blocks concurrent race conditions', async () => {
+    const timestamp = Date.now();
+    const raceNumber = `STUD-RACE-${timestamp.toString().slice(-6)}`;
+    const data1 = {
+      email: `race1.${timestamp}@example.test`,
+      fullName: 'Race Student 1',
+      studentNumber: raceNumber,
+      program: 'BSAIS',
+      yearLevel: '1st Year',
+      semester: '1st Semester',
+      section: 'A',
+      password: 'password123',
+      confirmPassword: 'password123',
+    };
+    const data2 = {
+      email: `race2.${timestamp}@example.test`,
+      fullName: 'Race Student 2',
+      studentNumber: raceNumber,
+      program: 'BSMA',
+      yearLevel: '2nd Year',
+      semester: '1st Semester',
+      section: 'B',
+      password: 'password123',
+      confirmPassword: 'password123',
+    };
+    // Submit concurrent registrations with the same student number
+    const [res1, res2] = await Promise.all([
+      registerStudentAccountAction(data1),
+      registerStudentAccountAction(data2),
+    ]);
+
+    // Exactly one must succeed and one must fail
+    const successes = [res1, res2].filter((r) => r.success);
+    const failures = [res1, res2].filter((r) => !r.success);
+
+    assert.equal(successes.length, 1, 'Exactly one concurrent registration with duplicate student number must succeed');
+    assert.equal(failures.length, 1, 'The duplicate registration must fail');
+    assert.match(failures[0].error || '', /already registered to another student/i);
+
+    // Verify reservation document exists
+    const reservationDoc = await getAdminFirestore().collection('studentNumberReservations').doc(raceNumber).get();
+    assert.equal(reservationDoc.exists, true);
+
+    // Delete the created user and verify reservation is released
+    const createdUid = successes[0].user?.uid;
+    if (createdUid) {
+      process.env.TEST_SESSION_COOKIE = adminSession;
+      await deleteUserAccountAction({ userId: createdUid });
+      const releasedDoc = await getAdminFirestore().collection('studentNumberReservations').doc(raceNumber).get();
+      assert.equal(releasedDoc.exists, false, 'Reservation must be released upon student account deletion');
+    }
+  });
+
   it('7. Temporary password flag is created correctly & 13. Password reset sets mustChangePassword', async () => {
     const res = await resetUserTemporaryPasswordAction({ userId: 'demo-student-a-uid' });
     assert.equal(res.success, true);
@@ -487,14 +540,22 @@ describe('Account Lifecycle Integration Tests', () => {
     const updatedAuth = await getAdminAuth().getUser(studentUid);
     assert.equal(updatedAuth.customClaims?.accountStatus, 'active');
 
-    // 5. Approved student session now succeeds
-    const postApprovalSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
-    process.env.TEST_SESSION_COOKIE = postApprovalSession;
+    // 5. Approved student session requires email verification before normal access
+    const unverifiedSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
+    process.env.TEST_SESSION_COOKIE = unverifiedSession;
+    await assert.rejects(
+      async () => getAuthenticatedUser(),
+      /email verification required/i
+    );
+
+    // 6. Once email ownership is verified, student access succeeds
+    await getAdminAuth().updateUser(studentUid, { emailVerified: true });
+    const verifiedSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
+    process.env.TEST_SESSION_COOKIE = verifiedSession;
     const authUserSession = await getAuthenticatedUser();
     assert.equal(authUserSession.uid, studentUid);
     assert.equal(authUserSession.user.accountStatus, 'active');
   });
-
   it('16. Admin can permanently delete user and related application records', async () => {
     process.env.TEST_SESSION_COOKIE = adminSession;
 
@@ -741,6 +802,12 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(duplicateRetry.success, false);
     assert.match(duplicateRetry.error || '', /already been successfully delivered/i);
 
+
+    // E2. Concurrency guard: Retrying a delivery currently in progress is rejected
+    await mockDeliveryRef.update({ status: 'sending' });
+    const inProgressRetry = await retryRegistrationEmailAction({ deliveryId: mockDeliveryId });
+    assert.equal(inProgressRetry.success, false);
+    assert.match(inProgressRetry.error || '', /currently in progress/i);
     // F. Admin can fetch recent registration email deliveries
     const fetchDeliveriesRes = await fetchRegistrationEmailDeliveriesAction();
     assert.equal(fetchDeliveriesRes.success, true);

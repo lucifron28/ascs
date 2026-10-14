@@ -113,10 +113,10 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <h2 className="text-xl font-bold text-base-content">Registration Submitted</h2>
                 <p className="mt-2 text-sm text-base-content/75 max-w-md mx-auto">
-                  Your student account for <span className="font-semibold text-base-content">{registeredEmail}</span> has been submitted and is <span className="font-bold text-warning">waiting for administrator approval</span>.
+                  Your student account for <span className="font-semibold text-base-content">{registeredEmail}</span> has been submitted. Please check your inbox for an <span className="font-bold text-primary">email verification link</span> and wait for <span className="font-bold text-warning">administrator approval</span>.
                 </p>
                 <p className="text-xs text-base-content/60 max-w-sm mx-auto">
-                  You will be able to access the clearance portal once your registration is confirmed by the administration.
+                  You will be able to access the clearance portal once your email address is verified and your registration is confirmed by the administration.
                 </p>
               </div>
               <div className="pt-2">

@@ -193,9 +193,16 @@ export default function LoginPage() {
 
           {/* Error Alert */}
           {error && (
-            <div role="alert" className="alert alert-error text-error-content rounded-xl mb-6 flex items-center gap-2 p-3 text-sm font-medium">
-              <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span>{error}</span>
+            <div role="alert" className="alert alert-error text-error-content rounded-xl mb-6 flex flex-col items-start gap-1.5 p-3 text-sm font-medium">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>{error}</span>
+              </div>
+              {error.toLowerCase().includes('email verification required') && (
+                <p className="text-xs text-error-content/90 font-normal pl-6">
+                  Check your inbox for your email verification link. Once verified and approved by the administrator, you can sign in.
+                </p>
+              )}
             </div>
           )}
 
