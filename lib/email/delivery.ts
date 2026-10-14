@@ -4,11 +4,13 @@ import {
   sendRegistrationApprovedEmail,
   sendRegistrationRejectedEmail,
 } from './service';
-import type {
-  RegistrationEmailDelivery,
-  EmailDeliveryStatus,
-  RegistrationDecisionType,
-} from '@/lib/types/firestore';
+export * from './delivery-types';
+import {
+  SENDING_LEASE_TIMEOUT_MS,
+  type RegistrationEmailDelivery,
+  type EmailDeliveryStatus,
+  type RegistrationDecisionType,
+} from './delivery-types';
 import { sanitizeAuditMetadata } from '@/lib/admin/lifecycle-validation';
 
 /**
@@ -20,6 +22,8 @@ export function resolveDeliveryStatus(result: SendEmailResult): EmailDeliverySta
   if (result.simulated) return 'simulated';
   return 'sent';
 }
+
+
 
 export interface RecordRegistrationEmailDeliveryParams {
   recipientEmail: string;
@@ -109,9 +113,15 @@ export async function retryRegistrationEmail(
       throw new Error('Email has already been successfully delivered.');
     }
 
-    // Prevent concurrent duplicate sends if another request is currently dispatching
+    // Check if another request is actively dispatching within the lease window
     if (current.status === 'sending') {
-      throw new Error('Email delivery retry is currently in progress.');
+      const lastAttemptTime = new Date(current.lastAttemptAt || current.updatedAt || 0).getTime();
+      const isExpired = Date.now() - lastAttemptTime >= SENDING_LEASE_TIMEOUT_MS;
+      if (!isExpired) {
+        throw new Error('Email delivery retry is currently in progress. Please wait before retrying again.');
+      }
+      // Lease is expired/abandoned (e.g. from server crash or network timeout).
+      // Recovery proceeds safely by claiming the abandoned record.
     }
 
     const now = new Date().toISOString();
