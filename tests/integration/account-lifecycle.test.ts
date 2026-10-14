@@ -4,7 +4,11 @@ import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-a
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { updateRequirementAssignmentAction, updateUserRoleAction } from '@/app/actions/admin';
-import { registerStudentAccountAction } from '@/app/actions/registration';
+import { registerStudentAccountAction, resendStudentVerificationEmailAction } from '@/app/actions/registration';
+import {
+  reserveStudentNumberAtomically,
+  releaseStudentNumberReservation,
+} from '@/lib/admin/student-number-reservation';
 import {
   createStudentAccountAction,
   createStaffAccountAction,
@@ -804,14 +808,76 @@ describe('Account Lifecycle Integration Tests', () => {
 
 
     // E2. Concurrency guard: Retrying a delivery currently in progress is rejected
-    await mockDeliveryRef.update({ status: 'sending' });
+    await mockDeliveryRef.update({ status: 'sending', lastAttemptAt: new Date().toISOString() });
     const inProgressRetry = await retryRegistrationEmailAction({ deliveryId: mockDeliveryId });
     assert.equal(inProgressRetry.success, false);
     assert.match(inProgressRetry.error || '', /currently in progress/i);
+
+    // E3. Lease timeout recovery: An abandoned 'sending' record older than 2 minutes is recovered
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+    await mockDeliveryRef.update({ status: 'sending', lastAttemptAt: threeMinutesAgo });
+    const abandonedRecovered = await retryRegistrationEmailAction({ deliveryId: mockDeliveryId });
+    assert.equal(abandonedRecovered.success, true);
+    assert.equal(abandonedRecovered.status, 'simulated');
+
     // F. Admin can fetch recent registration email deliveries
     const fetchDeliveriesRes = await fetchRegistrationEmailDeliveriesAction();
     assert.equal(fetchDeliveriesRes.success, true);
     assert.ok(fetchDeliveriesRes.deliveries.length >= 1);
     assert.ok(fetchDeliveriesRes.deliveries.some((d) => d.deliveryId === mockDeliveryId));
+  });
+
+  it('21. Student email verification resend cooldown and safe anti-enumeration response', async () => {
+    // A. Non-existent email returns safe generic response without leaking account absence
+    const nonExistentRes = await resendStudentVerificationEmailAction({ email: 'nobody.registered@example.test' });
+    assert.equal(nonExistentRes.success, true);
+    assert.match(nonExistentRes.message || '', /if an unverified student account exists/i);
+
+    // B. Registered student requests verification resend -> succeeds
+    const studentEmail = `verify.cooldown.${Date.now()}@example.test`;
+    const regRes = await registerStudentAccountAction({
+      email: studentEmail,
+      fullName: 'Cooldown Test Student',
+      studentNumber: `STUD-COOL-${Date.now().toString().slice(-4)}`,
+      program: 'BSAIS',
+      yearLevel: '1st Year',
+      semester: '1st Semester',
+      section: 'A',
+      password: 'password123',
+      confirmPassword: 'password123',
+    });
+    assert.equal(regRes.success, true);
+
+    // First resend succeeds
+    const firstResend = await resendStudentVerificationEmailAction({ email: studentEmail });
+    assert.equal(firstResend.success, true);
+    assert.match(firstResend.message || '', /verification email sent/i);
+
+    // Immediate second resend is throttled by the 60-second cooldown
+    const secondResend = await resendStudentVerificationEmailAction({ email: studentEmail });
+    assert.equal(secondResend.success, false);
+    assert.match(secondResend.error || '', /please wait.*second.*before requesting/i);
+  });
+
+  it('22. Student-number reservation UID association and ownership verification on release', async () => {
+    const db = getAdminFirestore();
+    const testNumber = `STUD-OWN-${Date.now().toString().slice(-4)}`;
+    const now = new Date().toISOString();
+
+    // 1. Atomically reserve number initially with 'pending'
+    await reserveStudentNumberAtomically(db, testNumber, 'pending', now);
+    const resDocBefore = await db.collection('studentNumberReservations').doc(testNumber).get();
+    assert.equal(resDocBefore.exists, true);
+    assert.equal(resDocBefore.data()?.userId, 'pending');
+
+    // 2. Ownership check: attempting release with mismatched expectedUserId is rejected
+    await releaseStudentNumberReservation(db, testNumber, 'wrong-user-id');
+    const resDocAfterMismatch = await db.collection('studentNumberReservations').doc(testNumber).get();
+    assert.equal(resDocAfterMismatch.exists, true, 'Reservation must NOT be released if ownership mismatches');
+
+    // 3. Release with correct ownership succeeds
+    await releaseStudentNumberReservation(db, testNumber, 'pending');
+    const resDocReleased = await db.collection('studentNumberReservations').doc(testNumber).get();
+    assert.equal(resDocReleased.exists, false, 'Reservation must be deleted when ownership matches');
   });
 });
