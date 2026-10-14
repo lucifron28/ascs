@@ -21,7 +21,8 @@ import {
   retryRegistrationEmailAction,
   fetchRegistrationEmailDeliveriesAction,
 } from '@/app/actions/admin-accounts';
-import type { RegistrationEmailDelivery } from '@/lib/types/firestore';
+import type { RegistrationEmailDelivery } from '@/lib/email/delivery-types';
+import { isDeliveryRetryable } from '@/lib/email/delivery-types';
 import { UserRole } from '@/lib/types/roles';
 import { VALID_STAFF_ROLES } from '@/lib/admin/lifecycle-validation';
 import { CLEARANCE_WORKFLOW_STAGES } from '@/lib/clearance/workflow';
@@ -213,7 +214,7 @@ export default function AdminDashboard() {
         if (rRes.success) setRequirements(rRes.requirements || []);
         if (lRes.success) setLogs(lRes.logs || []);
         if (dRes && dRes.success && dRes.deliveries) {
-          setFailedDeliveries(dRes.deliveries.filter((d: RegistrationEmailDelivery) => d.status === 'failed'));
+          setFailedDeliveries(dRes.deliveries.filter((d: RegistrationEmailDelivery) => isDeliveryRetryable(d)));
         }
 
         if (!uRes.success) setError(uRes.error || 'Failed to load user accounts.');
@@ -813,7 +814,7 @@ export default function AdminDashboard() {
                 </h4>
               </div>
               <p className="text-xs text-base-content/75">
-                Account decisions were preserved, but email dispatch failed. You can safely retry delivery below:
+                Account decisions were preserved, but email dispatch failed or timed out. (Note: Retrying an uncertain delivery may send a duplicate email if the previous SMTP attempt completed unacknowledged.)
               </p>
               <div className="space-y-2">
                 {failedDeliveries.map((del) => (
@@ -824,8 +825,9 @@ export default function AdminDashboard() {
                     <div>
                       <span className="font-semibold text-base-content">{del.recipientName}</span>{' '}
                       <span className="text-base-content/70">({del.recipientEmail})</span> —{' '}
-                      <span className="capitalize font-mono text-warning">{del.decisionType}</span>
-                      {del.error && <p className="text-[11px] text-error mt-0.5">{del.error}</p>}
+                      <span className="capitalize font-mono text-warning">
+                        {del.status === 'sending' ? 'Uncertain / Timed Out' : del.decisionType}
+                      </span>
                     </div>
                     <button
                       type="button"

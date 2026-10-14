@@ -36,6 +36,16 @@ describe('Firestore Rules Security Boundaries Tests', () => {
       await setDoc(doc(db, 'users/dean-uid'), { role: 'dean', accountStatus: 'active', isActive: true });
       await setDoc(doc(db, 'users/pending-student-uid'), { role: 'student', accountStatus: 'pending_approval', isActive: false });
       await setDoc(doc(db, 'users/inactive-admin-uid'), { role: 'admin', accountStatus: 'inactive', isActive: false });
+      await setDoc(doc(db, 'users/unverified-student-uid'), {
+        role: 'student',
+        accountStatus: 'active',
+        isActive: true,
+        createdBy: 'self_registration',
+      });
+      await setDoc(doc(db, 'clearanceApplications/app-unverified'), {
+        studentUid: 'unverified-student-uid',
+        financialStatus: 'pending',
+      });
       await setDoc(doc(db, 'activityLogs/log-1'), { action: 'test_action' });
       await setDoc(doc(db, 'clearanceApplications/app-student-a'), {
         studentUid: 'student-a-uid',
@@ -154,5 +164,19 @@ describe('Firestore Rules Security Boundaries Tests', () => {
     await assertSucceeds(getDoc(doc(activeAdminDb, 'users/student-a-uid')));
     await assertSucceeds(getDoc(doc(activeAdminDb, 'clearanceApplications/app-student-a')));
     await assertSucceeds(getDoc(doc(activeAdminDb, 'activityLogs/log-1')));
+  });
+
+  it('9. Approved but unverified self-registered students CANNOT read protected collections until email is verified', async () => {
+    // Unverified token
+    const unverifiedDb = testEnv.authenticatedContext('unverified-student-uid', { email_verified: false }).firestore();
+
+    await assertFails(getDoc(doc(unverifiedDb, 'users/unverified-student-uid')));
+    await assertFails(getDoc(doc(unverifiedDb, 'clearanceApplications/app-unverified')));
+    await assertFails(getDoc(doc(unverifiedDb, 'publicUsers/student-a-uid')));
+
+    // Once token has email_verified == true, access succeeds
+    const verifiedDb = testEnv.authenticatedContext('unverified-student-uid', { email_verified: true }).firestore();
+    await assertSucceeds(getDoc(doc(verifiedDb, 'users/unverified-student-uid')));
+    await assertSucceeds(getDoc(doc(verifiedDb, 'clearanceApplications/app-unverified')));
   });
 });

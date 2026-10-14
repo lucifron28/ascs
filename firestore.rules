@@ -21,7 +21,10 @@ service cloud.firestore {
     }
 
     function isActiveUser() {
-      return hasUserDoc() && getUserData().accountStatus == 'active' && getUserData().isActive == true;
+      return hasUserDoc() &&
+        getUserData().accountStatus == 'active' &&
+        getUserData().isActive == true &&
+        (!('createdBy' in getUserData()) || getUserData().createdBy != 'self_registration' || request.auth.token.email_verified == true);
     }
 
     function getUserRole() {

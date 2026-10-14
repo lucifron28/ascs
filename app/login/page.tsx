@@ -17,7 +17,7 @@ import {
   shouldShowDemoAccountPicker,
 } from '@/lib/demo/demo-accounts';
 import { formatProgram } from '@/lib/academic-programs';
-
+import { resendStudentVerificationEmailAction } from '@/app/actions/registration';
 const EMULATOR_DEMO_PASSWORD = 'password123';
 
 async function readJsonResponse(response: Response) {
@@ -42,6 +42,39 @@ export default function LoginPage() {
   const [selectedDemoAccountId, setSelectedDemoAccountId] = useState('');
   const selectedDemoAccount = getDemoAccountById(selectedDemoAccountId);
 
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [resendFeedback, setResendFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleResendVerification = async () => {
+    const emailVal = form.getFieldValue('email');
+    if (!emailVal || !emailVal.trim()) {
+      setError('Please enter your registered email address in the field below to resend the verification link.');
+      return;
+    }
+    setResendingVerification(true);
+    setResendFeedback(null);
+    try {
+      const res = await resendStudentVerificationEmailAction({ email: emailVal });
+      if (res.success) {
+        setResendFeedback({
+          success: true,
+          message: ('message' in res && typeof res.message === 'string' ? res.message : null) || 'Verification link sent. Please check your inbox.',
+        });
+      } else {
+        setResendFeedback({
+          success: false,
+          message: ('error' in res && typeof res.error === 'string' ? res.error : null) || 'Failed to dispatch verification email. Please try again later.',
+        });
+      }
+    } catch (err: unknown) {
+      setResendFeedback({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to dispatch verification email.',
+      });
+    } finally {
+      setResendingVerification(false);
+    }
+  };
   // TanStack Form configuration
   const form = useForm({
     defaultValues: {
@@ -199,9 +232,30 @@ export default function LoginPage() {
                 <span>{error}</span>
               </div>
               {error.toLowerCase().includes('email verification required') && (
-                <p className="text-xs text-error-content/90 font-normal pl-6">
-                  Check your inbox for your email verification link. Once verified and approved by the administrator, you can sign in.
-                </p>
+                <div className="w-full space-y-2 pl-6 pt-1">
+                  <p className="text-xs text-error-content/90 font-normal">
+                    Check your inbox for your email verification link. Once verified and approved by the administrator, you can sign in.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resendingVerification}
+                    className="btn btn-xs btn-outline bg-base-100/10 text-error-content border-error-content/30 hover:bg-base-100/20 font-semibold rounded-lg"
+                  >
+                    {resendingVerification ? 'Sending...' : 'Resend Verification Email'}
+                  </button>
+                  {resendFeedback && (
+                    <p
+                      className={`text-[11px] font-medium mt-1 p-2 rounded-lg ${
+                        resendFeedback.success
+                          ? 'bg-success/20 text-success-content border border-success/30'
+                          : 'bg-error-content/10 text-error-content border border-error-content/20'
+                      }`}
+                    >
+                      {resendFeedback.message}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}

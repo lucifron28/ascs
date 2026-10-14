@@ -29,8 +29,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Confirm account is active and approved
     const user = userDoc.data();
+    const requiresStudentEmailVerification =
+      user?.role === 'student' &&
+      user?.createdBy === 'self_registration' &&
+      !decodedToken.email_verified;
+
+    // Pending students need the verification-specific response so the login
+    // page can offer the resend recovery flow before admin approval.
+    if (user?.accountStatus === 'pending_approval' && requiresStudentEmailVerification) {
+      return NextResponse.json(
+        { error: 'Email verification required. Please verify your email address to access your clearance portal.' },
+        { status: 403 }
+      );
+    }
+
+    // 4. Confirm account is active and approved
     if (user?.accountStatus === 'pending_approval') {
       return NextResponse.json(
         { error: 'Waiting for Administrator Approval. Your account registration is pending review by the system administrator.' },
@@ -44,8 +58,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4b. Confirm email verification for self-registered students
-    if (user?.role === 'student' && user?.createdBy === 'self_registration' && !decodedToken.email_verified) {
+    // Preserve the normal verification gate for any active self-registered
+    // student whose email is still unverified.
+    if (requiresStudentEmailVerification) {
       return NextResponse.json(
         { error: 'Email verification required. Please verify your email address to access your clearance portal.' },
         { status: 403 }

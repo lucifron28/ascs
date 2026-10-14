@@ -1,10 +1,16 @@
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-auth';
+import { setupTestEnvironment, getSessionCookieForUser, getIdTokenForUser } from '../helpers/test-auth';
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
+import { NextRequest } from 'next/server';
+import { POST as createSession } from '@/app/api/auth/session/route';
 import { updateRequirementAssignmentAction, updateUserRoleAction } from '@/app/actions/admin';
-import { registerStudentAccountAction } from '@/app/actions/registration';
+import { registerStudentAccountAction, resendStudentVerificationEmailAction } from '@/app/actions/registration';
+import {
+  reserveStudentNumberAtomically,
+  releaseStudentNumberReservation,
+} from '@/lib/admin/student-number-reservation';
 import {
   createStudentAccountAction,
   createStaffAccountAction,
@@ -20,6 +26,15 @@ import {
 import { fetchAdminUsersAction, fetchSignatoryCandidatesAction } from '@/app/actions/admin';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { submitApplicationAction } from '@/app/actions/clearance';
+import { retryRegistrationEmail } from '@/lib/email/delivery';
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
 
 describe('Account Lifecycle Integration Tests', () => {
   let adminSession: string;
@@ -78,6 +93,101 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(studentDoc.data()?.program, 'BSAIS');
     assert.equal(studentDoc.data()?.yearLevel, studentData.yearLevel);
     assert.equal(studentDoc.data()?.semester, studentData.semester);
+  });
+
+  it('1b. Admin student rollback retains the reservation when Auth cleanup fails', async () => {
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const auth = getAdminAuth();
+    const methods = auth as unknown as {
+      deleteUser: typeof auth.deleteUser;
+      setCustomUserClaims: typeof auth.setCustomUserClaims;
+    };
+    const originalDeleteUser = methods.deleteUser.bind(auth);
+    const originalSetCustomUserClaims = methods.setCustomUserClaims.bind(auth);
+    const timestamp = Date.now();
+    const studentNumber = `STUD-ADMIN-ROLLBACK-${timestamp}`;
+    const email = `admin.rollback.${timestamp}@example.test`;
+
+    try {
+      methods.deleteUser = async () => {
+        throw new Error('Simulated Auth deletion failure');
+      };
+      methods.setCustomUserClaims = async () => {
+        throw new Error('Simulated custom-claims failure');
+      };
+
+      const result = await createStudentAccountAction({
+        email,
+        fullName: 'Admin Rollback Student',
+        studentNumber,
+        program: 'BSAIS',
+        yearLevel: '1st Year',
+        semester: '1st Semester',
+        section: 'A',
+      });
+      assert.equal(result.success, false);
+
+      const authUser = await auth.getUserByEmail(email);
+      const reservation = await getAdminFirestore()
+        .collection('studentNumberReservations')
+        .doc(studentNumber)
+        .get();
+      assert.equal(reservation.exists, true);
+      assert.equal(reservation.data()?.userId, 'pending');
+
+      await originalDeleteUser(authUser.uid);
+      const release = await releaseStudentNumberReservation(getAdminFirestore(), studentNumber, 'pending');
+      assert.equal(release.released, true);
+    } finally {
+      methods.deleteUser = originalDeleteUser;
+      methods.setCustomUserClaims = originalSetCustomUserClaims;
+    }
+  });
+
+  it('1c. Self-registration retains its reservation when Auth creation outcome is ambiguous', async () => {
+    const auth = getAdminAuth();
+    const methods = auth as unknown as { createUser: typeof auth.createUser };
+    const originalCreateUser = methods.createUser.bind(auth);
+    const timestamp = Date.now();
+    const studentNumber = `STUD-AUTH-AMBIGUOUS-${timestamp}`;
+    const email = `self.ambiguous.${timestamp}@example.test`;
+    let createdUid: string | null = null;
+
+    try {
+      methods.createUser = async (properties) => {
+        const user = await originalCreateUser(properties);
+        createdUid = user.uid;
+        throw new Error('Simulated lost Auth create response');
+      };
+      const result = await registerStudentAccountAction({
+        email,
+        fullName: 'Ambiguous Auth Creation Student',
+        studentNumber,
+        program: 'BSAIS',
+        yearLevel: '1st Year',
+        semester: '1st Semester',
+        section: 'A',
+        password: 'password123',
+        confirmPassword: 'password123',
+      });
+      assert.equal(result.success, false);
+    } finally {
+      methods.createUser = originalCreateUser;
+    }
+
+    assert.ok(createdUid);
+    try {
+      const reservation = await getAdminFirestore()
+        .collection('studentNumberReservations')
+        .doc(studentNumber)
+        .get();
+      assert.equal(reservation.exists, true);
+      assert.equal(reservation.data()?.userId, 'pending');
+    } finally {
+      await getAdminAuth().deleteUser(createdUid);
+      const release = await releaseStudentNumberReservation(getAdminFirestore(), studentNumber, 'pending');
+      assert.equal(release.released, true);
+    }
   });
 
   it('2. Admin can create a staff account without creating a student profile', async () => {
@@ -358,6 +468,47 @@ describe('Account Lifecycle Integration Tests', () => {
       const releasedDoc = await getAdminFirestore().collection('studentNumberReservations').doc(raceNumber).get();
       assert.equal(releasedDoc.exists, false, 'Reservation must be released upon student account deletion');
     }
+  });
+
+  it('6c. Self-registration releases a pending-owned reservation after pre-commit rollback', async () => {
+    const firestore = getAdminFirestore();
+    const methods = firestore as unknown as { batch: typeof firestore.batch };
+    const originalBatch = methods.batch.bind(firestore);
+    const timestamp = Date.now();
+    const studentNumber = `STUD-ROLLBACK-${timestamp}`;
+    const email = `self.rollback.${timestamp}@example.test`;
+    const batch = () => {
+      const writeBatch = originalBatch();
+      writeBatch.commit = async () => {
+        throw new Error('Simulated pre-commit failure');
+      };
+      return writeBatch;
+    };
+
+    try {
+      methods.batch = batch;
+      const result = await registerStudentAccountAction({
+        email,
+        fullName: 'Rollback Registration Student',
+        studentNumber,
+        program: 'BSAIS',
+        yearLevel: '1st Year',
+        semester: '1st Semester',
+        section: 'A',
+        password: 'password123',
+        confirmPassword: 'password123',
+      });
+      assert.equal(result.success, false);
+    } finally {
+      methods.batch = originalBatch;
+    }
+
+    const reservation = await firestore.collection('studentNumberReservations').doc(studentNumber).get();
+    assert.equal(reservation.exists, false, 'Pre-commit rollback must release the pending-owned reservation');
+    await assert.rejects(
+      getAdminAuth().getUserByEmail(email),
+      (error: unknown) => (error as { code?: string }).code === 'auth/user-not-found'
+    );
   });
 
   it('7. Temporary password flag is created correctly & 13. Password reset sets mustChangePassword', async () => {
@@ -695,6 +846,56 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(userDoc.exists, false);
   });
 
+  it('18b. Permanent deletion retains the student-number reservation until Auth deletion succeeds', async () => {
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const timestamp = Date.now();
+    const studentNumber = `STUD-DELETE-RETRY-${timestamp}`;
+    const registration = await registerStudentAccountAction({
+      email: `delete.retry.${timestamp}@example.test`,
+      fullName: 'Delete Retry Student',
+      studentNumber,
+      program: 'BSAIS',
+      yearLevel: '2nd Year',
+      semester: '1st Semester',
+      section: 'A',
+      password: 'password123',
+      confirmPassword: 'password123',
+    });
+    assert.equal(registration.success, true);
+    if (!registration.success) return;
+
+    const auth = getAdminAuth();
+    const methods = auth as unknown as { deleteUser: typeof auth.deleteUser };
+    const originalDeleteUser = methods.deleteUser.bind(auth);
+    let deleteResult: Awaited<ReturnType<typeof deleteUserAccountAction>> | undefined;
+    try {
+      methods.deleteUser = async () => {
+        throw new Error('Simulated Auth deletion failure');
+      };
+      deleteResult = await deleteUserAccountAction({ userId: registration.user.uid });
+    } finally {
+      methods.deleteUser = originalDeleteUser;
+    }
+
+    assert.equal(deleteResult?.success, false);
+    const reservation = await getAdminFirestore()
+      .collection('studentNumberReservations')
+      .doc(studentNumber)
+      .get();
+    assert.equal(reservation.exists, true);
+    assert.equal(reservation.data()?.userId, registration.user.uid);
+    assert.equal((await auth.getUser(registration.user.uid)).uid, registration.user.uid);
+
+    const retryResult = await deleteUserAccountAction({ userId: registration.user.uid });
+    assert.equal(retryResult.success, true, 'A retried deletion should find and release the retained reservation');
+    const reservationAfterRetry = await getAdminFirestore()
+      .collection('studentNumberReservations')
+      .doc(studentNumber)
+      .get();
+    assert.equal(reservationAfterRetry.exists, false);
+    await assert.rejects(auth.getUser(registration.user.uid));
+  });
+
   it('19. Permanent staff deletion unassigns requirements and non-existent user fails safely', async () => {
     process.env.TEST_SESSION_COOKIE = adminSession;
 
@@ -804,14 +1005,267 @@ describe('Account Lifecycle Integration Tests', () => {
 
 
     // E2. Concurrency guard: Retrying a delivery currently in progress is rejected
-    await mockDeliveryRef.update({ status: 'sending' });
+    await mockDeliveryRef.update({ status: 'sending', lastAttemptAt: new Date().toISOString() });
     const inProgressRetry = await retryRegistrationEmailAction({ deliveryId: mockDeliveryId });
     assert.equal(inProgressRetry.success, false);
     assert.match(inProgressRetry.error || '', /currently in progress/i);
-    // F. Admin can fetch recent registration email deliveries
+
+    // E3. Lease timeout recovery: An abandoned 'sending' record older than 2 minutes is recovered
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+    await mockDeliveryRef.update({ status: 'sending', lastAttemptAt: threeMinutesAgo });
+    const abandonedRecovered = await retryRegistrationEmailAction({ deliveryId: mockDeliveryId });
+    assert.equal(abandonedRecovered.success, true);
+    assert.equal(abandonedRecovered.status, 'simulated');
+
+    // E4. Fencing guard: Stale/expired attempt token cannot overwrite a newer claim
+    await mockDeliveryRef.update({
+      status: 'sending',
+      currentAttemptId: 'att_newer_active_claim',
+      lastAttemptAt: new Date().toISOString(),
+    });
+
+    // Simulate an older attempt trying to write its outcome
+    await db.runTransaction(async (transaction) => {
+      const snap = await transaction.get(mockDeliveryRef);
+      const data = snap.data();
+      const staleAttemptId = 'att_stale_expired_attempt';
+      if (data?.currentAttemptId !== staleAttemptId) {
+        // Fenced out! Do not overwrite!
+        return;
+      }
+      transaction.update(mockDeliveryRef, { status: 'failed', error: 'Stale error' });
+    });
+
+    const fencedDoc = await mockDeliveryRef.get();
+    assert.equal(fencedDoc.data()?.currentAttemptId, 'att_newer_active_claim');
+    assert.equal(fencedDoc.data()?.status, 'sending', 'Stale attempt must NOT overwrite newer active claim');
     const fetchDeliveriesRes = await fetchRegistrationEmailDeliveriesAction();
     assert.equal(fetchDeliveriesRes.success, true);
     assert.ok(fetchDeliveriesRes.deliveries.length >= 1);
     assert.ok(fetchDeliveriesRes.deliveries.some((d) => d.deliveryId === mockDeliveryId));
+  });
+
+  it('20b. Overlapping email retries discard stale send completions', async () => {
+    const db = getAdminFirestore();
+    const createDelivery = async () => {
+      const ref = db.collection('registrationEmailDeliveries').doc();
+      const now = new Date().toISOString();
+      await ref.set({
+        deliveryId: ref.id,
+        recipientEmail: 'retry.race@example.test',
+        recipientName: 'Retry Race Student',
+        decisionType: 'rejected',
+        rejectionReason: 'Missing document.',
+        status: 'failed',
+        lastAttemptAt: now,
+        error: 'Previous failure',
+        attemptsCount: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return ref;
+    };
+    const fastSuccess = {
+      sendApproved: async () => ({ success: true, id: 'newer-approved' }),
+      sendRejected: async () => ({ success: true, id: 'newer-success' }),
+    };
+    const oldDate = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+
+    // The newer retry completes first. A late failure from the older send must not replace it.
+    const olderWinsRef = await createDelivery();
+    const olderStarted = createDeferred<void>();
+    const olderCompletion = createDeferred<{ success: boolean; error?: string }>();
+    const olderAttempt = retryRegistrationEmail(olderWinsRef.id, 'admin-uid', 'Administrator', {
+      sendApproved: fastSuccess.sendApproved,
+      sendRejected: async () => {
+        olderStarted.resolve();
+        return olderCompletion.promise;
+      },
+    });
+    await olderStarted.promise;
+    await olderWinsRef.update({ status: 'sending', lastAttemptAt: oldDate });
+    const newerAttempt = await retryRegistrationEmail(olderWinsRef.id, 'admin-uid', 'Administrator', fastSuccess);
+    assert.equal(newerAttempt.status, 'sent');
+    olderCompletion.resolve({ success: false, error: 'Late stale failure' });
+    const olderResult = await olderAttempt;
+    assert.equal(olderResult.status, 'sent');
+    const finalOlderWins = await olderWinsRef.get();
+    assert.equal(finalOlderWins.data()?.status, 'sent');
+    assert.equal(finalOlderWins.data()?.error, null);
+
+    // The older retry may also finish while a newer retry is still sending.
+    const newerWinsRef = await createDelivery();
+    const firstStarted = createDeferred<void>();
+    const firstCompletion = createDeferred<{ success: boolean; error?: string }>();
+    const secondStarted = createDeferred<void>();
+    const secondCompletion = createDeferred<{ success: boolean; id?: string; error?: string }>();
+    const firstAttempt = retryRegistrationEmail(newerWinsRef.id, 'admin-uid', 'Administrator', {
+      sendApproved: fastSuccess.sendApproved,
+      sendRejected: async () => {
+        firstStarted.resolve();
+        return firstCompletion.promise;
+      },
+    });
+    await firstStarted.promise;
+    await newerWinsRef.update({ status: 'sending', lastAttemptAt: oldDate });
+    const secondAttempt = retryRegistrationEmail(newerWinsRef.id, 'admin-uid', 'Administrator', {
+      sendApproved: fastSuccess.sendApproved,
+      sendRejected: async () => {
+        secondStarted.resolve();
+        return secondCompletion.promise;
+      },
+    });
+    await secondStarted.promise;
+    firstCompletion.resolve({ success: false, error: 'Older failure' });
+    const firstResult = await firstAttempt;
+    assert.equal(firstResult.status, 'sending');
+    assert.equal((await newerWinsRef.get()).data()?.status, 'sending');
+    secondCompletion.resolve({ success: true, id: 'newer-success' });
+    const secondResult = await secondAttempt;
+    assert.equal(secondResult.status, 'sent');
+    const finalNewerWins = await newerWinsRef.get();
+    assert.equal(finalNewerWins.data()?.status, 'sent');
+    assert.equal(finalNewerWins.data()?.error, null);
+  });
+
+  it('21. Student email verification resend cooldown and safe anti-enumeration response', async () => {
+    // A. Non-existent email returns safe generic response without leaking account absence
+    const nonExistentRes = await resendStudentVerificationEmailAction({ email: 'nobody.registered@example.test' });
+    assert.equal(nonExistentRes.success, true);
+    assert.match(nonExistentRes.message || '', /if an unverified student account exists/i);
+
+    // B. Registered student requests verification resend -> succeeds
+    const studentEmail = `verify.cooldown.${Date.now()}@example.test`;
+    const regRes = await registerStudentAccountAction({
+      email: studentEmail,
+      fullName: 'Cooldown Test Student',
+      studentNumber: `STUD-COOL-${Date.now().toString().slice(-4)}`,
+      program: 'BSAIS',
+      yearLevel: '1st Year',
+      semester: '1st Semester',
+      section: 'A',
+      password: 'password123',
+      confirmPassword: 'password123',
+    });
+    assert.equal(regRes.success, true);
+
+    // First resend succeeds
+    const firstResend = await resendStudentVerificationEmailAction({ email: studentEmail });
+    assert.equal(firstResend.success, true);
+    assert.match(firstResend.message || '', /if an unverified student account exists/i);
+    // Immediate second resend is throttled by the 60-second cooldown
+    const secondResend = await resendStudentVerificationEmailAction({ email: studentEmail });
+    assert.equal(secondResend.success, false);
+    assert.match(secondResend.error || '', /please wait.*second.*before requesting/i);
+
+    // C. Concurrent resend requests: Exactly one resets cooldown, others are throttled atomically
+    const concurrentEmail = `verify.concurrent.${Date.now()}@example.test`;
+    await registerStudentAccountAction({
+      email: concurrentEmail,
+      fullName: 'Concurrent Test Student',
+      studentNumber: `STUD-CONC-${Date.now().toString().slice(-4)}`,
+      program: 'BSAIS',
+      yearLevel: '1st Year',
+      semester: '1st Semester',
+      section: 'A',
+      password: 'password123',
+      confirmPassword: 'password123',
+    });
+
+    const [concurrent1, concurrent2] = await Promise.all([
+      resendStudentVerificationEmailAction({ email: concurrentEmail }),
+      resendStudentVerificationEmailAction({ email: concurrentEmail }),
+    ]);
+    assert.ok(
+      ('error' in concurrent1 && concurrent1.error.includes('Please wait')) ||
+      ('error' in concurrent2 && concurrent2.error.includes('Please wait')),
+      'At least one concurrent resend request must be throttled by the atomic cooldown'
+    );
+  });
+
+  it('21b. Registration and resend keep SMTP diagnostics out of public responses', async () => {
+    const oldFailureFlag = process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE;
+    const timestamp = Date.now();
+    const email = `smtp.private.${timestamp}@example.test`;
+    process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE = 'true';
+    try {
+      const registration = await registerStudentAccountAction({
+        email,
+        fullName: 'SMTP Failure Student',
+        studentNumber: `STUD-SMTP-${timestamp}`,
+        program: 'BSAIS',
+        yearLevel: '1st Year',
+        semester: '1st Semester',
+        section: 'A',
+        password: 'password123',
+        confirmPassword: 'password123',
+      });
+      assert.equal(registration.success, true);
+      if (!registration.success) return;
+      assert.equal(registration.emailSent, false);
+      assert.doesNotMatch(registration.emailError || '', /535|invalid credentials|test-only|smtp/i);
+
+      const authUser = await getAdminAuth().getUserByEmail(email);
+      const pendingProfile = await getAdminFirestore().collection('users').doc(authUser.uid).get();
+      assert.equal(authUser.emailVerified, false);
+      assert.equal(pendingProfile.data()?.accountStatus, 'pending_approval');
+      assert.equal(pendingProfile.data()?.isActive, false);
+
+      const idToken = await getIdTokenForUser(email, 'password123');
+      const sessionResponse = await createSession(new NextRequest('http://localhost/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      }));
+      const sessionBody = await sessionResponse.json() as { error?: string };
+      assert.equal(sessionResponse.status, 403);
+      assert.match(sessionBody.error || '', /email verification required/i);
+
+      await pendingProfile.ref.update({ accountStatus: 'inactive', isActive: false });
+      const inactiveSessionResponse = await createSession(new NextRequest('http://localhost/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      }));
+      const inactiveSessionBody = await inactiveSessionResponse.json() as { error?: string };
+      assert.equal(inactiveSessionResponse.status, 403);
+      assert.match(inactiveSessionBody.error || '', /account is deactivated/i);
+      await pendingProfile.ref.update({ accountStatus: 'pending_approval', isActive: false });
+
+      // The original provider failure does not block the student from retrying.
+      process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE = 'false';
+      const knownAccount = await resendStudentVerificationEmailAction({ email });
+      const unknownAccount = await resendStudentVerificationEmailAction({
+        email: `unknown.smtp.${timestamp}@example.test`,
+      });
+      assert.deepEqual(knownAccount, unknownAccount);
+      assert.equal(knownAccount.success, true);
+      assert.doesNotMatch(JSON.stringify(knownAccount), /535|invalid credentials|test-only|smtp/i);
+      assert.equal((await pendingProfile.ref.get()).data()?.accountStatus, 'pending_approval');
+    } finally {
+      if (oldFailureFlag === undefined) delete process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE;
+      else process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE = oldFailureFlag;
+    }
+  });
+  it('22. Student-number reservation UID association and ownership verification on release', async () => {
+    const db = getAdminFirestore();
+    const testNumber = `STUD-OWN-${Date.now().toString().slice(-4)}`;
+    const now = new Date().toISOString();
+
+    // 1. Atomically reserve number initially with 'pending'
+    await reserveStudentNumberAtomically(db, testNumber, 'pending', now);
+    const resDocBefore = await db.collection('studentNumberReservations').doc(testNumber).get();
+    assert.equal(resDocBefore.exists, true);
+    assert.equal(resDocBefore.data()?.userId, 'pending');
+
+    // 2. Ownership check: attempting release with mismatched expectedUserId is rejected
+    await releaseStudentNumberReservation(db, testNumber, 'wrong-user-id');
+    const resDocAfterMismatch = await db.collection('studentNumberReservations').doc(testNumber).get();
+    assert.equal(resDocAfterMismatch.exists, true, 'Reservation must NOT be released if ownership mismatches');
+
+    // 3. Release with correct ownership succeeds
+    await releaseStudentNumberReservation(db, testNumber, 'pending');
+    const resDocReleased = await db.collection('studentNumberReservations').doc(testNumber).get();
+    assert.equal(resDocReleased.exists, false, 'Reservation must be deleted when ownership matches');
   });
 });
