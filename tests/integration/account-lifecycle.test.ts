@@ -1,8 +1,10 @@
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { setupTestEnvironment, getSessionCookieForUser } from '../helpers/test-auth';
+import { setupTestEnvironment, getSessionCookieForUser, getIdTokenForUser } from '../helpers/test-auth';
 import { resetEmulator } from '@/scripts/reset-emulator';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
+import { NextRequest } from 'next/server';
+import { POST as createSession } from '@/app/api/auth/session/route';
 import { updateRequirementAssignmentAction, updateUserRoleAction } from '@/app/actions/admin';
 import { registerStudentAccountAction, resendStudentVerificationEmailAction } from '@/app/actions/registration';
 import {
@@ -1203,6 +1205,35 @@ describe('Account Lifecycle Integration Tests', () => {
       assert.equal(registration.emailSent, false);
       assert.doesNotMatch(registration.emailError || '', /535|invalid credentials|test-only|smtp/i);
 
+      const authUser = await getAdminAuth().getUserByEmail(email);
+      const pendingProfile = await getAdminFirestore().collection('users').doc(authUser.uid).get();
+      assert.equal(authUser.emailVerified, false);
+      assert.equal(pendingProfile.data()?.accountStatus, 'pending_approval');
+      assert.equal(pendingProfile.data()?.isActive, false);
+
+      const idToken = await getIdTokenForUser(email, 'password123');
+      const sessionResponse = await createSession(new NextRequest('http://localhost/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      }));
+      const sessionBody = await sessionResponse.json() as { error?: string };
+      assert.equal(sessionResponse.status, 403);
+      assert.match(sessionBody.error || '', /email verification required/i);
+
+      await pendingProfile.ref.update({ accountStatus: 'inactive', isActive: false });
+      const inactiveSessionResponse = await createSession(new NextRequest('http://localhost/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      }));
+      const inactiveSessionBody = await inactiveSessionResponse.json() as { error?: string };
+      assert.equal(inactiveSessionResponse.status, 403);
+      assert.match(inactiveSessionBody.error || '', /account is deactivated/i);
+      await pendingProfile.ref.update({ accountStatus: 'pending_approval', isActive: false });
+
+      // The original provider failure does not block the student from retrying.
+      process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE = 'false';
       const knownAccount = await resendStudentVerificationEmailAction({ email });
       const unknownAccount = await resendStudentVerificationEmailAction({
         email: `unknown.smtp.${timestamp}@example.test`,
@@ -1210,6 +1241,7 @@ describe('Account Lifecycle Integration Tests', () => {
       assert.deepEqual(knownAccount, unknownAccount);
       assert.equal(knownAccount.success, true);
       assert.doesNotMatch(JSON.stringify(knownAccount), /535|invalid credentials|test-only|smtp/i);
+      assert.equal((await pendingProfile.ref.get()).data()?.accountStatus, 'pending_approval');
     } finally {
       if (oldFailureFlag === undefined) delete process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE;
       else process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE = oldFailureFlag;

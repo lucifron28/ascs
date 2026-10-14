@@ -19,8 +19,12 @@ const GENERIC_VERIFICATION_EMAIL_ERROR =
   'The verification email could not be sent automatically. You can request a new link from the Sign In page.';
 
 async function sendVerificationEmail(options: Parameters<typeof sendEmail>[0]) {
+  const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || '';
+  const isLocalFirebaseAuthEmulator =
+    process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true' &&
+    /^(127\.0\.0\.1|localhost):\d+$/.test(authEmulatorHost);
   if (
-    process.env.NODE_ENV !== 'production' &&
+    (process.env.NODE_ENV !== 'production' || isLocalFirebaseAuthEmulator) &&
     process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE === 'true'
   ) {
     return { success: false, error: 'Test-only SMTP authentication failure: 535 invalid credentials.' };
