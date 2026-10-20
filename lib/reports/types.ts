@@ -12,7 +12,6 @@ export interface ApplicationSummaryMetrics {
   total: number;
   approved: number;
   pending: number;
-  notApproved: number;
   completionRate: number; // 0..1 numeric ratio
 }
 
@@ -29,9 +28,8 @@ export interface RequirementMetric {
   totalAssigned: number;
   approved: number;
   pending: number;
-  notApproved: number;
   completionRate: number;
-  unresolvedCount: number; // pending + notApproved
+  unresolvedCount: number; // pending count
 }
 
 export interface GroupMetric {
@@ -40,7 +38,6 @@ export interface GroupMetric {
   total: number;
   approved: number;
   pending: number;
-  notApproved: number;
   completionRate: number;
 }
 

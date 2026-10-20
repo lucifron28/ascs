@@ -179,7 +179,6 @@ export default function ReportFiltersComponent({
               <option value="all">All Clearance Statuses</option>
               <option value="pending">Pending</option>
               <option value="approved">Fully Approved</option>
-              <option value="not_approved">Not Approved</option>
             </select>
           </div>
 

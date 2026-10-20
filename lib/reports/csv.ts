@@ -67,7 +67,6 @@ export function generateSummaryCsv(summary: ReportSummary): string {
     sanitizeCsvCell('Total'),
     sanitizeCsvCell('Approved'),
     sanitizeCsvCell('Pending'),
-    sanitizeCsvCell('Not Approved'),
     sanitizeCsvCell('Completion Rate (%)'),
   ].join(','));
 
@@ -78,7 +77,6 @@ export function generateSummaryCsv(summary: ReportSummary): string {
     sanitizeCsvCell(app.total),
     sanitizeCsvCell(app.approved),
     sanitizeCsvCell(app.pending),
-    sanitizeCsvCell(app.notApproved),
     sanitizeCsvCell(ratePct),
   ].join(','));
 
@@ -89,13 +87,11 @@ export function generateSummaryCsv(summary: ReportSummary): string {
       sanitizeCsvCell(fin.paid),
       sanitizeCsvCell(fin.paid),
       sanitizeCsvCell(0),
-      sanitizeCsvCell(0),
       sanitizeCsvCell('N/A'),
     ].join(','));
     lines.push([
       sanitizeCsvCell('Financial Status (Unpaid)'),
       sanitizeCsvCell(fin.unpaid),
-      sanitizeCsvCell(0),
       sanitizeCsvCell(0),
       sanitizeCsvCell(fin.unpaid),
       sanitizeCsvCell('N/A'),
@@ -105,7 +101,6 @@ export function generateSummaryCsv(summary: ReportSummary): string {
       sanitizeCsvCell(fin.pending),
       sanitizeCsvCell(0),
       sanitizeCsvCell(fin.pending),
-      sanitizeCsvCell(0),
       sanitizeCsvCell('N/A'),
     ].join(','));
   }
@@ -123,7 +118,6 @@ export function generateRequirementBreakdownCsv(summary: ReportSummary): string 
     sanitizeCsvCell('Total Assigned'),
     sanitizeCsvCell('Approved'),
     sanitizeCsvCell('Pending'),
-    sanitizeCsvCell('Not Approved'),
     sanitizeCsvCell('Unresolved Count'),
     sanitizeCsvCell('Completion Rate (%)'),
   ].join(','));
@@ -136,7 +130,6 @@ export function generateRequirementBreakdownCsv(summary: ReportSummary): string 
       sanitizeCsvCell(req.totalAssigned),
       sanitizeCsvCell(req.approved),
       sanitizeCsvCell(req.pending),
-      sanitizeCsvCell(req.notApproved),
       sanitizeCsvCell(req.unresolvedCount),
       sanitizeCsvCell(ratePct),
     ].join(','));
@@ -154,7 +147,6 @@ export function generateProgramBreakdownCsv(summary: ReportSummary): string {
     sanitizeCsvCell('Total Submitted'),
     sanitizeCsvCell('Approved'),
     sanitizeCsvCell('Pending'),
-    sanitizeCsvCell('Not Approved'),
     sanitizeCsvCell('Completion Rate (%)'),
   ].join(','));
 
@@ -165,7 +157,6 @@ export function generateProgramBreakdownCsv(summary: ReportSummary): string {
       sanitizeCsvCell(prog.total),
       sanitizeCsvCell(prog.approved),
       sanitizeCsvCell(prog.pending),
-      sanitizeCsvCell(prog.notApproved),
       sanitizeCsvCell(ratePct),
     ].join(','));
   }
@@ -209,6 +200,7 @@ export function generateApplicationDetailCsv(
     ].join(','));
 
     for (const app of applications) {
+      const displayOverallStatus = app.overallStatus === 'approved' ? 'approved' : 'pending';
       lines.push([
         sanitizeCsvCell(app.studentNumber),
         sanitizeCsvCell(app.studentName),
@@ -217,7 +209,7 @@ export function generateApplicationDetailCsv(
         sanitizeCsvCell(app.section),
         sanitizeCsvCell(app.academicYear),
         sanitizeCsvCell(app.semester),
-        sanitizeCsvCell(app.overallStatus),
+        sanitizeCsvCell(displayOverallStatus),
         sanitizeCsvCell(app.financialStatus || 'pending'),
         sanitizeCsvCell(app.submittedAt || ''),
       ].join(','));
@@ -238,6 +230,7 @@ export function generateApplicationDetailCsv(
     ].join(','));
 
     for (const app of applications) {
+      const displayOverallStatus = app.overallStatus === 'approved' ? 'approved' : 'pending';
       lines.push([
         sanitizeCsvCell(app.studentNumber),
         sanitizeCsvCell(app.studentName),
@@ -246,7 +239,7 @@ export function generateApplicationDetailCsv(
         sanitizeCsvCell(app.section),
         sanitizeCsvCell(app.academicYear),
         sanitizeCsvCell(app.semester),
-        sanitizeCsvCell(app.overallStatus),
+        sanitizeCsvCell(displayOverallStatus),
         sanitizeCsvCell(app.deanApproved ? 'Yes' : 'No'),
         sanitizeCsvCell(app.submittedAt || ''),
       ].join(','));

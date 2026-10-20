@@ -98,13 +98,13 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
     if (filters.program) query = query.where('program', '==', filters.program);
     if (filters.yearLevel) query = query.where('yearLevel', '==', filters.yearLevel);
     if (filters.section) query = query.where('section', '==', filters.section);
-    if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
+    if (filters.overallStatus === 'approved') query = query.where('overallStatus', '==', 'approved');
     if (filters.financialStatus) query = query.where('financialStatus', '==', filters.financialStatus);
 
     const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
     assertReportDatasetWithinLimit(appSnap.docs.length, 'summary');
 
-    const rawApplications: RawApplicationData[] = appSnap.docs.map((doc) => {
+    let rawApplications: RawApplicationData[] = appSnap.docs.map((doc) => {
       const d = doc.data();
       return {
         id: doc.id,
@@ -116,6 +116,10 @@ export async function fetchAdminReportSummaryAction(inputFilters: Partial<Report
         deanApproved: d.deanApproved,
       };
     });
+
+    if (filters.overallStatus === 'pending' || filters.overallStatus === 'not_approved') {
+      rawApplications = rawApplications.filter((app) => app.overallStatus !== 'approved');
+    }
 
     // 2. Fetch only the five canonical active signatory requirements.
     const reqsSnap = await firestore.collection('clearanceRequirements').get().catch(() => null);
@@ -186,12 +190,11 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
     if (filters.program) query = query.where('program', '==', filters.program);
     if (filters.yearLevel) query = query.where('yearLevel', '==', filters.yearLevel);
     if (filters.section) query = query.where('section', '==', filters.section);
-    if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
-
+    if (filters.overallStatus === 'approved') query = query.where('overallStatus', '==', 'approved');
     const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
     assertReportDatasetWithinLimit(appSnap.docs.length, 'summary');
 
-    const rawApplications: RawApplicationData[] = appSnap.docs.map((doc) => {
+    let rawApplications: RawApplicationData[] = appSnap.docs.map((doc) => {
       const d = doc.data();
       return {
         id: doc.id,
@@ -203,6 +206,10 @@ export async function fetchDeanReportSummaryAction(inputFilters: Partial<ReportF
         deanApproved: d.deanApproved,
       };
     });
+
+    if (filters.overallStatus === 'pending' || filters.overallStatus === 'not_approved') {
+      rawApplications = rawApplications.filter((app) => app.overallStatus !== 'approved');
+    }
 
     // 2. Keep Dean metrics aligned with the five canonical signatory roles.
     const reqsSnap = await firestore.collection('clearanceRequirements').get().catch(() => null);
@@ -351,13 +358,18 @@ export async function exportAdminReportCsvAction(
       if (filters.program) query = query.where('program', '==', filters.program);
       if (filters.yearLevel) query = query.where('yearLevel', '==', filters.yearLevel);
       if (filters.section) query = query.where('section', '==', filters.section);
-      if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
+      if (filters.overallStatus === 'approved') query = query.where('overallStatus', '==', 'approved');
       if (filters.financialStatus) query = query.where('financialStatus', '==', filters.financialStatus);
 
       const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
       assertReportDatasetWithinLimit(appSnap.docs.length, 'export');
 
-      const rows: ApplicationDetailRow[] = appSnap.docs.map((doc) => {
+      let matchingDocs = appSnap.docs;
+      if (filters.overallStatus === 'pending' || filters.overallStatus === 'not_approved') {
+        matchingDocs = matchingDocs.filter((doc) => doc.data().overallStatus !== 'approved');
+      }
+
+      const rows: ApplicationDetailRow[] = matchingDocs.map((doc) => {
         const d = doc.data();
         const overallStatus = parseApplicationStatus(d.overallStatus);
         const financialStatus = parseFinancialStatus(d.financialStatus);
@@ -454,12 +466,16 @@ export async function exportDeanReportCsvAction(
       if (filters.program) query = query.where('program', '==', filters.program);
       if (filters.yearLevel) query = query.where('yearLevel', '==', filters.yearLevel);
       if (filters.section) query = query.where('section', '==', filters.section);
-      if (filters.overallStatus) query = query.where('overallStatus', '==', filters.overallStatus);
-
+      if (filters.overallStatus === 'approved') query = query.where('overallStatus', '==', 'approved');
       const appSnap = await query.limit(MAX_REPORT_APPLICATIONS + 1).get();
       assertReportDatasetWithinLimit(appSnap.docs.length, 'export');
 
-      const rows: ApplicationDetailRow[] = appSnap.docs.map((doc) => {
+      let matchingDocs = appSnap.docs;
+      if (filters.overallStatus === 'pending' || filters.overallStatus === 'not_approved') {
+        matchingDocs = matchingDocs.filter((doc) => doc.data().overallStatus !== 'approved');
+      }
+
+      const rows: ApplicationDetailRow[] = matchingDocs.map((doc) => {
         const d = doc.data();
         const overallStatus = parseApplicationStatus(d.overallStatus);
         if (d.deanApproved !== true) {

@@ -98,15 +98,13 @@ export function calculateApplicationMetrics(
   const total = deduplicated.length;
   let approved = 0;
   let pending = 0;
-  let notApproved = 0;
 
   for (const app of deduplicated) {
     const status = parseApplicationStatus(app.overallStatus);
     if (status === 'approved') {
       approved++;
-    } else if (status === 'not_approved') {
-      notApproved++;
     } else {
+      // All unresolved applications (including 'pending' and legacy 'not_approved') count as pending review
       pending++;
     }
   }
@@ -117,7 +115,6 @@ export function calculateApplicationMetrics(
     total,
     approved,
     pending,
-    notApproved,
     completionRate,
   };
 }
@@ -163,7 +160,6 @@ export function calculateRequirementMetrics(
       total: number;
       approved: number;
       pending: number;
-      notApproved: number;
     }
   >();
 
@@ -178,7 +174,6 @@ export function calculateRequirementMetrics(
       total: 0,
       approved: 0,
       pending: 0,
-      notApproved: 0,
     });
   }
 
@@ -198,7 +193,6 @@ export function calculateRequirementMetrics(
         total: 0,
         approved: 0,
         pending: 0,
-        notApproved: 0,
       };
       map.set(reqId, item);
     }
@@ -210,9 +204,8 @@ export function calculateRequirementMetrics(
     }
     if (status === 'approved') {
       item.approved++;
-    } else if (status === 'not_approved') {
-      item.notApproved++;
     } else {
+      // Both 'pending' and legacy 'not_approved' count as pending review
       item.pending++;
     }
   }
@@ -220,7 +213,7 @@ export function calculateRequirementMetrics(
   const metrics: RequirementMetric[] = [];
   for (const item of map.values()) {
     const completionRate = calculateCompletionRate(item.approved, item.total);
-    const unresolvedCount = item.pending + item.notApproved;
+    const unresolvedCount = item.pending;
 
     metrics.push({
       requirementId: item.requirementId,
@@ -229,7 +222,6 @@ export function calculateRequirementMetrics(
       totalAssigned: item.total,
       approved: item.approved,
       pending: item.pending,
-      notApproved: item.notApproved,
       completionRate,
       unresolvedCount,
     });
@@ -238,17 +230,11 @@ export function calculateRequirementMetrics(
   return sortBottlenecks(metrics);
 }
 
-/** Sort requirement metrics deterministically by unresolvedCount desc, notApproved desc, pending desc, label asc. */
+/** Sort requirement metrics deterministically by unresolvedCount (pending) desc, label asc. */
 export function sortBottlenecks(metrics: RequirementMetric[]): RequirementMetric[] {
   return [...metrics].sort((a, b) => {
     if (b.unresolvedCount !== a.unresolvedCount) {
       return b.unresolvedCount - a.unresolvedCount;
-    }
-    if (b.notApproved !== a.notApproved) {
-      return b.notApproved - a.notApproved;
-    }
-    if (b.pending !== a.pending) {
-      return b.pending - a.pending;
     }
     return a.label.localeCompare(b.label);
   });
@@ -266,10 +252,8 @@ export function calculateGroupMetrics(
       total: number;
       approved: number;
       pending: number;
-      notApproved: number;
     }
   >();
-
   for (const app of deduplicated) {
     const rawVal = app[field];
     const key = rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== ''
@@ -278,21 +262,17 @@ export function calculateGroupMetrics(
 
     let item = map.get(key);
     if (!item) {
-      item = { total: 0, approved: 0, pending: 0, notApproved: 0 };
+      item = { total: 0, approved: 0, pending: 0 };
       map.set(key, item);
     }
-
     item.total++;
     const status = parseApplicationStatus(app.overallStatus);
     if (status === 'approved') {
       item.approved++;
-    } else if (status === 'not_approved') {
-      item.notApproved++;
     } else {
       item.pending++;
     }
   }
-
   const result: GroupMetric[] = [];
   for (const [key, item] of map.entries()) {
     result.push({
@@ -301,7 +281,6 @@ export function calculateGroupMetrics(
       total: item.total,
       approved: item.approved,
       pending: item.pending,
-      notApproved: item.notApproved,
       completionRate: calculateCompletionRate(item.approved, item.total),
     });
   }

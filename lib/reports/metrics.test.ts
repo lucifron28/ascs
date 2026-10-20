@@ -25,7 +25,6 @@ test('2. calculateApplicationMetrics accurately counts statuses and calculates c
   assert.equal(emptyMetrics.total, 0);
   assert.equal(emptyMetrics.approved, 0);
   assert.equal(emptyMetrics.pending, 0);
-  assert.equal(emptyMetrics.notApproved, 0);
   assert.equal(emptyMetrics.completionRate, 0);
 
   const apps: RawApplicationData[] = [
@@ -38,9 +37,9 @@ test('2. calculateApplicationMetrics accurately counts statuses and calculates c
   const metrics = calculateApplicationMetrics(apps);
   assert.equal(metrics.total, 4);
   assert.equal(metrics.approved, 2);
-  assert.equal(metrics.pending, 1);
-  assert.equal(metrics.notApproved, 1);
+  assert.equal(metrics.pending, 2); // 1 pending + 1 legacy not_approved = 2 pending review
   assert.equal(metrics.completionRate, 0.5);
+  assert.equal(metrics.total, metrics.approved + metrics.pending);
 });
 
 test('3. calculateFinancialMetrics accurately counts paid, unpaid, and pending financial statuses', () => {
@@ -174,17 +173,17 @@ test('6. calculateRequirementMetrics handles 500+ applications and excludes non-
   assert.equal(metrics[0].unresolvedCount, 200);
 });
 
-test('7. sortBottlenecks sorts deterministically by unresolvedCount desc, notApproved desc, pending desc, label asc', () => {
+test('7. sortBottlenecks sorts deterministically by unresolvedCount desc, label asc', () => {
   const unSorted = [
-    { requirementId: '1', role: 'r1', label: 'Alpha Office', totalAssigned: 10, approved: 8, pending: 1, notApproved: 1, completionRate: 0.8, unresolvedCount: 2 },
-    { requirementId: '2', role: 'r2', label: 'Beta Office', totalAssigned: 10, approved: 5, pending: 2, notApproved: 3, completionRate: 0.5, unresolvedCount: 5 },
-    { requirementId: '3', role: 'r3', label: 'Gamma Office', totalAssigned: 10, approved: 5, pending: 4, notApproved: 1, completionRate: 0.5, unresolvedCount: 5 },
+    { requirementId: '1', role: 'r1', label: 'Gamma Office', totalAssigned: 10, approved: 8, pending: 2, completionRate: 0.8, unresolvedCount: 2 },
+    { requirementId: '2', role: 'r2', label: 'Beta Office', totalAssigned: 10, approved: 5, pending: 5, completionRate: 0.5, unresolvedCount: 5 },
+    { requirementId: '3', role: 'r3', label: 'Alpha Office', totalAssigned: 10, approved: 5, pending: 5, completionRate: 0.5, unresolvedCount: 5 },
   ];
 
   const sorted = sortBottlenecks(unSorted);
-  assert.equal(sorted[0].requirementId, '2');
-  assert.equal(sorted[1].requirementId, '3');
-  assert.equal(sorted[2].requirementId, '1');
+  assert.equal(sorted[0].requirementId, '3'); // Alpha Office (unresolved 5, label Alpha)
+  assert.equal(sorted[1].requirementId, '2'); // Beta Office (unresolved 5, label Beta)
+  assert.equal(sorted[2].requirementId, '1'); // Gamma Office (unresolved 2)
 });
 
 test('8. calculateGroupMetrics aggregates data by program, yearLevel, or section and handles duplicates', () => {
@@ -206,4 +205,21 @@ test('8. calculateGroupMetrics aggregates data by program, yearLevel, or section
 
   const secMetrics = calculateGroupMetrics(apps, 'section');
   assert.equal(secMetrics.length, 2);
+});
+
+test('9. Invariant: total = approved + pending, legacy unresolved records count as pending', () => {
+  const mixedApps: RawApplicationData[] = [
+    { id: 'app-a', overallStatus: 'approved' },
+    { id: 'app-b', overallStatus: 'pending' },
+    { id: 'app-c', overallStatus: 'not_approved' },
+    { id: 'app-d', overallStatus: 'not_approved' },
+    { id: 'app-e', overallStatus: 'pending' },
+  ];
+
+  const summary = calculateApplicationMetrics(mixedApps);
+  assert.equal(summary.total, 5);
+  assert.equal(summary.approved, 1);
+  assert.equal(summary.pending, 4);
+  assert.equal(summary.total, summary.approved + summary.pending);
+  assert.equal(summary.completionRate, 0.2);
 });

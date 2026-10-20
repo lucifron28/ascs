@@ -33,7 +33,6 @@ export default function BreakdownTable({
               <th scope="col" className="font-semibold text-right">Total Submitted</th>
               <th scope="col" className="font-semibold text-right">Approved</th>
               <th scope="col" className="font-semibold text-right">Pending</th>
-              <th scope="col" className="font-semibold text-right">Not Approved</th>
               <th scope="col" className="font-semibold text-right">Completion Rate</th>
             </tr>
           </thead>
@@ -46,7 +45,6 @@ export default function BreakdownTable({
                   <td className="text-right font-medium">{item.total}</td>
                   <td className="text-right font-semibold text-success">{item.approved}</td>
                   <td className="text-right font-semibold text-warning">{item.pending}</td>
-                  <td className="text-right font-semibold text-error">{item.notApproved}</td>
                   <td className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <span className="font-bold text-base-content">{ratePct}%</span>

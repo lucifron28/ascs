@@ -13,6 +13,20 @@ test.describe('Admin and Dean Reports E2E Acceptance', () => {
     await expect(page.getByRole('heading', { name: /institution clearance/i })).toBeVisible();
     await expect(page.getByText(/financial verification summary/i)).toBeVisible();
     await expect(page.getByRole('cell', { name: /BSAIS.*Accounting Information System/i })).toBeVisible();
+
+    // Assert exactly 4 summary cards are present and Not Approved is absent
+    const cardTitles = page.locator('span.uppercase');
+    await expect(cardTitles.filter({ hasText: 'Total Applications' })).toBeVisible();
+    await expect(cardTitles.filter({ hasText: 'Fully Approved' })).toBeVisible();
+    await expect(cardTitles.filter({ hasText: 'Pending Review' })).toBeVisible();
+    await expect(cardTitles.filter({ hasText: 'Completion Rate' })).toBeVisible();
+    await expect(cardTitles.filter({ hasText: 'Not Approved' })).toHaveCount(0);
+
+    // Filter dropdown must not contain Not Approved option
+    await expect(page.locator('#report-filter-status option[value="not_approved"]')).toHaveCount(0);
+
+    // Tables must not contain Not Approved column
+    await expect(page.locator('th:has-text("Not Approved")')).toHaveCount(0);
   });
 
   test('Dean can view academic reports dashboard with financial summary excluded', async ({ page }) => {
@@ -28,5 +42,14 @@ test.describe('Admin and Dean Reports E2E Acceptance', () => {
 
     await expect(page.getByText(/financial verification summary/i)).not.toBeVisible();
     await expect(page.getByRole('cell', { name: /BSAIS.*Accounting Information System/i })).toBeVisible();
+
+    // Assert exactly 4 summary cards are present and Not Approved is absent in Dean reports
+    const cardTitles = page.locator('span.uppercase');
+    await expect(cardTitles.filter({ hasText: 'Total Applications' })).toBeVisible();
+    await expect(cardTitles.filter({ hasText: 'Fully Approved' })).toBeVisible();
+    await expect(cardTitles.filter({ hasText: 'Pending Review' })).toBeVisible();
+    await expect(cardTitles.filter({ hasText: 'Completion Rate' })).toBeVisible();
+    await expect(cardTitles.filter({ hasText: 'Not Approved' })).toHaveCount(0);
+    await expect(page.locator('th:has-text("Not Approved")')).toHaveCount(0);
   });
 });

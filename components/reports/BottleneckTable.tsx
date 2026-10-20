@@ -23,7 +23,7 @@ export default function BottleneckTable({
           <h3 className="font-bold text-xs uppercase tracking-wider text-base-content">{title}</h3>
         </div>
         <span className="text-[10px] text-base-content/80 font-bold">
-          Sorted by Total Unresolved (Pending + Not Approved)
+          Sorted by Total Unresolved (Pending)
         </span>
       </div>
 
@@ -36,7 +36,6 @@ export default function BottleneckTable({
               <th scope="col" className="font-semibold text-right">Total Assigned</th>
               <th scope="col" className="font-semibold text-right">Approved</th>
               <th scope="col" className="font-semibold text-right">Pending</th>
-              <th scope="col" className="font-semibold text-right">Not Approved</th>
               <th scope="col" className="font-semibold text-right">Unresolved Count</th>
               <th scope="col" className="font-semibold text-right">Completion Rate</th>
             </tr>
@@ -57,7 +56,6 @@ export default function BottleneckTable({
                   <td className="text-right font-medium">{req.totalAssigned}</td>
                   <td className="text-right font-semibold text-success">{req.approved}</td>
                   <td className="text-right font-semibold text-warning">{req.pending}</td>
-                  <td className="text-right font-semibold text-error">{req.notApproved}</td>
                   <td className="text-right">
                     <span
                       className={`badge badge-sm font-black rounded-md ${
