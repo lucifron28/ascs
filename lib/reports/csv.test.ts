@@ -40,28 +40,28 @@ const mockSummary: ReportSummary = {
   generatedAt: '2026-08-07T00:00:00.000Z',
   filters: { academicYear: '2026-2027', semester: '1st Semester' },
   scope: 'admin',
-  applicationSummary: { total: 10, approved: 6, pending: 3, notApproved: 1, completionRate: 0.6 },
+  applicationSummary: { total: 10, approved: 6, pending: 4, completionRate: 0.6 },
   financialSummary: { paid: 7, unpaid: 2, pending: 1 },
   requirementBreakdown: [
-    { requirementId: 'lib', role: 'librarian', label: 'Library Clearance', totalAssigned: 10, approved: 8, pending: 1, notApproved: 1, completionRate: 0.8, unresolvedCount: 2 },
+    { requirementId: 'lib', role: 'librarian', label: 'Library Clearance', totalAssigned: 10, approved: 8, pending: 2, completionRate: 0.8, unresolvedCount: 2 },
   ],
   programBreakdown: [
-    { key: 'BSAIS', label: 'BSAIS — Accounting Information System', total: 10, approved: 6, pending: 3, notApproved: 1, completionRate: 0.6 },
+    { key: 'BSAIS', label: 'BSAIS — Accounting Information System', total: 10, approved: 6, pending: 4, completionRate: 0.6 },
   ],
   yearLevelBreakdown: [],
   sectionBreakdown: [],
   highestUnresolvedRequirements: [],
 };
 
-test('5. generateSummaryCsv includes UTF-8 BOM, metadata header, and summary rows', () => {
+test('5. generateSummaryCsv includes UTF-8 BOM, metadata header, and summary rows without Not Approved', () => {
   const csv = generateSummaryCsv(mockSummary);
   assert.ok(csv.startsWith('\uFEFF'), 'CSV must start with UTF-8 BOM');
   assert.match(csv, /# ASCS Clearance ADMIN Report/);
   assert.match(csv, /Submitted Applications/);
   assert.match(csv, /60\.0%/);
   assert.match(csv, /Financial Status \(Paid\)/);
+  assert.doesNotMatch(csv, /"Not Approved"/, 'Summary CSV must not contain Not Approved column');
 });
-
 test('6. Dean export excludes Admin-only financial details and user management metadata', () => {
   const mockDeanSummary: ReportSummary = {
     ...mockSummary,
@@ -90,14 +90,37 @@ test('6. Dean export excludes Admin-only financial details and user management m
   assert.match(csv, /"Dean Approved"/);
   assert.doesNotMatch(csv, /"Financial Status"/, 'Dean CSV should not contain Financial Status column header');
 });
-test('7. generateRequirementBreakdownCsv and generateProgramBreakdownCsv output valid CSV headers and rows', () => {
+test('7. generateRequirementBreakdownCsv and generateProgramBreakdownCsv output valid CSV headers and rows without Not Approved', () => {
   const reqCsv = generateRequirementBreakdownCsv(mockSummary);
   assert.ok(reqCsv.startsWith('\uFEFF'));
   assert.match(reqCsv, /Library Clearance/);
   assert.match(reqCsv, /"Unresolved Count"/);
+  assert.doesNotMatch(reqCsv, /"Not Approved"/, 'Requirement breakdown CSV must not contain Not Approved column');
 
   const progCsv = generateProgramBreakdownCsv(mockSummary);
   assert.ok(progCsv.startsWith('\uFEFF'));
   assert.match(progCsv, /"BSAIS — Accounting Information System"/);
   assert.match(progCsv, /"Completion Rate \(%\)"/);
+  assert.doesNotMatch(progCsv, /"Not Approved"/, 'Program breakdown CSV must not contain Not Approved column');
+});
+
+test('8. generateApplicationDetailCsv maps legacy not_approved to pending in CSV output', () => {
+  const applications = [
+    {
+      studentNumber: 'STUD-LEGACY',
+      studentName: 'Legacy Student',
+      program: 'BSAIS',
+      yearLevel: '4',
+      section: 'A',
+      academicYear: '2026-2027',
+      semester: '1st Semester',
+      overallStatus: 'not_approved',
+      financialStatus: 'paid',
+      submittedAt: '2026-08-01',
+    },
+  ];
+
+  const csv = generateApplicationDetailCsv(applications, mockSummary);
+  assert.match(csv, /"pending"/, 'Legacy not_approved application must display as pending in detail CSV');
+  assert.doesNotMatch(csv, /"not_approved"/, 'Detail CSV must not display obsolete not_approved status');
 });

@@ -41,9 +41,9 @@ describe('Reports & CSV Export Integration Tests', () => {
 
     assert.equal(summary.applicationSummary.total, 4);
     assert.equal(summary.applicationSummary.approved, 1);
-    assert.equal(summary.applicationSummary.pending, 1);
-    assert.equal(summary.applicationSummary.notApproved, 2);
-
+    assert.equal(summary.applicationSummary.pending, 3);
+    assert.equal(summary.applicationSummary.total, summary.applicationSummary.approved + summary.applicationSummary.pending);
+    assert.equal(summary.applicationSummary.completionRate, 0.25);
     assert.ok(summary.financialSummary);
     assert.equal(summary.financialSummary?.paid, 2);
     assert.equal(summary.financialSummary?.pending, 1);
@@ -120,7 +120,7 @@ describe('Reports & CSV Export Integration Tests', () => {
 
     assert.ok(csvRes.csvContent);
     assert.match(csvRes.csvContent, /ASCS Clearance ADMIN Report|Submitted Applications/i);
-
+    assert.doesNotMatch(csvRes.csvContent, /"Not Approved"/, 'Admin CSV must not contain Not Approved column');
     const logsSnap = await getAdminFirestore()
       .collection('activityLogs')
       .where('action', '==', 'export_admin_report_csv')
@@ -136,6 +136,7 @@ describe('Reports & CSV Export Integration Tests', () => {
     if (deanCsvRes.success) {
       assert.ok(deanCsvRes.csvContent);
       assert.equal(deanCsvRes.csvContent.includes('Financial Status'), false);
+      assert.doesNotMatch(deanCsvRes.csvContent, /"Not Approved"/, 'Dean CSV must not contain Not Approved column');
     }
   });
   it('16. Report queries and exports handle legacy short-form semester records seamlessly without splitting terms', async () => {
@@ -237,6 +238,50 @@ describe('Reports & CSV Export Integration Tests', () => {
     if (optionsRes.success) {
       assert.equal(optionsRes.filterOptions.semesters.includes('1st'), false);
       assert.equal(optionsRes.filterOptions.semesters.includes('1st Semester'), true);
+    }
+  });
+
+  it('17. Reporting calculations follow 2-state model and treat legacy not_approved as pending review', async () => {
+    process.env.TEST_SESSION_COOKIE = adminSession;
+
+    // 1. Query with overallStatus: 'pending' includes both pending (Student B) and legacy not_approved (Students C & D)
+    const pendingRes = await fetchAdminReportSummaryAction({
+      academicYear: '2026-2027',
+      semester: '1st Semester',
+      overallStatus: 'pending',
+    });
+    assert.equal(pendingRes.success, true);
+    if (!pendingRes.success) return;
+    assert.equal(pendingRes.summary.applicationSummary.total, 3);
+    assert.equal(pendingRes.summary.applicationSummary.approved, 0);
+    assert.equal(pendingRes.summary.applicationSummary.pending, 3);
+    assert.equal(pendingRes.summary.applicationSummary.completionRate, 0);
+
+    // 2. Query with overallStatus: 'approved' returns only Student A
+    const approvedRes = await fetchAdminReportSummaryAction({
+      academicYear: '2026-2027',
+      semester: '1st Semester',
+      overallStatus: 'approved',
+    });
+    assert.equal(approvedRes.success, true);
+    if (!approvedRes.success) return;
+    assert.equal(approvedRes.summary.applicationSummary.total, 1);
+    assert.equal(approvedRes.summary.applicationSummary.approved, 1);
+    assert.equal(approvedRes.summary.applicationSummary.pending, 0);
+    assert.equal(approvedRes.summary.applicationSummary.completionRate, 1.0);
+
+    // 3. Application detail export displays legacy not_approved applications with status 'pending'
+    const detailCsvRes = await exportAdminReportCsvAction(
+      { academicYear: '2026-2027', semester: '1st Semester' },
+      'application-detail'
+    );
+    assert.equal(detailCsvRes.success, true);
+    if (detailCsvRes.success) {
+      assert.doesNotMatch(detailCsvRes.csvContent, /"not_approved"/, 'CSV detail export must not output obsolete not_approved status');
+      // Lines for Student C and Student D must have "pending"
+      const lines = detailCsvRes.csvContent.split('\n');
+      const studentCLine = lines.find((l) => l.includes('STUD-2026-0003'));
+      assert.ok(studentCLine && studentCLine.includes('"pending"'), 'Student C must display as pending in detail export');
     }
   });
 });

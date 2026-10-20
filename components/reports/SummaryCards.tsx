@@ -4,7 +4,6 @@ import {
   FileText,
   CheckCircle2,
   Clock,
-  XCircle,
   Percent,
   CreditCard,
 } from 'lucide-react';
@@ -21,7 +20,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
   return (
     <div className="space-y-6">
       {/* Primary Application Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Submitted Applications */}
         <div className="card bg-base-100 border border-base-content/15 p-5 rounded-xl shadow-sm space-y-2">
           <div className="flex items-center justify-between text-base-content/80">
@@ -52,18 +51,8 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
           <p className="text-[10px] text-base-content/80 font-medium">Awaiting signatory sign-off</p>
         </div>
 
-        {/* Not Approved */}
-        <div className="card bg-base-100 border border-base-content/15 p-5 rounded-xl shadow-sm space-y-2">
-          <div className="flex items-center justify-between text-base-content/80">
-            <span className="text-xs font-semibold uppercase tracking-wider">Not Approved</span>
-            <XCircle className="w-4 h-4 text-error" aria-hidden="true" />
-          </div>
-          <div className="text-2xl font-black text-error">{app.notApproved}</div>
-          <p className="text-[10px] text-base-content/80 font-medium">Holds or remarks present</p>
-        </div>
-
         {/* Submitted Application Completion Rate */}
-        <div className="card bg-base-100 border border-base-content/15 p-5 rounded-xl shadow-sm space-y-2 sm:col-span-2 lg:col-span-1">
+        <div className="card bg-base-100 border border-base-content/15 p-5 rounded-xl shadow-sm space-y-2">
           <div className="flex items-center justify-between text-base-content/80">
             <span className="text-xs font-semibold uppercase tracking-wider">Completion Rate</span>
             <Percent className="w-4 h-4 text-primary" aria-hidden="true" />
