@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchFinancialQueueAction, updateFinancialStatusAction, reopenFinancialStatusAction } from '@/app/actions/clearance';
 import { CreditCard, CheckCircle2, ShieldAlert, AlertCircle, CircleEllipsis, Search, FileText, RotateCcw } from 'lucide-react';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
+import { formatStudentAcademicSummary } from '@/lib/student-academic-display';
 import {
   canSaveFinancialDecision,
   getFinancialNotesDisplay,
@@ -28,6 +29,9 @@ interface FinancialRecord {
   overall_status: string;
   student_name: string;
   student_id_number: string;
+  program?: string | null;
+  year_level?: string | null;
+  section?: string | null;
   is_actionable?: boolean;
 }
 
@@ -337,7 +341,7 @@ export default function AccountantDashboard() {
               <thead>
                 <tr className="text-base-content/70 text-xs uppercase tracking-wider border-b border-base-content/10">
                   <th scope="col" className="bg-transparent pb-4 pl-4 font-bold">Student</th>
-                  <th scope="col" className="bg-transparent pb-4 font-bold">Student No.</th>
+                  <th scope="col" className="bg-transparent pb-4 font-bold">Student #</th>
                   <th scope="col" className="bg-transparent pb-4 font-bold">Account Status</th>
                   <th scope="col" className="bg-transparent pb-4 font-bold">Pending Dues Notes</th>
                   <th scope="col" className="bg-transparent pb-4 font-bold">Last Verified</th>
@@ -349,6 +353,9 @@ export default function AccountantDashboard() {
                   <tr key={rec.id} className="bg-base-200/50 hover:bg-base-200 border border-base-content/10 rounded-xl transition-all">
                     <td className="font-semibold text-base-content py-4 rounded-l-xl pl-4 flex flex-col justify-center min-w-[150px]">
                       <span>{rec.student_name}</span>
+                      <span className="text-[11px] text-base-content/60 font-normal mt-0.5">
+                        {formatStudentAcademicSummary(rec) || 'Academic details unavailable'}
+                      </span>
                       <span className="text-[10px] text-base-content/60 font-normal mt-0.5">Ref: {rec.application_number}</span>
                     </td>
                     <td className="text-base-content/80 py-4 font-mono text-xs">{rec.student_id_number}</td>
@@ -439,7 +446,7 @@ export default function AccountantDashboard() {
                 <span className="font-semibold text-base-content">{selectedRecord.student_name}</span>
               </div>
               <div>
-                <span className="text-base-content/60 font-medium">ID Number:</span>{' '}
+                <span className="text-base-content/60 font-medium">Student #:</span>{' '}
                 <span className="font-mono text-base-content">{selectedRecord.student_id_number}</span>
               </div>
               <div>
@@ -580,7 +587,7 @@ export default function AccountantDashboard() {
 
                  <div className="bg-base-200 border border-base-content/15 p-3 rounded-xl space-y-1 text-xs">
                    <div><span className="text-base-content/60">Student:</span> <span className="font-semibold text-base-content">{reopenRecord.student_name}</span></div>
-                   <div><span className="text-base-content/60">Student No:</span> <span className="font-mono text-base-content">{reopenRecord.student_id_number}</span></div>
+                   <div><span className="text-base-content/60">Student #:</span> <span className="font-mono text-base-content">{reopenRecord.student_id_number}</span></div>
                    <div><span className="text-base-content/60">Application:</span> <span className="font-mono text-base-content">{reopenRecord.application_number}</span></div>
                  </div>
 

@@ -34,14 +34,16 @@ export async function fetchAdminUsersAction() {
       firestore.collection('students').get().catch(() => null),
     ]);
 
-    const studentMap = new Map<string, { studentNumber: string; program?: string }>();
+    const studentMap = new Map<string, { studentNumber: string; program?: string; yearLevel?: string; section?: string }>();
     if (studentsSnap) {
       studentsSnap.docs.forEach((doc) => {
         const data = doc.data();
-        if (data.studentNumber || data.program) {
+        if (data.studentNumber || data.program || data.yearLevel || data.section) {
           studentMap.set(doc.id, {
             studentNumber: data.studentNumber || '',
             program: data.program || undefined,
+            yearLevel: data.yearLevel || undefined,
+            section: data.section || undefined,
           });
         }
       });
@@ -52,7 +54,10 @@ export async function fetchAdminUsersAction() {
       const role = (data.role || 'student') as UserRole;
       const studentNumber =
         data.studentNumber || (role === 'student' ? studentMap.get(doc.id)?.studentNumber : undefined);
-      const program = role === 'student' ? studentMap.get(doc.id)?.program : undefined;
+      const studentProfile = role === 'student' ? studentMap.get(doc.id) : undefined;
+      const program = studentProfile?.program || data.program;
+      const yearLevel = studentProfile?.yearLevel || data.yearLevel;
+      const section = studentProfile?.section || data.section;
       const accountStatus = data.accountStatus || (data.isActive === false ? 'inactive' : 'active');
       const isActive = data.isActive !== undefined ? Boolean(data.isActive) : accountStatus === 'active';
 
@@ -67,6 +72,8 @@ export async function fetchAdminUsersAction() {
         mustChangePassword: data.mustChangePassword ?? false,
         studentNumber: studentNumber || '',
         program: program || '',
+        yearLevel: yearLevel || '',
+        section: section || '',
         contactNumber: data.contactNumber || '',
         createdAt: data.createdAt
           ? typeof data.createdAt === 'string'

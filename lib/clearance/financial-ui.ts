@@ -1,4 +1,5 @@
 import type { FinancialStatus } from '@/lib/types/status';
+import { matchesStudentSearch } from '@/lib/student-academic-display';
 
 export type FinancialDecision = Exclude<FinancialStatus, 'pending'> | null;
 
@@ -33,6 +34,8 @@ export interface FilterableFinancialRecord {
   student_id_number?: string;
   application_number?: string;
   program?: string | null;
+  year_level?: string | null;
+  section?: string | null;
 }
 
 /** Filter financial records by distinct status category and apply search query. */
@@ -59,15 +62,15 @@ export function filterFinancialRecords<T extends FilterableFinancialRecord>(
       categoryMatches = records;
   }
 
-  const trimmedQuery = searchQuery.trim().toLowerCase();
-  if (!trimmedQuery) return categoryMatches;
-
   return categoryMatches.filter((r) => {
-    return Boolean(
-      (r.student_name && r.student_name.toLowerCase().includes(trimmedQuery)) ||
-      (r.student_id_number && r.student_id_number.toLowerCase().includes(trimmedQuery)) ||
-      (r.application_number && r.application_number.toLowerCase().includes(trimmedQuery)) ||
-      (r.program && r.program.toLowerCase().includes(trimmedQuery))
+    return matchesStudentSearch(
+      searchQuery,
+      r.student_name,
+      r.student_id_number,
+      r.application_number,
+      r.program,
+      r.year_level,
+      r.section,
     );
   });
 }

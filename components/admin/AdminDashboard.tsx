@@ -53,6 +53,7 @@ import {
   Mail,
 } from 'lucide-react';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
+import { matchesStudentSearch } from '@/lib/student-academic-display';
 interface UserRecord {
   uid: string;
   email: string;
@@ -64,6 +65,8 @@ interface UserRecord {
   mustChangePassword?: boolean;
   studentNumber?: string;
   program?: string;
+  yearLevel?: string;
+  section?: string;
   contactNumber?: string;
   createdAt: string;
 }
@@ -633,11 +636,16 @@ export default function AdminDashboard() {
 
   // Filtered Users
   const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.fullName.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
-      (u.studentNumber || '').toLowerCase().includes(userSearch.toLowerCase()) ||
-      (u.username || '').toLowerCase().includes(userSearch.toLowerCase());
+    const matchesSearch = matchesStudentSearch(
+      userSearch,
+      u.fullName,
+      u.email,
+      u.username,
+      u.studentNumber,
+      u.program,
+      u.yearLevel,
+      u.section,
+    );
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || u.accountStatus === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
@@ -895,7 +903,7 @@ export default function AdminDashboard() {
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/50" />
               <input
                 type="text"
-                placeholder="Search user by name, email, or username..."
+                placeholder="Search by name, Student #, email, program, year, or section..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 className="input input-sm h-11 input-bordered w-full pl-10 bg-base-200 border-base-content/15 rounded-xl text-sm"
@@ -992,6 +1000,8 @@ export default function AdminDashboard() {
                   <th>User Details</th>
                   <th>Student #</th>
                   <th>Program</th>
+                  <th>Year</th>
+                  <th>Section</th>
                   <th>Role</th>
                   <th>Status</th>
                   <th>Password</th>
@@ -1001,7 +1011,7 @@ export default function AdminDashboard() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-base-content/60 text-xs">
+                    <td colSpan={9} className="text-center py-8 text-base-content/60 text-xs">
                       No matching user accounts found.
                     </td>
                   </tr>
@@ -1017,6 +1027,12 @@ export default function AdminDashboard() {
                       </td>
                       <td className="text-xs text-base-content/80">
                         {u.role === 'student' ? formatProgram(u.program) : '--'}
+                      </td>
+                      <td className="text-xs text-base-content/80">
+                        {u.role === 'student' ? u.yearLevel || '--' : '--'}
+                      </td>
+                      <td className="text-xs text-base-content/80">
+                        {u.role === 'student' ? u.section || '--' : '--'}
                       </td>
                       <td>
                         <span className="badge badge-primary border-primary/20 bg-primary/10 text-primary capitalize font-medium text-xs">

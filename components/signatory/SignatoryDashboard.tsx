@@ -21,6 +21,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import AccessibleDialog from '@/components/ui/AccessibleDialog';
+import { formatStudentAcademicSummary, matchesStudentSearch } from '@/lib/student-academic-display';
 
 interface PendingApproval {
   approval_id: string;
@@ -35,6 +36,8 @@ interface PendingApproval {
   student_id_number: string;
   student_name: string;
   program?: string | null;
+  year_level?: string | null;
+  section?: string | null;
 }
 
 interface ApprovedHistoryItem {
@@ -54,6 +57,7 @@ interface ApprovedHistoryItem {
   student_name: string;
   program?: string | null;
   year_level?: string | null;
+  section?: string | null;
   overall_status: string;
 }
 
@@ -242,23 +246,26 @@ export default function SignatoryDashboard() {
   };
 
   const filteredQueue = queue.filter((app) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      app.student_name.toLowerCase().includes(q) ||
-      app.student_id_number.toLowerCase().includes(q) ||
-      app.application_number.toLowerCase().includes(q)
+    return matchesStudentSearch(
+      searchQuery,
+      app.student_name,
+      app.student_id_number,
+      app.application_number,
+      app.program,
+      app.year_level,
+      app.section,
     );
   });
 
   const filteredHistory = history.filter((app) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      app.student_name.toLowerCase().includes(q) ||
-      app.student_id_number.toLowerCase().includes(q) ||
-      app.application_number.toLowerCase().includes(q) ||
-      (app.program && app.program.toLowerCase().includes(q))
+    return matchesStudentSearch(
+      searchQuery,
+      app.student_name,
+      app.student_id_number,
+      app.application_number,
+      app.program,
+      app.year_level,
+      app.section,
     );
   });
 
@@ -329,7 +336,7 @@ export default function SignatoryDashboard() {
           </div>
           <input
             type="text"
-            placeholder={activeTab === 'pending' ? 'Search pending students by name or ID...' : 'Search approved students by name, ID, or program...'}
+            placeholder="Search students by name, Student #, year, program, or section..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input input-bordered w-full pl-9 bg-base-200 border-base-content/15 focus:border-primary text-base-content rounded-xl placeholder-base-content/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary text-sm h-11"
@@ -363,7 +370,7 @@ export default function SignatoryDashboard() {
                   <thead>
                     <tr className="text-base-content/70 text-xs uppercase tracking-wider border-b border-base-content/10">
                       <th scope="col" className="bg-transparent pb-4 pl-4 font-bold">Student</th>
-                      <th scope="col" className="bg-transparent pb-4 font-bold">ID Number</th>
+                      <th scope="col" className="bg-transparent pb-4 font-bold">Student #</th>
                       <th scope="col" className="bg-transparent pb-4 font-bold">Academic Term</th>
                       <th scope="col" className="bg-transparent pb-4 font-bold">Purpose</th>
                       <th scope="col" className="bg-transparent pb-4 font-bold">Submitted At</th>
@@ -377,7 +384,12 @@ export default function SignatoryDashboard() {
                           <div className="w-8 h-8 rounded-full bg-base-300 flex items-center justify-center">
                             <User className="w-4 h-4 text-base-content/60" aria-hidden="true" />
                           </div>
-                          <span>{app.student_name}</span>
+                          <div>
+                            <div>{app.student_name}</div>
+                            <div className="text-[11px] text-base-content/60 font-normal mt-0.5">
+                              {formatStudentAcademicSummary(app) || 'Academic details unavailable'}
+                            </div>
+                          </div>
                         </td>
                         <td className="text-base-content/80 py-4 font-mono text-xs">{app.student_id_number}</td>
                         <td className="text-base-content/80 py-4">
@@ -436,7 +448,7 @@ export default function SignatoryDashboard() {
                   <thead>
                     <tr className="text-base-content/70 text-xs uppercase tracking-wider border-b border-base-content/10">
                       <th scope="col" className="bg-transparent pb-4 pl-4 font-bold">Student</th>
-                      <th scope="col" className="bg-transparent pb-4 font-bold">ID Number</th>
+                      <th scope="col" className="bg-transparent pb-4 font-bold">Student #</th>
                       <th scope="col" className="bg-transparent pb-4 font-bold">Term & Purpose</th>
                       <th scope="col" className="bg-transparent pb-4 font-bold">Status</th>
                       <th scope="col" className="bg-transparent pb-4 font-bold">Approved Date</th>
@@ -453,7 +465,9 @@ export default function SignatoryDashboard() {
                           </div>
                           <div>
                             <div>{item.student_name}</div>
-                            {item.program && <div className="text-[10px] text-base-content/60 font-mono">{item.program}</div>}
+                            <div className="text-[11px] text-base-content/60 font-normal mt-0.5">
+                              {formatStudentAcademicSummary(item) || 'Academic details unavailable'}
+                            </div>
                           </div>
                         </td>
                         <td className="text-base-content/80 py-4 font-mono text-xs">{item.student_id_number}</td>
@@ -527,7 +541,7 @@ export default function SignatoryDashboard() {
                 <span className="font-semibold text-base-content">{selectedApp.student_name}</span>
               </div>
               <div>
-                <span className="text-base-content/60 font-medium">ID Number:</span>{' '}
+                <span className="text-base-content/60 font-medium">Student #:</span>{' '}
                 <span className="font-mono text-base-content">{selectedApp.student_id_number}</span>
               </div>
               <div>

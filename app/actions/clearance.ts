@@ -448,6 +448,9 @@ export async function fetchPendingApprovalsAction() {
         submitted_at: appData.submittedAt,
         student_id_number: appData.studentNumber,
         student_name: appData.studentName,
+        program: appData.program || null,
+        year_level: appData.yearLevel || null,
+        section: appData.section || null,
         workflow_stage: getWorkflowStageForRole(role)?.stage || null,
       });
     }
@@ -507,6 +510,7 @@ export async function fetchApprovedHistoryAction() {
         student_name: appData.studentName,
         program: appData.program || null,
         year_level: appData.yearLevel || null,
+        section: appData.section || null,
         overall_status: appData.overallStatus,
       });
     }
@@ -901,6 +905,9 @@ export async function fetchFinancialQueueAction() {
         overall_status: data.overallStatus,
         student_name: data.studentName,
         student_id_number: data.studentNumber,
+        program: data.program || null,
+        year_level: data.yearLevel || null,
+        section: data.section || null,
         is_actionable: actionable,
         is_history: !actionable,
       });

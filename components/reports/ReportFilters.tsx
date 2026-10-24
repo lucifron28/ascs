@@ -135,7 +135,7 @@ export default function ReportFiltersComponent({
               <option value="all">All Year Levels</option>
               {options.yearLevels.map((yl) => (
                 <option key={yl} value={yl}>
-                  Year {yl}
+                  {yl}
                 </option>
               ))}
             </select>
