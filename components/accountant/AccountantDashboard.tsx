@@ -263,7 +263,7 @@ export default function AccountantDashboard() {
           </div>
           <input
             type="text"
-            placeholder="Search by student name or ID..."
+            placeholder="Search name, Student #, year, program, section, or application #..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input input-bordered w-full pl-9 bg-base-200 border-base-content/15 focus:border-primary text-base-content rounded-xl placeholder-base-content/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary text-sm h-11"
@@ -354,7 +354,11 @@ export default function AccountantDashboard() {
                     <td className="font-semibold text-base-content py-4 rounded-l-xl pl-4 flex flex-col justify-center min-w-[150px]">
                       <span>{rec.student_name}</span>
                       <span className="text-[11px] text-base-content/60 font-normal mt-0.5">
-                        {formatStudentAcademicSummary(rec) || 'Academic details unavailable'}
+                        {formatStudentAcademicSummary({
+                          yearLevel: rec.year_level,
+                          program: rec.program,
+                          section: rec.section,
+                        }) || 'Academic details unavailable'}
                       </span>
                       <span className="text-[10px] text-base-content/60 font-normal mt-0.5">Ref: {rec.application_number}</span>
                     </td>

@@ -387,7 +387,11 @@ export default function SignatoryDashboard() {
                           <div>
                             <div>{app.student_name}</div>
                             <div className="text-[11px] text-base-content/60 font-normal mt-0.5">
-                              {formatStudentAcademicSummary(app) || 'Academic details unavailable'}
+                              {formatStudentAcademicSummary({
+                                yearLevel: app.year_level,
+                                program: app.program,
+                                section: app.section,
+                              }) || 'Academic details unavailable'}
                             </div>
                           </div>
                         </td>
@@ -466,7 +470,11 @@ export default function SignatoryDashboard() {
                           <div>
                             <div>{item.student_name}</div>
                             <div className="text-[11px] text-base-content/60 font-normal mt-0.5">
-                              {formatStudentAcademicSummary(item) || 'Academic details unavailable'}
+                              {formatStudentAcademicSummary({
+                                yearLevel: item.year_level,
+                                program: item.program,
+                                section: item.section,
+                              }) || 'Academic details unavailable'}
                             </div>
                           </div>
                         </td>
