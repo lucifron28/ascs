@@ -16,8 +16,15 @@ test.describe('Live Multi-Role Clearance Journey', () => {
     await page.waitForURL('**/student/dashboard');
     await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
 
-    // Select Academic Year 2026-2027, 1st Semester, Graduation
-    await page.getByLabel(/academic year/i).selectOption('2026-2027');
+    // Reject malformed academic years, then continue with a valid typed value.
+    const academicYearField = page.getByLabel(/academic year/i);
+    await academicYearField.fill('205-2026');
+    await academicYearField.blur();
+    await expect(page.getByText(/enter a valid academic year/i)).toBeVisible();
+    await academicYearField.fill('2026-2027');
+    await expect(page.getByText(/enter a valid academic year/i)).toHaveCount(0);
+
+    // Submit for 2026-2027, 1st Semester, Graduation
     await page.getByLabel(/semester/i).selectOption('1st Semester');
     await page.getByLabel(/purpose/i).selectOption('Graduation');
     await page.getByRole('checkbox').check();
