@@ -3,7 +3,20 @@
 import React, { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { submitApplicationAction } from '@/app/actions/clearance';
+import { validateAcademicYear } from '@/lib/reports/filters';
 import { FileText, Send, AlertTriangle } from 'lucide-react';
+
+const SUGGESTED_ACADEMIC_YEARS = ['2025-2026', '2026-2027', '2027-2028', '2028-2029'];
+const ACADEMIC_YEAR_ERROR = 'Enter a valid academic year in YYYY-YYYY format using consecutive years, such as 2026-2027.';
+
+function getAcademicYearError(value: string): string | null {
+  try {
+    validateAcademicYear(value);
+    return null;
+  } catch {
+    return ACADEMIC_YEAR_ERROR;
+  }
+}
 
 interface ApplicationFormProps {
   onSuccess: () => void;
@@ -12,6 +25,7 @@ interface ApplicationFormProps {
 export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [academicYearError, setAcademicYearError] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -21,6 +35,17 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
       confirmCorrectness: false,
     },
     onSubmit: async ({ value }) => {
+      setError(null);
+      const validationError = getAcademicYearError(value.academicYear);
+      if (validationError) {
+        setAcademicYearError(validationError);
+        setTimeout(() => {
+          document.getElementById('academicYear')?.focus();
+        }, 50);
+        return;
+      }
+
+      setAcademicYearError(null);
       if (!value.confirmCorrectness) {
         setError('You must confirm that all submitted details are correct.');
         setTimeout(() => {
@@ -80,18 +105,41 @@ export default function ApplicationForm({ onSuccess }: ApplicationFormProps) {
               <label htmlFor="academicYear" className="label py-1">
                 <span className="label-text text-base-content/80 font-medium text-xs">Academic Year</span>
               </label>
-              <select
+              <input
                 id="academicYear"
+                type="text"
+                list="academic-year-suggestions"
                 name={field.name}
                 value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="YYYY-YYYY"
+                maxLength={9}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  field.handleChange(value);
+                  if (academicYearError) setAcademicYearError(getAcademicYearError(value));
+                }}
+                onBlur={() => {
+                  field.handleBlur();
+                  setAcademicYearError(getAcademicYearError(field.state.value));
+                }}
                 disabled={loading}
-                className="select select-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                <option value="2026-2027">2026-2027</option>
-                <option value="2027-2028">2027-2028</option>
-                <option value="2028-2029">2028-2029</option>
-              </select>
+                aria-invalid={!!academicYearError}
+                aria-describedby={academicYearError ? 'academicYear-help academicYear-error' : 'academicYear-help'}
+                className="input input-bordered w-full bg-base-200 border-base-content/15 text-base-content rounded-xl text-sm h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              />
+              <datalist id="academic-year-suggestions">
+                {SUGGESTED_ACADEMIC_YEARS.map((academicYear) => (
+                  <option key={academicYear} value={academicYear} />
+                ))}
+              </datalist>
+              <p id="academicYear-help" className="text-base-content/60 text-xs mt-1">
+                Enter the format YYYY-YYYY, for example, 2026-2027.
+              </p>
+              {academicYearError && (
+                <p id="academicYear-error" role="alert" className="text-error text-xs mt-1">
+                  {academicYearError}
+                </p>
+              )}
             </div>
           )}
         </form.Field>
