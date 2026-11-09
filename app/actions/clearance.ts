@@ -2,6 +2,7 @@
 
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { normalizeSemester, getApplicationTermDocumentIds } from '@/lib/academic-term';
+import { validateAcademicYear } from '@/lib/reports/filters';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { getClearanceStatusSummary, REQUIRED_SIGNATORY_ROLES } from '@/lib/clearance/status';
 import {
@@ -104,6 +105,7 @@ export async function submitApplicationAction(data: {
     if (!data.academicYear?.trim() || !data.semester?.trim() || !data.purpose?.trim()) {
       throw new Error('Academic year, semester, and purpose are required fields.');
     }
+    const academicYear = validateAcademicYear(data.academicYear);
 
     if (user.role !== 'student') {
       throw new Error('Unauthorized: Only students can submit clearance applications.');
@@ -112,7 +114,7 @@ export async function submitApplicationAction(data: {
     const firestore = getAdminFirestore();
 
     const semester = normalizeSemester(data.semester);
-    const termDocIds = getApplicationTermDocumentIds(studentUid, data.academicYear, semester);
+    const termDocIds = getApplicationTermDocumentIds(studentUid, academicYear, semester);
     const appId = termDocIds[0];
 
     // Execute submission in a Firestore Transaction
@@ -122,7 +124,7 @@ export async function submitApplicationAction(data: {
         const checkAppSnap = await transaction.get(checkAppRef);
 
         if (checkAppSnap.exists) {
-          throw new Error(`Already submitted a clearance application for ${data.academicYear} ${semester}.`);
+          throw new Error(`Already submitted a clearance application for ${academicYear} ${semester}.`);
         }
       }
       const appRef = firestore.collection('clearanceApplications').doc(appId);
@@ -198,7 +200,7 @@ export async function submitApplicationAction(data: {
         program: student.program,
         yearLevel: student.yearLevel,
         section: student.section,
-        academicYear: data.academicYear,
+        academicYear,
         semester: semester,
         purpose: data.purpose,
         overallStatus: 'pending',
@@ -242,7 +244,7 @@ export async function submitApplicationAction(data: {
         action: 'submitted_application',
         entityType: 'clearance_application',
         entityId: appId,
-        metadata: { academicYear: data.academicYear, semester: semester, purpose: data.purpose },
+        metadata: { academicYear, semester, purpose: data.purpose },
         createdAt: new Date().toISOString()
       });
 
