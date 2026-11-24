@@ -51,7 +51,7 @@
 | Requirement | Status | Description & Evidence |
 | --- | --- | --- |
 | **Admin-created accounts** | `Implemented` | `createStudentAccountAction` and `createStaffAccountAction` execute atomic Firestore batches (`users`, `publicUsers`, `students`, `activityLogs`), feature full Auth deletion compensation on custom claim or Firestore write failure, use cryptographically secure passwords (`crypto.randomInt`), and require explicit server-side confirmation (`confirmElevatedAdminCreation`) for elevated admin creation. |
-| **Student self-registration** | `Implemented` | Public registration is enabled. New accounts are stored with `accountStatus = pending_approval`; an administrator must approve the account before normal student access is granted. |
+| **Student self-registration** | `Implemented` | Public registration is enabled. New accounts are stored with `accountStatus = pending_approval`; email ownership is not independently verified, and an administrator must review student identity and approve the account before normal student access is granted. |
 | **Student application submission** | `Implemented` | `submitApplicationAction` creates application and approval subdocuments in a Firestore transaction. |
 | **Duplicate-term prevention** | `Implemented` | Enforces deterministic doc ID `{studentUid}_{academicYear}_{semester}`; duplicate submissions throw transactional error. |
 | **Own-status tracking** | `Implemented` | Security rules restrict student reads to `studentUid == request.auth.uid`. |

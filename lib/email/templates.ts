@@ -41,7 +41,7 @@ export function renderRegistrationApprovedEmail(
 
   const text = `Hello ${input.fullName || 'Student'},
 
-Your registration for the Automated Student Clearance System (ASCS) at Pamantasan ng Kolehiyo ng Mauban has been approved by the system administrator.
+Your registration for the Automated Student Clearance System (ASCS) at Pambayang Kolehiyo ng Mauban has been approved by the system administrator.
 
 You can now sign in using your registered email address (${input.email}) to submit and track your clearance application.
 
@@ -78,7 +78,7 @@ ASCS PKM Administration`;
       <span class="status-badge">Registration Approved</span>
     </div>
     <p>Hello <strong>${safeName}</strong>,</p>
-    <p>Your registration for the Automated Student Clearance System at Pamantasan ng Kolehiyo ng Mauban has been approved by the system administrator.</p>
+    <p>Your registration for the Automated Student Clearance System at Pambayang Kolehiyo ng Mauban has been approved by the system administrator.</p>
     <p>Your registered email address <strong>${safeEmail}</strong> is now active. You may log in to submit and track your clearance applications.</p>
     <div style="text-align: center;">
       <a href="${safeLoginUrl}" class="btn" style="color: #ffffff;">Sign In to ASCS</a>
@@ -104,7 +104,7 @@ export function renderRegistrationRejectedEmail(
 
   const text = `Hello ${input.fullName || 'Student'},
 
-Thank you for your interest in registering for the Automated Student Clearance System (ASCS) at Pamantasan ng Kolehiyo ng Mauban.
+Thank you for your interest in registering for the Automated Student Clearance System (ASCS) at Pambayang Kolehiyo ng Mauban.
 
 Your registration request could not be approved at this time for the following reason:
 
@@ -141,7 +141,7 @@ ASCS PKM Administration`;
       <span class="status-badge">Registration Not Approved</span>
     </div>
     <p>Hello <strong>${safeName}</strong>,</p>
-    <p>Thank you for submitting a registration request for the Automated Student Clearance System at Pamantasan ng Kolehiyo ng Mauban.</p>
+    <p>Thank you for submitting a registration request for the Automated Student Clearance System at Pambayang Kolehiyo ng Mauban.</p>
     <p>Your registration could not be approved by the administrator. Reason provided:</p>
     <div class="reason-box">
       <strong>Administrator Remarks:</strong><br>

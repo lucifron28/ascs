@@ -166,17 +166,15 @@ describe('Firestore Rules Security Boundaries Tests', () => {
     await assertSucceeds(getDoc(doc(activeAdminDb, 'activityLogs/log-1')));
   });
 
-  it('9. Approved but unverified self-registered students CANNOT read protected collections until email is verified', async () => {
-    // Unverified token
+  it('9. Approved self-registered students CAN read their own protected collections even with email_verified: false', async () => {
     const unverifiedDb = testEnv.authenticatedContext('unverified-student-uid', { email_verified: false }).firestore();
 
-    await assertFails(getDoc(doc(unverifiedDb, 'users/unverified-student-uid')));
-    await assertFails(getDoc(doc(unverifiedDb, 'clearanceApplications/app-unverified')));
-    await assertFails(getDoc(doc(unverifiedDb, 'publicUsers/student-a-uid')));
+    await assertSucceeds(getDoc(doc(unverifiedDb, 'users/unverified-student-uid')));
+    await assertSucceeds(getDoc(doc(unverifiedDb, 'clearanceApplications/app-unverified')));
+    await assertSucceeds(getDoc(doc(unverifiedDb, 'publicUsers/student-a-uid')));
 
-    // Once token has email_verified == true, access succeeds
-    const verifiedDb = testEnv.authenticatedContext('unverified-student-uid', { email_verified: true }).firestore();
-    await assertSucceeds(getDoc(doc(verifiedDb, 'users/unverified-student-uid')));
-    await assertSucceeds(getDoc(doc(verifiedDb, 'clearanceApplications/app-unverified')));
+    // Cross-account access remains prohibited
+    await assertFails(getDoc(doc(unverifiedDb, 'users/student-a-uid')));
+    await assertFails(getDoc(doc(unverifiedDb, 'clearanceApplications/app-student-a')));
   });
 });
