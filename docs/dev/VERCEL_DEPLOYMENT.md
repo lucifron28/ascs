@@ -15,10 +15,10 @@ the normal Firebase login form and no remote password is exposed client-side.
 | --- | --- |
 | Vercel project | `ron-cada-projects/ascs` |
 | Deployment URL | <https://ascs-one.vercel.app> |
-| Latest production deployment | <https://ascs-pffis9p43-ron-cada-projects.vercel.app> |
-| Deployment ID | `dpl_4UAcAX4K6odRFbRw13SVnPLAv72n` |
-| Deployment date | 2026-10-20 |
-| Deployed Git SHA | `e139d60f1f67abd343405ee6f9f3b97552003d92` (verified `main`) |
+| Latest production deployment | <https://ascs-1mqdcqfwn-ron-cada-projects.vercel.app> |
+| Deployment ID | `dpl_CRRhgb7ryi8q8845VpacrRqwiMVk` |
+| Deployment date | 2026-11-24 |
+| Deployed Git SHA | `59f0a96a684e18b595cb4535247f02b148d72fff` (verified `main`) |
 | Firebase demo project | `ascs11` (fictional demo data) |
 | Firestore database | `(default)` in `asia-southeast1` |
 | Demo mode | `NEXT_PUBLIC_DEMO_MODE=true` |
@@ -26,6 +26,8 @@ the normal Firebase login form and no remote password is exposed client-side.
 | Deployment protection | Vercel SSO remains enabled; no bypass secret or demo credentials are stored in the repository |
 
 ### Verification result
+
+For PR #28 (`59f0a96a684e18b595cb4535247f02b148d72fff`), updated `firestore.rules` (removing the `email_verified` gate) was deployed to Firebase project `ascs11`, and production deployment `dpl_CRRhgb7ryi8q8845VpacrRqwiMVk` reached `Ready` on <https://ascs-one.vercel.app>. Public HTTP checks on `/login` and `/register` returned HTTP 200 with `Pambayang Kolehiyo ng Mauban seal` and without verification resend UI. Authenticated `npm run verify:vercel` was not run in this session because `VERCEL_DEMO_*` credentials were not supplied in the environment.
 
 The production deployment is connected to the dedicated fictional Firebase
 project `ascs11`. Public checks for `/` and `/login` returned HTTP 200. The
