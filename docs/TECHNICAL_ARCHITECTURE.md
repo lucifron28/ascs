@@ -85,7 +85,9 @@ Firestore Security Rules protect direct client SDK access.
    `getAuthenticatedUserForPasswordChange()` to verify the session and load the
    Firestore profile.
 5. Authorization checks `role`, `accountStatus`/`isActive`, and
-   `mustChangePassword` before the requested operation.
+   `mustChangePassword` before the requested operation. Email ownership is not
+   independently verified; student identity review and account approval are the
+   Administrator's responsibility.
 6. Logout clears the session through `/api/auth/logout`. Deactivation and
    password reset also revoke or invalidate active sessions where applicable.
 

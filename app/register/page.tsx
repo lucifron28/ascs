@@ -50,11 +50,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
-  const [registrationOutcome, setRegistrationOutcome] = useState<{
-    email: string;
-    emailSent: boolean;
-    emailError?: string | null;
-  } | null>(null);
   const updateField = (field: keyof typeof initialForm, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     setError(null);
@@ -79,13 +74,9 @@ export default function RegisterPage() {
 
       setForm((current) => ({ ...current, password: '', confirmPassword: '' }));
       setRegisteredEmail(result.user.email);
-      setRegistrationOutcome({
-        email: result.user.email,
-        emailSent: result.emailSent !== false,
-        emailError: result.emailError,
-      });
     } catch (registrationError: unknown) {
       setError(registrationError instanceof Error ? registrationError.message : 'Unable to create your account.');
+    } finally {
       setLoading(false);
     }
   };
@@ -100,7 +91,7 @@ export default function RegisterPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Image
             src="/pkmlogo.png"
-            alt="Pamantasan ng Kolehiyo ng Mauban seal"
+            alt="Pambayang Kolehiyo ng Mauban seal"
             width={96}
             height={96}
             preload
@@ -123,21 +114,9 @@ export default function RegisterPage() {
                 <p className="mt-2 text-sm text-base-content/75 max-w-md mx-auto">
                   Your student account for <span className="font-semibold text-base-content">{registeredEmail}</span> has been created and is <span className="font-bold text-warning">waiting for administrator approval</span>.
                 </p>
-                {registrationOutcome?.emailSent === false ? (
-                  <div className="p-3.5 bg-warning/10 border border-warning/30 rounded-xl max-w-md mx-auto text-xs text-base-content/80 text-left space-y-1.5 mt-2">
-                    <p className="font-bold text-warning">Verification Email Notice:</p>
-                    <p>
-                      The initial verification email could not be sent automatically. Your account registration was safely saved.
-                    </p>
-                    <p>
-                      You can request a new verification link anytime from the Sign In page.
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-base-content/60 max-w-sm mx-auto">
-                    Please check your inbox for an <span className="font-bold text-primary">email verification link</span>. You will be able to access the clearance portal once your email is verified and your account is approved.
-                  </p>
-                )}
+                <p className="text-xs text-base-content/60 max-w-sm mx-auto">
+                  An administrator will review your registration. You will receive an email notification once your account is approved so you can sign in to the clearance portal.
+                </p>
               </div>
               <div className="pt-2">
                 <Link

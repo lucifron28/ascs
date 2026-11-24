@@ -6,7 +6,7 @@ import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { NextRequest } from 'next/server';
 import { POST as createSession } from '@/app/api/auth/session/route';
 import { updateRequirementAssignmentAction, updateUserRoleAction } from '@/app/actions/admin';
-import { registerStudentAccountAction, resendStudentVerificationEmailAction } from '@/app/actions/registration';
+import { registerStudentAccountAction } from '@/app/actions/registration';
 import {
   reserveStudentNumberAtomically,
   releaseStudentNumberReservation,
@@ -691,21 +691,14 @@ describe('Account Lifecycle Integration Tests', () => {
     const updatedAuth = await getAdminAuth().getUser(studentUid);
     assert.equal(updatedAuth.customClaims?.accountStatus, 'active');
 
-    // 5. Approved student session requires email verification before normal access
-    const unverifiedSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
-    process.env.TEST_SESSION_COOKIE = unverifiedSession;
-    await assert.rejects(
-      async () => getAuthenticatedUser(),
-      /email verification required/i
-    );
-
-    // 6. Once email ownership is verified, student access succeeds
-    await getAdminAuth().updateUser(studentUid, { emailVerified: true });
-    const verifiedSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
-    process.env.TEST_SESSION_COOKIE = verifiedSession;
+    // 5. Approved student session succeeds even when Firebase emailVerified is false
+    const approvedSession = await getSessionCookieForUser('student.approval@example.test', 'student-password123');
+    process.env.TEST_SESSION_COOKIE = approvedSession;
     const authUserSession = await getAuthenticatedUser();
     assert.equal(authUserSession.uid, studentUid);
     assert.equal(authUserSession.user.accountStatus, 'active');
+    const authUserAfter = await getAdminAuth().getUser(studentUid);
+    assert.equal(authUserAfter.emailVerified, false);
   });
   it('16. Admin can permanently delete user and related application records', async () => {
     process.env.TEST_SESSION_COOKIE = adminSession;
@@ -1128,124 +1121,73 @@ describe('Account Lifecycle Integration Tests', () => {
     assert.equal(finalNewerWins.data()?.error, null);
   });
 
-  it('21. Student email verification resend cooldown and safe anti-enumeration response', async () => {
-    // A. Non-existent email returns safe generic response without leaking account absence
-    const nonExistentRes = await resendStudentVerificationEmailAction({ email: 'nobody.registered@example.test' });
-    assert.equal(nonExistentRes.success, true);
-    assert.match(nonExistentRes.message || '', /if an unverified student account exists/i);
-
-    // B. Registered student requests verification resend -> succeeds
-    const studentEmail = `verify.cooldown.${Date.now()}@example.test`;
-    const regRes = await registerStudentAccountAction({
-      email: studentEmail,
-      fullName: 'Cooldown Test Student',
-      studentNumber: `STUD-COOL-${Date.now().toString().slice(-4)}`,
-      program: 'BSAIS',
-      yearLevel: '1st Year',
-      semester: '1st Semester',
-      section: 'A',
-      password: 'password123',
-      confirmPassword: 'password123',
-    });
-    assert.equal(regRes.success, true);
-
-    // First resend succeeds
-    const firstResend = await resendStudentVerificationEmailAction({ email: studentEmail });
-    assert.equal(firstResend.success, true);
-    assert.match(firstResend.message || '', /if an unverified student account exists/i);
-    // Immediate second resend is throttled by the 60-second cooldown
-    const secondResend = await resendStudentVerificationEmailAction({ email: studentEmail });
-    assert.equal(secondResend.success, false);
-    assert.match(secondResend.error || '', /please wait.*second.*before requesting/i);
-
-    // C. Concurrent resend requests: Exactly one resets cooldown, others are throttled atomically
-    const concurrentEmail = `verify.concurrent.${Date.now()}@example.test`;
-    await registerStudentAccountAction({
-      email: concurrentEmail,
-      fullName: 'Concurrent Test Student',
-      studentNumber: `STUD-CONC-${Date.now().toString().slice(-4)}`,
-      program: 'BSAIS',
-      yearLevel: '1st Year',
-      semester: '1st Semester',
-      section: 'A',
-      password: 'password123',
-      confirmPassword: 'password123',
-    });
-
-    const [concurrent1, concurrent2] = await Promise.all([
-      resendStudentVerificationEmailAction({ email: concurrentEmail }),
-      resendStudentVerificationEmailAction({ email: concurrentEmail }),
-    ]);
-    assert.ok(
-      ('error' in concurrent1 && concurrent1.error.includes('Please wait')) ||
-      ('error' in concurrent2 && concurrent2.error.includes('Please wait')),
-      'At least one concurrent resend request must be throttled by the atomic cooldown'
-    );
-  });
-
-  it('21b. Registration and resend keep SMTP diagnostics out of public responses', async () => {
-    const oldFailureFlag = process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE;
+  it('21. Student self-registration awaits administrator approval without email verification', async () => {
     const timestamp = Date.now();
-    const email = `smtp.private.${timestamp}@example.test`;
-    process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE = 'true';
-    try {
-      const registration = await registerStudentAccountAction({
-        email,
-        fullName: 'SMTP Failure Student',
-        studentNumber: `STUD-SMTP-${timestamp}`,
-        program: 'BSAIS',
-        yearLevel: '1st Year',
-        semester: '1st Semester',
-        section: 'A',
-        password: 'password123',
-        confirmPassword: 'password123',
-      });
-      assert.equal(registration.success, true);
-      if (!registration.success) return;
-      assert.equal(registration.emailSent, false);
-      assert.doesNotMatch(registration.emailError || '', /535|invalid credentials|test-only|smtp/i);
+    const email = `no.verify.${timestamp}@example.test`;
+    const registration = await registerStudentAccountAction({
+      email,
+      fullName: 'No Verification Student',
+      studentNumber: `STUD-NOV-${timestamp}`,
+      program: 'BSAIS',
+      yearLevel: '1st Year',
+      semester: '1st Semester',
+      section: 'A',
+      password: 'password123',
+      confirmPassword: 'password123',
+    });
+    assert.equal(registration.success, true);
+    if (!registration.success) return;
+    assert.equal('emailSent' in registration, false);
+    assert.equal('emailError' in registration, false);
 
-      const authUser = await getAdminAuth().getUserByEmail(email);
-      const pendingProfile = await getAdminFirestore().collection('users').doc(authUser.uid).get();
-      assert.equal(authUser.emailVerified, false);
-      assert.equal(pendingProfile.data()?.accountStatus, 'pending_approval');
-      assert.equal(pendingProfile.data()?.isActive, false);
+    const authUser = await getAdminAuth().getUserByEmail(email);
+    const pendingProfile = await getAdminFirestore().collection('users').doc(authUser.uid).get();
+    assert.equal(authUser.emailVerified, false);
+    assert.equal(pendingProfile.data()?.accountStatus, 'pending_approval');
+    assert.equal(pendingProfile.data()?.isActive, false);
 
-      const idToken = await getIdTokenForUser(email, 'password123');
-      const sessionResponse = await createSession(new NextRequest('http://localhost/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      }));
-      const sessionBody = await sessionResponse.json() as { error?: string };
-      assert.equal(sessionResponse.status, 403);
-      assert.match(sessionBody.error || '', /email verification required/i);
+    // Pending student cannot establish a session before administrator approval
+    const idToken = await getIdTokenForUser(email, 'password123');
+    const pendingSessionResponse = await createSession(new NextRequest('http://localhost/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    }));
+    const pendingSessionBody = await pendingSessionResponse.json() as { error?: string };
+    assert.equal(pendingSessionResponse.status, 403);
+    assert.match(pendingSessionBody.error || '', /waiting for administrator approval/i);
 
-      await pendingProfile.ref.update({ accountStatus: 'inactive', isActive: false });
-      const inactiveSessionResponse = await createSession(new NextRequest('http://localhost/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      }));
-      const inactiveSessionBody = await inactiveSessionResponse.json() as { error?: string };
-      assert.equal(inactiveSessionResponse.status, 403);
-      assert.match(inactiveSessionBody.error || '', /account is deactivated/i);
-      await pendingProfile.ref.update({ accountStatus: 'pending_approval', isActive: false });
+    // Deactivated account remains blocked
+    await pendingProfile.ref.update({ accountStatus: 'inactive', isActive: false });
+    const inactiveSessionResponse = await createSession(new NextRequest('http://localhost/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    }));
+    const inactiveSessionBody = await inactiveSessionResponse.json() as { error?: string };
+    assert.equal(inactiveSessionResponse.status, 403);
+    assert.match(inactiveSessionBody.error || '', /account is deactivated/i);
+    await pendingProfile.ref.update({ accountStatus: 'pending_approval', isActive: false });
 
-      // The original provider failure does not block the student from retrying.
-      process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE = 'false';
-      const knownAccount = await resendStudentVerificationEmailAction({ email });
-      const unknownAccount = await resendStudentVerificationEmailAction({
-        email: `unknown.smtp.${timestamp}@example.test`,
-      });
-      assert.deepEqual(knownAccount, unknownAccount);
-      assert.equal(knownAccount.success, true);
-      assert.doesNotMatch(JSON.stringify(knownAccount), /535|invalid credentials|test-only|smtp/i);
-      assert.equal((await pendingProfile.ref.get()).data()?.accountStatus, 'pending_approval');
-    } finally {
-      if (oldFailureFlag === undefined) delete process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE;
-      else process.env.ASCS_TEST_FORCE_VERIFICATION_EMAIL_FAILURE = oldFailureFlag;
-    }
+    // Administrator approves registration -> student can sign in with emailVerified: false
+    process.env.TEST_SESSION_COOKIE = adminSession;
+    const approveRes = await approveStudentRegistrationAction({ userId: authUser.uid });
+    assert.equal(approveRes.success, true);
+
+    const approvedIdToken = await getIdTokenForUser(email, 'password123');
+    const approvedSessionResponse = await createSession(new NextRequest('http://localhost/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: approvedIdToken }),
+    }));
+    assert.equal(approvedSessionResponse.status, 200);
+
+    const approvedCookie = await getSessionCookieForUser(email, 'password123');
+    process.env.TEST_SESSION_COOKIE = approvedCookie;
+    const sessionUser = await getAuthenticatedUser();
+    assert.equal(sessionUser.uid, authUser.uid);
+    assert.equal(sessionUser.user.accountStatus, 'active');
+    assert.equal((await getAdminAuth().getUser(authUser.uid)).emailVerified, false);
   });
   it('22. Student-number reservation UID association and ownership verification on release', async () => {
     const db = getAdminFirestore();

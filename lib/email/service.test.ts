@@ -34,8 +34,12 @@ test('2. renderRegistrationApprovedEmail renders clean approval email with stude
   assert.ok(html.includes('Juan dela Cruz'));
   assert.ok(html.includes('juan@example.test'));
   assert.ok(html.includes('https://ascs-one.vercel.app/login'));
+  assert.ok(html.includes('Pambayang Kolehiyo ng Mauban'));
+  assert.ok(!html.includes('Pamantasan ng Kolehiyo ng Mauban'));
   assert.ok(text.includes('Juan dela Cruz'));
   assert.ok(text.includes('has been approved'));
+  assert.ok(text.includes('Pambayang Kolehiyo ng Mauban'));
+  assert.ok(!text.includes('Pamantasan ng Kolehiyo ng Mauban'));
 });
 
 test('3. renderRegistrationApprovedEmail escapes potentially dangerous content', () => {
@@ -59,7 +63,11 @@ test('4. renderRegistrationRejectedEmail renders rejection email containing admi
   assert.equal(subject, 'ASCS PKM — Student Registration Status Update');
   assert.ok(html.includes('Maria Clara'));
   assert.ok(html.includes('Invalid student ID number. Please provide official ID.'));
+  assert.ok(html.includes('Pambayang Kolehiyo ng Mauban'));
+  assert.ok(!html.includes('Pamantasan ng Kolehiyo ng Mauban'));
   assert.ok(text.includes('Invalid student ID number. Please provide official ID.'));
+  assert.ok(text.includes('Pambayang Kolehiyo ng Mauban'));
+  assert.ok(!text.includes('Pamantasan ng Kolehiyo ng Mauban'));
 });
 
 test('5. renderRegistrationRejectedEmail escapes dangerous input in rejection reason', () => {

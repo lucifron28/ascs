@@ -5,7 +5,7 @@ test.describe('Theme contract', () => {
     await page.goto('/login');
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'ascs-light');
-    const loginLogo = page.locator('img[alt="Pamantasan ng Kolehiyo ng Mauban seal"]');
+    const loginLogo = page.locator('img[alt="Pambayang Kolehiyo ng Mauban seal"]');
     await expect(loginLogo).toBeVisible();
     await expect(loginLogo).toHaveAttribute('src', /pkmlogo\.png/);
 
